@@ -43,14 +43,27 @@ def main() -> None:
     last = 0.0
 
     def get(url: str, **params):
+        """GET with spacing; network errors, 429 and 5xx are retried with growing waits
+        (a single connection reset used to end a multi-hour run)."""
         nonlocal last
-        wait = last + args.delay - time.monotonic()
-        if wait > 0:
-            time.sleep(wait)
-        try:
-            return http.get(url, params=params or None)
-        finally:
-            last = time.monotonic()
+        for attempt in range(8):
+            wait = last + args.delay - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                r = http.get(url, params=params or None)
+            except httpx.TransportError as e:
+                r, why = None, f"{type(e).__name__}: {e}"
+            else:
+                why = f"HTTP {r.status_code}"
+            finally:
+                last = time.monotonic()
+            if r is not None and r.status_code != 429 and r.status_code < 500:
+                return r
+            pause = min(30 * 2 ** attempt, 900)
+            print(f"{time.strftime('%H:%M:%S')} {why}; retrying in {pause} s", flush=True)
+            time.sleep(pause)
+        raise RuntimeError(f"giving up on {url} after 8 attempts")
 
     while True:
         params = {"format": args.format}

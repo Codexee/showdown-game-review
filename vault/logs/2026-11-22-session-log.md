@@ -37,6 +37,8 @@ tags: [area/vault]
 
 - **Stage 6 built** ([[ADR-0014-move-review-method]], [[2026-11-22-stage6-results]]): a Node sim service replays the inputlog and plays every top-K choice pair from each turn start; the value head scores the leaves; regret matching+ solves the matrix; 5/10/20 bands, per-turn luck, Lichess accuracy; background jobs and a review UI. Test game: Codexe 93.2 vs 96.6, one mistake (T18 switch to Venusaur, −14.6). Fixed a snapshot-mutation bug, played-choice format, and an ignored request body. 91 Python tests. Limit: grades use the real hidden sets ([[open-questions]] #6).
 
+- **Collector crash:** the 14-day inputlog crawl stopped at 16,700 replays (2026-11-10 11:15 UTC) on one connection reset. Added retries with backoff and resumed it ([[environment-quirks]]).
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 

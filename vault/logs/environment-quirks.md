@@ -23,5 +23,9 @@ Short entries. Newest first.
 ## 2026-11-22: `searchprivate` ignores `before`
 - The private replay search parses `before` but never passes it on. Page with `page=` instead ([[2026-11-22-research-round-2]]).
 
+## 2026-11-22: Long replay crawls get connection resets
+- After about 16,700 replays at 1 request/s, `replay.pokemonshowdown.com` reset a connection (`httpx.ReadError: [Errno 54] Connection reset by peer`). Just before that, throughput fell from about 2 minutes to about 20 minutes per 100 replays (`data/train/collect.log`).
+- `training/collect.py` had no retry, so the run ended. It now retries network errors, 429 and 5xx up to 8 times, waiting 30 s and doubling each time (15 min at most), and resumes from `_state.json`.
+
 ## Related
 - [[environment]] · [[data-sources]] · [[template-debug-log]]
