@@ -19,7 +19,7 @@ tags: [area/vault]
 
 - **Stage 2b built:** userscript plus ingest routes, an install panel in the app, and [[ADR-0010-local-api-origin-guard]]. Fixed two problems found while designing: the poller stopped at the first known game, which would hide uploads once the userscript adds games first (now a high-water mark, with a regression test); and uploaded `.json` ids could escape `data/` (now validated). 27 Python + 7 Node tests pass; an end-to-end run against a throwaway server worked. Not yet run on the real Showdown site.
 
-- **Rebuild prototype** ([[2026-11-22-rebuild-prototype-results]]): 61/61 `gen9randombattle` replays rebuilt exactly at their commit; a wrong commit gives visible and silent errors. ADR-0009 is ready for the user's OK. Also fixed `parse_replay_ref` to accept side-server ids (`impulse-…`, `smogtours-…`).
+- **Rebuild prototype** ([[2026-11-22-rebuild-prototype-results]]): 61/61 `gen9randombattle` replays rebuilt exactly at their commit; a wrong commit gives visible and silent errors. The user accepted ADR-0009 ([[2026-11-22-adr-0009-decision]]). Also fixed `parse_replay_ref` to accept side-server ids (`impulse-…`, `smogtours-…`).
 
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).

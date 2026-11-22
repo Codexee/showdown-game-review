@@ -35,7 +35,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0006-replay-archive]]: accepted
 - [[ADR-0007-app-stack]]: accepted
 - [[ADR-0008-python-313]]: accepted
-- [[ADR-0009-randbats-full-info-reconstruction]]: proposed; prototype passed 61/61, waiting on your OK
+- [[ADR-0009-randbats-full-info-reconstruction]]: accepted (prototype 61/61)
 - [[ADR-0010-local-api-origin-guard]]: accepted
 
 ## Specs
@@ -54,4 +54,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-research-findings]]
 - [[2026-11-22-research-round-2]]
 - [[2026-11-22-rebuild-prototype-results]]
+- [[2026-11-22-adr-0009-decision]]
 - [[2026-11-22-second-brain-guide]]

@@ -1,7 +1,8 @@
 ---
 title: ADR-0009 Rebuild full-information randbats games from inputlogs
 type: adr
-status: proposed
+status: accepted
+accepted: 2026-11-22
 date: 2026-11-22
 supersedes:
 superseded_by:
@@ -10,14 +11,14 @@ tags: [area/model, area/data]
 
 # ADR-0009: Rebuild full-information Gen 9 Random Battle games from replay inputlogs
 
-> [!success] Prototype 2026-11-22: 61/61 exact rebuilds
-> Proposed for acceptance; waiting on the user ([[open-questions]]). Evidence: [[2026-11-22-rebuild-prototype-results]].
+> [!success] Accepted 2026-11-22 ([[2026-11-22-adr-0009-decision]])
+> Prototype: 61/61 exact rebuilds. Evidence: [[2026-11-22-rebuild-prototype-results]].
 
 ## Context
 - For random formats, the replay JSON includes the **inputlog**: the Showdown commit hash (`>version`), the battle seed, each player's team seed, and every choice ([[2026-11-22-research-round-2]]).
 - A normal replay log shows only what was revealed during the game. Metamon has to guess hidden sets when it rebuilds each player's view ([[bot-landscape]]).
 
-## Decision (proposed)
+## Decision
 - For each archived random-format replay, run Showdown's simulator **at the exact commit named in `>version`** on the inputlog. This reproduces both full teams (moves, item, ability, Tera type, level, EVs, IVs) and the whole battle, including the omniscient log.
 - **Validate** every rebuild by comparing it with the replay's public log, after dropping server-only lines (list in the prototype results). Uploaded replay logs use the omniscient channel, so compare against channel -1. Drop any replay that doesn't match.
 - **Never** rebuild at a different commit, even a close one: in the prototype, 1 of 56 wrong-commit runs matched the public log but had a wrong hidden set ([[2026-11-22-rebuild-prototype-results]]).

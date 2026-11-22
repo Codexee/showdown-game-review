@@ -12,13 +12,13 @@ Items wait here until they are answered. When an item is answered, record the an
 
 ## Open
 1. *(test, needs the user)* **First real-browser run of the userscript:** play one game with Tampermonkey on, then check (a) the game appears, (b) whether Chrome showed a Local Network Access prompt, (c) whether the private check works (Tampermonkey log shows `private search:` errors if the login cookie isn't sent to replay.pokemonshowdown.com), (d) after uploading, the poller upgrades the same id, which confirms room ids match replay ids. The `searchprivate` URL is settled: the replay site itself calls `/api/replays/searchprivate?username=` and gets `]` + JSON ([[spec-replay-sync]]).
-2. **Accept ADR-0009?** The prototype rebuilt 61/61 replays exactly at their commit ([[2026-11-22-rebuild-prototype-results]]). Recommendation: accept.
-3. **Side-server replays** (e.g. `impulse-…`): include them in training data (each adds a checkout) or filter to main-server ids only? Recommendation: main server only.
-4. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
-5. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
-6. **Install SpriteCook** when the UI stage starts ([[tooling]]).
+2. **Side-server replays** (e.g. `impulse-…`): include them in training data (each adds a checkout) or filter to main-server ids only? Recommendation: main server only.
+3. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
+4. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
+5. **Install SpriteCook** when the UI stage starts ([[tooling]]).
 
 ## Resolved
+- **ADR-0009** → accepted: train on full-information games rebuilt from inputlogs at their exact commit ([[2026-11-22-adr-0009-decision]]), 2026-11-22.
 - **Private replays method** → the userscript lists them with your browser login and sends only ids and passwords; the server fetches `<id>-<pw>pw.json` with no login ([[spec-replay-sync]], [[2026-11-22-research-round-2]]), 2026-11-22.
 - **Userscript hook** → wrap `app.receive` / `PS.receive`, finish on `|win|` / `|tie`, send through Tampermonkey `GM_xmlhttpRequest` ([[spec-replay-sync]]), 2026-11-22.
 - **Python version** → 3.13 in a uv venv ([[ADR-0008-python-313]]), 2026-11-22.
