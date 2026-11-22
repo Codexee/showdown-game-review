@@ -8,26 +8,29 @@ updated: 2026-11-22
 
 # Open questions
 
-Items wait here until the user answers. When answered: record the answer in a `raw/` note, update the affected notes, and move the item to **Resolved**.
+Items wait here until they are answered. When an item is answered, record the answer in a `raw/` note, update the affected notes, and move the item to **Resolved**. Items marked *(research)* are for Claude to look up, not for the user.
 
 ## Open
-
-1. **Which "Gen 9 randbats"?** Standard [Gen 9] Random Battle (`gen9randombattle`) or [Gen 9 Champions] Random Battle? Recommendation: standard Gen 9 Random Battle (more games, foul-play support), unless the plan is to reuse the Champions mod for VGC M-C. ([[formats]])
-2. **Does the 1.5% usage rule still apply?** It was set for Champions OU. Randbats sets come from a generator, so it mostly doesn't apply. For VGC M-C it probably does. ([[project-overview]])
-3. **Your Showdown username(s)** for [[spec-replay-sync]].
-4. **"Auto save all replays": which games?** The server only has games that were uploaded. Options: (a) poll your public uploaded replays by username; (b) also catch games you never upload, which needs a small browser userscript on play.pokemonshowdown.com that sends each finished battle log to the local server. (b) conflicts a little with choosing a web app over an extension ([[ADR-0001-local-web-app]]), but it is a small add-on. ([[ADR-0006-replay-archive]])
-5. **Private replays.** Do you upload private (password) replays? Fetching them needs your login, and the method is unknown. ([[data-sources]])
-6. **Which games to list.** Only the target formats, or every format you play? Recommendation: save every format, list all, analyze only formats with a model.
-7. **Other ways to load a game** (the round-1 input question): paste a replay URL, upload a saved log/HTML file, add your own team paste. Pulling by username is chosen; the others are not decided.
-8. **Python version** that PyTorch, poke-env and poke-engine all support on this Mac. Check before setup. ([[environment]])
-9. **Server and frontend stack.** FastAPI plus a plain or Vite frontend is the likely pick. ([[architecture]])
-10. **Install SpriteCook** when the UI stage starts? ([[tooling]])
+1. *(research)* **Private replays:** how to list and fetch a user's private replays without the app storing the password. Fallback: the userscript captures private games going forward ([[ADR-0006-replay-archive]]).
+2. *(research)* **Userscript hook:** which Showdown client event marks a finished battle, and whether the browser allows a request from play.pokemonshowdown.com to localhost ([[spec-replay-sync]]).
+3. *(research)* **Python version** that PyTorch, poke-env and poke-engine all support on this Mac ([[environment]]).
+4. *(research)* **Gen 9 Random Battle set data:** where Showdown keeps the random-set pools (file path and format) so the model can use them as priors ([[spec-eval-model]]).
+5. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
+6. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
+7. **Install SpriteCook** when the UI stage starts ([[tooling]]).
 
 ## Resolved
 - **Format target** → Gen 9 randbats, then VGC Reg M-C ([[ADR-0002-format-order]]), 2026-11-22.
+- **Which randbats** → standard [Gen 9] Random Battle, `gen9randombattle` ([[2026-11-22-interview-round-2]]), 2026-11-22.
 - **Training time** → overnight 8–12 h ([[ADR-0005-overnight-training-budget]]), 2026-11-22.
 - **Where the app runs** → local web app, pixel-art style ([[ADR-0001-local-web-app]], [[ADR-0004-pixel-art-style]]), 2026-11-22.
-- **Loading games** → pull by username, list games with details, save all replays ([[spec-replay-sync]]), 2026-11-22.
+- **Stack** → FastAPI + Vite/TypeScript + SQLite ([[ADR-0007-app-stack]]), 2026-11-22.
+- **Username** → `Codexe` ([[2026-11-22-interview-round-2]]), 2026-11-22.
+- **Which games to save** → every finished game from now on, no backfill; poller first, then userscript ([[ADR-0006-replay-archive]]), 2026-11-22.
+- **Private replays** → include them ([[2026-11-22-interview-round-2]]); the method is still open (#1), 2026-11-22.
+- **Formats to save and list** → all formats; eval only where a model exists ([[spec-replay-sync]]), 2026-11-22.
+- **Ways to load a game** → username sync, paste a replay URL, upload a log/HTML file, add your own team paste ([[spec-replay-sync]]), 2026-11-22.
+- **1.5% usage rule** → keep it for VGC Reg M-C; it does not apply to randbats, whose set pool is fixed ([[spec-eval-model]]), 2026-11-22.
 
 ## Related
-- [[index]] · [[2026-11-22-interview-round-1]]
+- [[index]] · [[2026-11-22-interview-round-1]] · [[2026-11-22-interview-round-2]]

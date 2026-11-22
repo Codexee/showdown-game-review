@@ -15,6 +15,7 @@ flowchart LR
   subgraph Showdown["Showdown (internet)"]
     RS[replay server<br/>search.json, .json, .log]
     US[user API<br/>users/&lt;id&gt;.json]
+    CL[play.pokemonshowdown.com<br/>+ our userscript]
   end
   subgraph Local["This Mac"]
     SYNC[replay sync<br/>poller + importer]
@@ -28,6 +29,8 @@ flowchart LR
   end
   RS --> SYNC
   US --> SYNC
+  CL -- finished battle log --> API
+  API --> DB
   SYNC --> DB
   DB --> PARSE --> MODEL
   MODEL --> API --> UI
@@ -39,7 +42,8 @@ flowchart LR
 ## Components
 | Component | Job | Spec |
 |---|---|---|
-| Replay sync | Pull the user's ratings and replay list; download and keep every replay | [[spec-replay-sync]] |
+| Replay sync | Pull the user's ratings and new replays (public and private) | [[spec-replay-sync]] |
+| Userscript | Runs on Showdown's site; posts each finished battle's log to `/api/ingest` | [[spec-replay-sync]], [[ADR-0006-replay-archive]] |
 | Archive | SQLite index plus the raw `.log` file per game; never deleted | [[spec-replay-sync]], [[ADR-0006-replay-archive]] |
 | Log parser | Turn a Showdown protocol log into a battle state per turn, from each player's view | [[spec-eval-model]] |
 | Eval model | Value (win chance) and policy (move ranking) per turn | [[spec-eval-model]] |
@@ -47,15 +51,16 @@ flowchart LR
 | UI | Game list, replay player, eval bar, eval graph, move labels | [[spec-review-app]], [[visual-style]] |
 | Training | Small test run, then an overnight run | [[spec-eval-model]], [[ADR-0005-overnight-training-budget]] |
 
-**Unknown:** server framework (FastAPI is the likely pick) and frontend stack. Logged in [[open-questions]].
+Stack: FastAPI, Vite + TypeScript, SQLite ([[ADR-0007-app-stack]]).
 
 ## Planned code layout (draft)
 ```
-server/     Python: API, sync, parser, model inference
-training/   Python: datasets, training loops, self-play
-web/        frontend
-data/       archive (git-ignored)
-vault/      this vault
+server/      Python (FastAPI): API, sync, ingest, parser, model inference
+training/    Python: datasets, training loops, self-play
+web/         Vite + TypeScript frontend
+userscript/  the Showdown userscript
+data/        archive (git-ignored)
+vault/       this vault
 ```
 
 ## Related

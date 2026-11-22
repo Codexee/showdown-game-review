@@ -13,7 +13,8 @@ For any turn of a game, output (a) the win chance for each side, which drives th
 
 ## Method (following [[bot-landscape]])
 1. **Parse replays into per-side views.** Turn each archived log into the battle state as each player saw it: revealed moves, items, abilities, HP, status, boosts, field. This is the same step Metamon uses.
-2. **Set priors.** For randbats, use the random-set pool for each species. For VGC M-C, use Smogon usage and moveset stats, keeping species and moves at ≥1.5% usage if that rule still applies ([[open-questions]] #2).
+2. **Set priors.** For randbats, use the random-set pool for each species (location in Showdown's code: [[open-questions]] #4). For VGC M-C, use Smogon usage and moveset stats and keep only species and moves at ≥1.5% usage; rarer ones map to a generic "other" token ([[2026-11-22-interview-round-2]]).
+   - If the user added their own team paste to a game ([[spec-replay-sync]]), use those exact sets for their side instead of priors.
 3. **Model.** A transformer over the Pokémon and field tokens, with a value head (win chance) and a policy head (choice ranking). Size so one run fits [[ADR-0005-overnight-training-budget]].
 4. **Training.**
    - Stage A: supervised. Policy learns the human's choices; value learns the final result (win/loss) from each turn.

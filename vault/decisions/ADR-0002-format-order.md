@@ -21,8 +21,8 @@ tags: [area/model]
 
 Champions OU is no longer the first target.
 
-> [!warning] Open
-> "gen9 randbats" may mean standard Gen 9 Random Battle or [Gen 9 Champions] Random Battle. See [[open-questions]] #1.
+> [!note] Clarified 2026-11-22
+> "gen9 randbats" means standard [Gen 9] Random Battle (`gen9randombattle`), not [Gen 9 Champions] Random Battle ([[2026-11-22-interview-round-2]]).
 
 ## Options considered
 - **Champions OU singles:** good usage data, foul-play support. Dropped as first target by the user.
@@ -31,7 +31,7 @@ Champions OU is no longer the first target.
 
 ## Consequences
 - The parser and model must be built so that the doubles stage reuses them (battle state, embeddings, training loop).
-- The 1.5% usage filter may not apply to randbats ([[open-questions]] #2).
+- The 1.5% usage filter does not apply to randbats; it does apply to VGC M-C ([[2026-11-22-interview-round-2]]).
 
 ## Related
 - [[formats]] · [[spec-eval-model]] · [[bot-landscape]]

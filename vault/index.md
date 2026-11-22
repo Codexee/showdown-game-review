@@ -7,7 +7,7 @@ updated: 2026-11-22
 
 # Showdown Game Review: index
 
-A local, Lichess-style review tool for Pokémon Showdown games. A trained network gives an eval bar and an eval graph for each turn. The app pulls your games by username and saves every replay locally. The UI uses a Gen 4–5 pixel-art style.
+A local, Lichess-style review tool for Pokémon Showdown games. A trained network gives an eval bar and an eval graph for each turn. The app pulls games for `Codexe` and saves every finished game from now on. The UI uses a Gen 4–5 pixel-art style. First format: [Gen 9] Random Battle; then VGC 2026 Reg M-C.
 
 Rules for this vault: [[CLAUDE]].
 
@@ -31,7 +31,8 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0003-vault-as-memory]]: accepted
 - [[ADR-0004-pixel-art-style]]: accepted
 - [[ADR-0005-overnight-training-budget]]: accepted
-- [[ADR-0006-replay-archive]]: proposed
+- [[ADR-0006-replay-archive]]: accepted
+- [[ADR-0007-app-stack]]: accepted
 
 ## Specs
 - [[spec-review-app]]: replay viewer, eval bar, eval graph (draft)
@@ -44,5 +45,6 @@ Rules for this vault: [[CLAUDE]].
 
 ## Raw inputs
 - [[2026-11-22-interview-round-1]]
+- [[2026-11-22-interview-round-2]]
 - [[2026-11-22-research-findings]]
 - [[2026-11-22-second-brain-guide]]
