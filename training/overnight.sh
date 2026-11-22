@@ -19,10 +19,10 @@ exec >> "$LOG" 2>&1   # follow along with: tail -f data/models/main.log
 
 echo "== $(date) overnight run $RUN: games since $SINCE, ${HOURS} h, d=$D layers=$LAYERS"
 if [ ! -f data/train/ds/full/meta.json ]; then
-  uv run python -m training.build_dataset --name full --hf 'data/hf/*.parquet' --since "$SINCE"
+  uv run python -m training.build_dataset --name full --hf 'data/hf/*.parquet' --since "$SINCE" --workers "$(sysctl -n hw.ncpu)"
 fi
 if [ ! -f data/train/ds/test_pinned/meta.json ]; then
-  uv run python -m training.build_dataset --name test_pinned --inputlog data/train/test_pinned --both-sides --val-frac 0
+  uv run python -m training.build_dataset --name test_pinned --inputlog data/train/test_pinned --both-sides --val-frac 0 --workers "$(sysctl -n hw.ncpu)"
 fi
 caffeinate -i -s uv run python -m training.train --data full --run "$RUN" --hours "$HOURS" \
   --d "$D" --layers "$LAYERS" --heads 8 --ff $((D * 4)) --bs 2048 --lr 4e-4 --epochs 8 --eval-every 3000 --resume
