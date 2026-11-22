@@ -57,6 +57,11 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 - `conftest.py`: `FakeShowdown`, an `httpx.MockTransport` that serves users, search (with `before`) and replays (with password suffixes).
 - 27 tests: log summaries, id parsing, no-backfill first sync, add-once, paging, private replays, URL and file import, filters, team paste, settings; ingest, userscript-copy upgrade, the poller regression, private ingest, origin guard, path traversal.
 
+## Prototypes: `prototypes/`
+| Folder | Job |
+|---|---|
+| `inputlog-rebuild/` | `rebuild.cjs` runs a built Showdown checkout on replay inputlogs and checks the rebuilt log against the replay ([[ADR-0009-randbats-full-info-reconstruction]]). Data and checkouts live in `data/proto/` (git-ignored). |
+
 ## Not built yet
 Per-turn parser (stage 3), review screen (stage 4), model (stage 5). See [[roadmap]].
 

@@ -5,8 +5,9 @@ import re
 from urllib.parse import urlparse
 
 _NON_ID = re.compile(r"[^a-z0-9]+")
-# replay id: <formatid>-<number>, optionally followed by -<password>pw
-_REPLAY_ID = re.compile(r"^([a-z0-9]+-\d+)(?:-([a-z0-9]+)pw)?$")
+# replay id: [<server>-]<formatid>-<number>, optionally followed by -<password>pw.
+# Side servers upload to the same replay site with a prefix, e.g. impulse-gen9randombattle-13297.
+_REPLAY_ID = re.compile(r"^((?:[a-z0-9]+-)?[a-z0-9]+-\d+)(?:-([a-z0-9]+)pw)?$")
 
 
 def to_id(text: str | None) -> str:

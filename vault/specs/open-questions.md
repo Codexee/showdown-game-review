@@ -12,8 +12,8 @@ Items wait here until they are answered. When an item is answered, record the an
 
 ## Open
 1. *(test, needs the user)* **First real-browser run of the userscript:** play one game with Tampermonkey on, then check (a) the game appears, (b) whether Chrome showed a Local Network Access prompt, (c) whether the private check works (Tampermonkey log shows `private search:` errors if the login cookie isn't sent to replay.pokemonshowdown.com), (d) after uploading, the poller upgrades the same id, which confirms room ids match replay ids. The `searchprivate` URL is settled: the replay site itself calls `/api/replays/searchprivate?username=` and gets `]` + JSON ([[spec-replay-sync]]).
-2. *(prototype)* **Full-information rebuild:** does running the simulator at the logged commit reproduce the public log exactly, and how many distinct commits do a few weeks of replays span? ([[ADR-0009-randbats-full-info-reconstruction]])
-3. **Accept ADR-0009?** Depends on #2.
+2. **Accept ADR-0009?** The prototype rebuilt 61/61 replays exactly at their commit ([[2026-11-22-rebuild-prototype-results]]). Recommendation: accept.
+3. **Side-server replays** (e.g. `impulse-…`): include them in training data (each adds a checkout) or filter to main-server ids only? Recommendation: main server only.
 4. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
 5. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
 6. **Install SpriteCook** when the UI stage starts ([[tooling]]).

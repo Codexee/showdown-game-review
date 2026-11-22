@@ -10,26 +10,30 @@ tags: [area/model, area/data]
 
 # ADR-0009: Rebuild full-information Gen 9 Random Battle games from replay inputlogs
 
+> [!success] Prototype 2026-11-22: 61/61 exact rebuilds
+> Proposed for acceptance; waiting on the user ([[open-questions]]). Evidence: [[2026-11-22-rebuild-prototype-results]].
+
 ## Context
 - For random formats, the replay JSON includes the **inputlog**: the Showdown commit hash (`>version`), the battle seed, each player's team seed, and every choice ([[2026-11-22-research-round-2]]).
-- The `>version` hash is a real commit in smogon/pokemon-showdown.
 - A normal replay log shows only what was revealed during the game. Metamon has to guess hidden sets when it rebuilds each player's view ([[bot-landscape]]).
 
-## Decision (proposed; needs a quick prototype)
-- For each archived `gen9randombattle` replay, run Showdown's simulator **at the commit named in `>version`** with the inputlog's seeds and choices. This should reproduce both full teams (moves, items, abilities, Tera types, EVs) and the exact battle, turn by turn.
-- Training then uses **both** views of each turn:
-  - the player's partial view, as the model input;
-  - the full hidden state, as extra targets (predict the opponent's sets) and as a check that the rebuild matches the public log.
-- Use pkmn's randbats stats (`data.pkmn.cc/randbats/stats/gen9randombattle.json`) as set priors when the full state is not known, i.e. at review time ([[spec-eval-model]]).
+## Decision (proposed)
+- For each archived random-format replay, run Showdown's simulator **at the exact commit named in `>version`** on the inputlog. This reproduces both full teams (moves, item, ability, Tera type, level, EVs, IVs) and the whole battle, including the omniscient log.
+- **Validate** every rebuild by comparing it with the replay's public log, after dropping server-only lines (list in the prototype results). Uploaded replay logs use the omniscient channel, so compare against channel -1. Drop any replay that doesn't match.
+- **Never** rebuild at a different commit, even a close one: in the prototype, 1 of 56 wrong-commit runs matched the public log but had a wrong hidden set ([[2026-11-22-rebuild-prototype-results]]).
+- Keep a cache of built Showdown checkouts keyed by commit (`git worktree` per commit from one blobless clone). Commits change about every 1–2 weeks on the main server, so a month of replays needs only a handful of checkouts.
+- Training uses each turn's **partial view** as input and the **full state** as extra targets (opponent sets, hidden HP) ([[spec-eval-model]]).
+- At review time (no inputlog for the opponent), use pkmn randbats stats as priors ([[data-sources]]).
 
-## Risks and checks
-- Random team generation changes often. Rebuilding needs the exact commit; keep a small cache of Showdown checkouts keyed by commit, or group replays by commit. **Unknown:** how many distinct commits a few weeks of replays span.
-- Verify by comparing the rebuilt battle's protocol output with the replay's public log, line by line. Drop any replay that doesn't match.
-- This applies only to random formats. VGC Reg M-C replays have no safe inputlog and need the Metamon-style partial-view method plus open team sheets, if available. (unverified for M-C)
+## Evidence (prototype, 2026-11-22)
+- 61 replays (3 commits): 61/61 exact log matches at the right commit; 56/61 at a wrong commit, including 1 silent hidden-set error.
+- ~57 ms per replay including Node start; ~5 s and ~200 MB to set up each commit.
+- Side servers (e.g. `impulse-…`) run their own commits; filter by server prefix or accept a few extra checkouts.
 
-## Consequences
-- If it works, randbats training data has exact labels for hidden information, which is better than what Metamon had.
-- Adds a Node step (running the simulator at past commits) to the data pipeline.
+## Risks
+- Disk: ~200 MB per commit. Share `node_modules` between checkouts or delete old checkouts after their replays are processed.
+- If Showdown stops publishing inputlogs, this source stops; the archive keeps what it already has.
+- Doesn't apply to VGC Reg M-C (no safe inputlog). That stage needs the partial-view method plus team sheets.
 
 ## Related
-- [[spec-eval-model]] · [[data-sources]] · [[formats]]
+- [[spec-eval-model]] · [[data-sources]] · [[formats]] · [[2026-11-22-rebuild-prototype-results]]

@@ -13,7 +13,7 @@ For any turn of a game, output (a) the win chance for each side, which drives th
 
 ## Method (following [[bot-landscape]])
 1. **Parse replays into per-side views.** Turn each archived log into the battle state as each player saw it: revealed moves, items, abilities, HP, status, boosts, field. This is the same step Metamon uses.
-   - **Randbats only:** also rebuild the full hidden state from the replay's inputlog by running the simulator at the logged commit ([[ADR-0009-randbats-full-info-reconstruction]]). That gives exact opponent sets as training targets.
+   - **Randbats only:** also rebuild the full hidden state from the replay's inputlog by running the simulator at the logged commit ([[ADR-0009-randbats-full-info-reconstruction]]). That gives exact opponent sets as training targets. Prototype: 61/61 exact rebuilds ([[2026-11-22-rebuild-prototype-results]]).
 2. **Set priors.** For randbats, use pkmn's role, move, item and Tera probabilities (`data.pkmn.cc/randbats/stats/gen9randombattle.json`, [[data-sources]]). Update the beliefs as moves and items are revealed. For VGC M-C, use Smogon usage and moveset stats and keep only species and moves at ≥1.5% usage; rarer ones map to a generic "other" token ([[2026-11-22-interview-round-2]]).
    - If the user added their own team paste to a game ([[spec-replay-sync]]), use those exact sets for their side instead of priors.
 3. **Model.** A transformer over the Pokémon and field tokens, with a value head (win chance) and a policy head (choice ranking). Size so one run fits [[ADR-0005-overnight-training-budget]].

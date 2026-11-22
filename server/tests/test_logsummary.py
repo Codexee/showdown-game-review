@@ -50,7 +50,8 @@ def test_to_id():
     ("https://replay.pokemonshowdown.com/gen9randombattle-2705718015.json", ("gen9randombattle-2705718015", None)),
     ("replay.pokemonshowdown.com/gen9ou-1-abc123pw", None),  # no scheme: treated as a path
     ("gen9ou-12-abc123pw", ("gen9ou-12", "abc123")),
-    ("https://replay.pokemonshowdown.com/smogtours-gen9ou-123", None),
+    ("https://replay.pokemonshowdown.com/smogtours-gen9ou-123", ("smogtours-gen9ou-123", None)),
+    ("impulse-gen9randombattle-13297-xyz9pw", ("impulse-gen9randombattle-13297", "xyz9")),
     ("https://evil.example.com/gen9ou-123", None),
     ("not a replay", None),
 ])
