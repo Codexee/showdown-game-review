@@ -15,9 +15,11 @@ tags: [area/vault]
 
 - **Research round 2** ([[2026-11-22-research-round-2]]): solved all four research items from the open questions. Big find: random-battle replays include an inputlog with seeds and the Showdown commit, so full hidden information may be rebuildable ([[ADR-0009-randbats-full-info-reconstruction]], proposed). Added [[ADR-0008-python-313]].
 
+- **Stage 2a built** ([[module-map]]): uv venv on 3.13; FastAPI backend (archive, poller, imports, API); Vite/TS game list page; 18 tests pass. Fixed a team-parsing bug ([[2026-11-22-bug-forme-change-team]]). Live check: the profile loaded (most-played: gen8randombattle, gen9randombattle), the first sync set the archive start to 2026-11-22 06:37, and two older games were added by URL. Codexe's newest upload is a Champions VGC Reg M-C game.
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
-- Start [[roadmap]] stage 2a ([[spec-replay-sync]]): uv venv on 3.13, FastAPI skeleton, poller, archive.
+- Stage 2b: userscript and ingest routes ([[spec-replay-sync]]); test the open browser questions ([[open-questions]] #1).
 - Prototype the inputlog rebuild on a few replays ([[open-questions]] #2).

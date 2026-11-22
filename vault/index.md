@@ -21,6 +21,7 @@ Rules for this vault: [[CLAUDE]].
 - [[data-sources]]: replay API, user API, Smogon usage stats
 - [[bot-landscape]]: foul-play, poke-env, Metamon, AlphaMon and others
 - [[architecture]]: components and data flow
+- [[module-map]]: what each code file does, and how to run it
 - [[environment]]: this Mac's hardware and installed tools
 - [[tooling]]: Claude skills and plugins used for this project
 - [[visual-style]]: Gen 4–5 pixel-art direction
@@ -44,6 +45,7 @@ Rules for this vault: [[CLAUDE]].
 ## Logs
 - [[2026-11-22-session-log]]
 - [[environment-quirks]]
+- [[2026-11-22-bug-forme-change-team]]
 
 ## Raw inputs
 - [[2026-11-22-interview-round-1]]

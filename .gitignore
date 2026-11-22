@@ -18,3 +18,6 @@ vault/.trash/
 # local claude settings and os junk
 .claude/settings.local.json
 .DS_Store
+
+# frontend build
+web/dist/

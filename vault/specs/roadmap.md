@@ -11,7 +11,7 @@ updated: 2026-11-22
 The order follows the dependencies in [[architecture]]. Stages are not locked until the interview finishes ([[open-questions]]).
 
 1. **Vault and repo.** This vault, git, project `CLAUDE.md`. *Done 2026-11-22.*
-2. **Replay sync and archive.** (a) Poller for `Codexe`'s new uploaded replays, plus the archive, game list, URL paste and file upload. (b) Userscript that sends every finished battle. Useful by itself. The same scraper also collects `gen9randombattle` training data. [[spec-replay-sync]], [[ADR-0006-replay-archive]]
+2. **Replay sync and archive.** *2a done 2026-11-22 ([[module-map]]); 2b (userscript) next.* (a) Poller for `Codexe`'s new uploaded replays, plus the archive, game list, URL paste and file upload. (b) Userscript that sends every finished battle. Useful by itself. The same scraper also collects `gen9randombattle` training data. [[spec-replay-sync]], [[ADR-0006-replay-archive]]
 3. **Log parser.** Protocol log → battle state per turn, from each side's view. Test on archived games.
 4. **Review app shell.** Game list plus replay player with a placeholder eval (for example, remaining HP). Pixel-art style. [[spec-review-app]], [[visual-style]]
 5. **Eval model, Gen 9 Random Battle.** Small test training, then the overnight run. Plug into the eval bar. [[spec-eval-model]]

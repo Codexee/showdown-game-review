@@ -8,6 +8,10 @@ updated: 2026-11-22
 
 # Spec: replay sync and game list (draft)
 
+> [!note] Status 2026-11-22
+> **Built (stage 2a):** profile, poller (public and password-suffixed private replays it can see), archive, game list with filters, URL import, file import (.log/.json/.html), team paste, settings. Code map: [[module-map]]. Checked live: first sync set the start time; two of Codexe's older replays were added by URL.
+> **Not built (stage 2b):** userscript, `/api/ingest`, `/api/ingest-private`. Team icons are text names for now; sprites come in stage 4.
+
 Source requests: [[2026-11-22-interview-round-1]] and [[2026-11-22-interview-round-2]]. Storage and capture decisions: [[ADR-0006-replay-archive]].
 
 ## User story
