@@ -132,12 +132,22 @@ class ReviewScreen {
     for (const [i, li] of [...this.turnList.children].entries()) {
       const btn = li.querySelector('button')!
       btn.setAttribute('aria-current', i === this.step ? 'step' : 'false')
-      if (i === this.step && focusList) li.scrollIntoView({ block: 'nearest' })
+      if (i === this.step && focusList) this.keepInList(li as HTMLElement)
     }
     history.replaceState(null, '', `#/game/${encodeURIComponent(this.review.game.id)}/${this.step}`)
   }
 
   private lastTurn() { return this.steps[this.steps.length - 1]?.turn ?? 0 }
+
+  // Keep the current turn visible inside the turn list without moving the page.
+  // (scrollIntoView would also scroll the window, which made the page jump on every step.)
+  private keepInList(li: HTMLElement) {
+    const list = this.turnList
+    const top = li.offsetTop - list.offsetTop
+    const bottom = top + li.offsetHeight
+    if (top < list.scrollTop) list.scrollTop = top
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight
+  }
 
   handleKey(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return

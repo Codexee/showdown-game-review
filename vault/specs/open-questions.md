@@ -11,6 +11,7 @@ updated: 2026-11-22
 Items wait here until they are answered. When an item is answered, record the answer in a `raw/` note, update the affected notes, and move the item to **Resolved**. Items marked *(research)* are for Claude to look up, not for the user.
 
 ## Open
+0. **Adopt the P0 model changes before the overnight run?** Properties instead of only ids, randbats set priors for hidden info, last-turn events, PS Dashboard-style measurement (bootstrap CIs, by-phase calibration, high-rating slice, paired gate), post-hoc calibration ([[benchmark-best-in-class]]). Recommendation: yes; it costs a few hours and the overnight run is the expensive step.
 1. *(test, needs the user)* **First real-browser run of the userscript:** play one game with Tampermonkey on, then check (a) the game appears, (b) whether Chrome showed a Local Network Access prompt, (c) whether the private check works (Tampermonkey log shows `private search:` errors if the login cookie isn't sent to replay.pokemonshowdown.com), (d) after uploading, the poller upgrades the same id, which confirms room ids match replay ids. The `searchprivate` URL is settled: the replay site itself calls `/api/replays/searchprivate?username=` and gets `]` + JSON ([[spec-replay-sync]]).
 2. **Side-server replays** (e.g. `impulse-…`): include them in training data (each adds a checkout) or filter to main-server ids only? Recommendation: main server only.
 3. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).

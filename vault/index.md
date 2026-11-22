@@ -23,6 +23,7 @@ Rules for this vault: [[CLAUDE]].
 - [[architecture]]: components and data flow
 - [[module-map]]: what each code file does, and how to run it
 - [[battle-parser]]: per-turn battle state from a log; accuracy and limits
+- [[benchmark-best-in-class]]: how we compare with PS Dashboard, ps-ppo, Metamon and others; ranked gaps
 - [[environment]]: this Mac's hardware and installed tools
 - [[tooling]]: Claude skills and plugins used for this project
 - [[visual-style]]: Gen 4–5 pixel-art direction
@@ -61,4 +62,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-parser-accuracy-results]]
 - [[2026-11-22-stage4-answers]]
 - [[2026-11-22-training-test-runs]]
+- [[2026-11-22-prior-art-research]]
 - [[2026-11-22-second-brain-guide]]

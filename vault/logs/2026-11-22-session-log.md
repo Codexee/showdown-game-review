@@ -27,6 +27,8 @@ tags: [area/vault]
 
 - **Stage 5 pipeline built** ([[spec-eval-model]], [[ADR-0012-training-data-v1]], [[2026-11-22-training-test-runs]]): 2.0M-game HF dataset downloaded; inputlog collector running (14 days); rebuild pipeline (1,283/1,283 exact after ignoring `|error|` lines); features, model, training, export, app integration. Test model `test2` installed: 66% vs 64% placeholder on future games. The first test model lost to the placeholder until per-side totals were added. Overnight run waiting for the user's go.
 
+- **Prior-art research** ([[2026-11-22-prior-art-research]], [[benchmark-best-in-class]]): PS Dashboard is the bar (simulator search, calibrated win%, 5/10/20 regret bands, decision vs luck, paired bootstrap gate, engine protocol); ps-ppo (1900+ randbats Elo) shows property features, priors and last-turn events. Ranked gaps P0–P2; P0 waits on the user. Also fixed: the review page scrolled on every turn step (`scrollIntoView` scrolled the window).
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
