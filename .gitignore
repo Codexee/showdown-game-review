@@ -21,3 +21,7 @@ vault/.trash/
 
 # frontend build
 web/dist/
+
+# Obsidian, if the project root is opened as a vault (per-user state)
+/.obsidian/
+/Untitled*.base
