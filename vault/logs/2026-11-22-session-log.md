@@ -26,4 +26,4 @@ Facts that exist only in a chat transcript are easy to lose when a question is s
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- Prototype the inputlog rebuild on a few replays ([[open-questions]] #2).
+- Next build stage: [[roadmap]] stage 3 (per-turn parser), which feeds both the rebuild pipeline ([[ADR-0009-randbats-full-info-reconstruction]]) and the review screen.
