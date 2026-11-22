@@ -31,10 +31,12 @@ tags: [area/vault]
 
 - **Jaxcalibur and mikumiku37** ([[2026-11-22-prior-art-jaxcalibur-mikumiku]]): the #1 bots in our two formats, both ~8.5M-param self-play transformers on custom fast engines, with one-ply / pUCT search over sampled worlds. P0 gains auxiliary heads and a smaller model; stage 6's matrix-over-worlds plan is confirmed; self-play needs a fast engine. Added [[ADR-0013-post-game-analysis-only]].
 
+- **P0 done** ([[2026-11-22-p0-ab-results]]): dex property tables, randbats priors, last-turn events, opponent-choice and hidden-set heads, smaller model, temperature, by-phase / bootstrap / 1500+ metrics, pinned bank, paired gate. p0 beats test2 on future games (log-loss −0.011 [−0.018, −0.004]; late game −0.040) and is installed. Found the train/test rating gap (median 1676 vs 1427).
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- User: start `./training/overnight.sh` (about 9 h).
+- User: start `./training/overnight.sh` (about 9 h; installs only if it passes the gate vs p0).
 - Then: stage 6 (move labels from the policy and value heads).

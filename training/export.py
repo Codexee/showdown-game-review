@@ -21,12 +21,13 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
     ap.add_argument("--which", default="best", choices=["best", "last"])
+    ap.add_argument("--test-data", default="test_pinned", help="dataset name the run was scored on")
     args = ap.parse_args()
     ck = torch.load(MODELS / args.run / f"{args.which}.pt", map_location="cpu", weights_only=False)
     m = ck.get("metrics", {})
     # Prefer the score on future games (training.test_model) over same-period validation:
     # validation overstated the value head's edge in the first test run.
-    test_file = MODELS / args.run / "test_test.json"
+    test_file = MODELS / args.run / f"test_{args.test_data}.json"
     t = json.loads(test_file.read_text()) if test_file.exists() else {}
     src, label = (t, "newer games it never saw") if t.get("value_acc") is not None else (m, "held-out games")
     info = {
@@ -38,7 +39,8 @@ def main() -> None:
         "policy_top3": m.get("policy_top3"),
     }
     tmp = MODELS / "current.pt.tmp"
-    torch.save({"model": ck["model"], "config": ck["config"], "info": info}, tmp)
+    torch.save({"model": ck["model"], "config": ck["config"], "info": info,
+                "temperature": float(ck.get("temperature", 1.0))}, tmp)
     tmp.replace(MODELS / "current.pt")
     print(f"installed {args.run}/{args.which}.pt (step {ck['step']}) as data/models/current.pt: {info}")
 

@@ -48,7 +48,11 @@ def test_model_forward_and_switch_mask():
     ids, mon, field, _ = encode(state, "p1")
     v, p = model(torch.from_numpy(ids[None].astype(np.int64)), torch.from_numpy(mon[None]), torch.from_numpy(field[None]))
     assert v.shape == (1,) and p.shape == (1, SIZES["moves"] + 6)
-    mask = switch_mask(torch.from_numpy(mon[None]))[0].tolist()
+    _, _, aux = model(torch.from_numpy(ids[None].astype(np.int64)), torch.from_numpy(mon[None]),
+                      torch.from_numpy(field[None]), aux=True)
+    assert aux["opp_policy"].shape == (1, SIZES["moves"] + 6)
+    assert aux["set_item"].shape == (1, 6, SIZES["items"]) and aux["set_moves"].shape == (1, 6, SIZES["moves"])
+    mask = switch_mask(torch.from_numpy(mon[None])[:, :6])[0].tolist()
     # Dedenne (bench) and the first unseen slot are valid; active Metagross is not
     assert mask[0] is True and mask[1] is False and mask[2] is True and mask[3:] == [False, False, False]
 
@@ -74,3 +78,29 @@ def test_review_uses_installed_model_for_singles_only(client_with_model, fake):
     assert all(0 <= s["eval"] <= 1 for s in r["steps"]) and r["steps"][-1]["eval"] == 0.0  # game over: exact
     vgc = client_with_model.get(f"/api/games/{VGC_ID}/review").json()
     assert vgc["eval_method"] == "placeholder"  # doubles: model not trained for it
+
+
+def test_turn_events_and_set_labels():
+    from training.features import ITEMS, turn_events
+    log = load_replay(RANDBATS_ID)["log"]
+    ev = turn_events(log)
+    assert ev[3]["p2"] == {"moved_first": True} and ev[3]["last_move"] == {"p2": "flipturn"}  # Metagross fully paralyzed
+    samples = list(game_samples(log, both_sides=True))
+    ids, mon, field, value, pol, opp_pol, labels = samples[6]   # turn 4, p1's view
+    assert ids[12, 1] == MOVES["flipturn"] and field[-6] == 1.0  # opponent's last move; opponent moved first
+    # Ampharos's Assault Vest was knocked off on turn 2: the label still knows the original item
+    assert labels[1, 0] == ITEMS["assaultvest"]
+    assert opp_pol >= 0
+
+
+def test_metrics_temperature_and_paired_gate():
+    from training.metrics import fit_temperature, paired, sigmoid
+    rng = np.random.default_rng(0)
+    logit = rng.normal(0, 2, 20000)
+    y = (rng.random(20000) < sigmoid(logit / 2.0)).astype(float)   # true temperature 2
+    assert 1.8 < fit_temperature(logit, y) < 2.2
+    games = np.repeat(np.arange(2000), 10)
+    a = {"key": np.arange(20000), "p": sigmoid(logit), "label": y, "game": games}
+    b = {"key": np.arange(20000), "p": sigmoid(logit / 2.0), "label": y, "game": games}
+    r = paired(a, b, boot=200)
+    assert r["delta_log_loss"] < 0 and r["delta_log_loss_ci90"][1] < 0   # the calibrated one wins clearly

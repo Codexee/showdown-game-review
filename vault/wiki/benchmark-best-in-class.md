@@ -31,7 +31,7 @@ Sources: [[2026-11-22-prior-art-research]], [[2026-11-22-prior-art-jaxcalibur-mi
 
 ## Gaps, ranked
 
-### P0: before the overnight run (they change the model's inputs or how it's judged)
+### P0: before the overnight run (they change the model's inputs or how it's judged) — **done 2026-11-22** ([[2026-11-22-p0-ab-results]]: passes the paired gate)
 1. **Properties, not just ids** (ps-ppo): base stats and types for each Pokémon; base power, accuracy, type, category, priority for each move. Helps with rare species and with **drift** (the value edge fell from +4.1 to +2.2 accuracy points on newer games, [[2026-11-22-training-test-runs]]).
 2. **Randbats set priors for unrevealed information:** for each opponent Pokémon, the distribution of possible moves, items, abilities and Tera types from pkmn's randbats stats ([[data-sources]]), as a weighted bag. Randbats sets come from fixed pools, so this is information the player really has, and the others don't use it this way.
 3. **Recent events as input** (ps-ppo: last turn; Jaxcalibur: last 16 events as tokens): who moved first (speed information), moves used, crits, misses, super-effective hits.

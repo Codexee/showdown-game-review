@@ -32,6 +32,7 @@ class PokemonState:
     boosts: dict[str, int] = field(default_factory=dict)
     volatiles: list[str] = field(default_factory=list)
     item: str | None = None
+    orig_item: str | None = None    # item it started the battle with, once revealed (kept after it's lost)
     ability: str | None = None      # current ability
     base_ability: str | None = None # ability it was revealed to have originally (e.g. trace)
     forme_ability: str | None = None      # set while in a forme that fixes the ability (Mega...)

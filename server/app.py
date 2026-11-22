@@ -253,7 +253,9 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
         model_values: list[float] = []
         if model is not None:
             try:
-                model_values = model.win_chances([s for s in result.states if not s["ended"]], perspective)
+                from training.features import turn_events
+                model_values = model.win_chances([s for s in result.states if not s["ended"]], perspective,
+                                                 turn_events(game["log"]))
             except Exception as e:  # fall back rather than break the screen
                 result.warnings.append(f"model failed: {e}")
                 model = None

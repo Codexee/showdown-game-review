@@ -25,21 +25,25 @@ class ModelEval:
         self.model.load_state_dict(ck["model"])
         self.model.eval()
         self.info = ck.get("info", {})
+        self.temperature = float(ck.get("temperature", 1.0))  # fitted on validation (calibration)
         self.torch = torch
 
-    def win_chances(self, states: list[dict], side: str) -> list[float]:
+    def win_chances(self, states: list[dict], side: str, events: dict | None = None) -> list[float]:
+        """`events` = training.features.turn_events(log): what happened each turn, which the
+        model reads for the turn after (last moves, who moved first...)."""
         from training.features import encode
 
         if not states:
             return []
-        enc = [encode(s, side) for s in states]
+        ev = events or {}
+        enc = [encode(s, side, ev.get(s["turn"] - 1) if s["turn"] > 1 else None) for s in states]
         t = self.torch
         with t.no_grad():
             ids = t.from_numpy(np.stack([e[0] for e in enc]).astype(np.int64))
             mon = t.from_numpy(np.stack([e[1] for e in enc]))
             field = t.from_numpy(np.stack([e[2] for e in enc]))
             value, _ = self.model(ids, mon, field)
-            return t.sigmoid(value).tolist()
+            return t.sigmoid(value / self.temperature).tolist()
 
 
 def load(data_dir: Path) -> ModelEval | None:

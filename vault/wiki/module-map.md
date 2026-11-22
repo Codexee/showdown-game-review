@@ -81,9 +81,12 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 | `vocab.json` | Fixed vocabulary from Showdown's data at ac7b7da0f9. |
 | `features.py` | `encode(state, side)` → 13 tokens; `turn_actions(log)`; `game_samples(log)`. |
 | `build_dataset.py` | `python -m training.build_dataset --name … --hf … --since …` (or `--inputlog`): multiprocess → memory-mapped arrays in `data/train/ds/<name>/`. |
-| `model.py` | `EvalNet` transformer: value + policy heads, switch mask. |
+| `tables.py` | Fixed lookup tables built from `dex.json` (Showdown dex: base stats, types, move properties) and `randbats_gen9.json` (pkmn/randbats priors, MIT). |
+| `model.py` | `EvalNet` v1.1: tokens with property tables and randbats-prior mixes; value, policy, opponent's-choice and hidden-set heads; switch mask per side. |
+| `metrics.py` | Temperature fit, ECE, by-phase scores, bootstrap CIs over games, 1500+ slice, paired comparison. |
+| `compare_runs.py` | Paired gate: two runs' predictions on the same pinned samples (`preds_<data>.npz`), Δ log-loss / Brier with 90% bands. |
 | `train.py` | `python -m training.train --data … --run … --hours …`: MPS training, checkpoints, resume, metrics vs placeholder. |
-| `test_model.py` | Scores a run on another dataset (future games). |
+| `test_model.py` | Scores a run on another dataset (the pinned bank `test_pinned`) with the validation temperature; writes the report and per-sample predictions. |
 | `export.py` | Installs a run as `data/models/current.pt` for the app. |
 | `overnight.sh` | Build → train 9 h → test → install, with `caffeinate`. Log: `data/models/<run>.log`. |
 

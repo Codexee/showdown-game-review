@@ -9,7 +9,7 @@ updated: 2026-11-22
 # Spec: eval model and training
 
 > [!note] Status 2026-11-22
-> Pipeline built and tested; a small model (`test2`) is installed and drives the eval bar for singles. On games played after its training data it calls the winner **66% vs 64%** for the remaining-HP placeholder ([[2026-11-22-training-test-runs]]). The overnight run (`./training/overnight.sh`) has not been run yet.
+> v1.1 (`p0`, P0 changes) is installed: on 3,709 pinned future games it calls the winner **66.2% vs 62.9%** for the placeholder and beats the previous model in a paired gate (log-loss −0.011, 90% band [−0.018, −0.004]) ([[2026-11-22-p0-ab-results]]). The overnight run (`./training/overnight.sh`, now d=256 / 6 layers with the gate before install) has not been run yet.
 
 ## Goal
 For any turn of a game, output (a) the win chance for each side, which drives the eval bar, and (b) a ranking of the choices, for move review. First format: Gen 9 Random Battle; then VGC 2026 Reg M-C ([[ADR-0002-format-order]]).
@@ -20,6 +20,14 @@ For any turn of a game, output (a) the win chance for each side, which drives th
 - **Input:** the public view at each turn start from one player's side: 13 tokens (6 own, 6 opponent, field). Per Pokémon: species, item, ability, 4 revealed moves, Tera (ids; unknown = UNK, known-empty = NONE) and HP, fainted, active, seen, level, statuses, boosts, key volatiles. Field: turn, weather, terrain, Trick Room etc., hazards and screens per side, Tera used, and per-side totals (HP left, Pokémon alive, Pokémon unseen).
 - **Targets:** value = this player won. Policy = the move id or own switch slot chosen at the turn start (pivot switches, post-faint switches, called moves and `|cant|` turns excluded).
 
+## v1.1 changes (P0 from [[benchmark-best-in-class]], 2026-11-22)
+- **Properties by id** (`training/tables.py`, buffers in the model): base stats + types per species; base power, accuracy, category, priority, type and effect flags per move (from Showdown's dex, `training/dex.json`).
+- **Randbats priors** for what isn't revealed: per species, a probability-weighted mix of likely moves (top 12), items (4), abilities (3), Tera types (4), from pkmn/randbats stats (`training/randbats_gen9.json`, MIT; formes fall back to the base species).
+- **Last turn's events** on the field token: per side moved first, crit, miss, super-effective, switched, fainted; plus each side's last move (id + properties).
+- **Auxiliary heads** (Jaxcalibur): the opponent's choice this turn (weight 0.25) and each opposing Pokémon's item / ability / Tera / moves as revealed by the end of the game (weight 0.1 each; multi-positive loss for moves). The parser now keeps `orig_item` so a knocked-off item is still a label.
+- **Smaller default:** d=256, 6 layers.
+- **Measurement** (`training/metrics.py`): temperature fitted on validation and applied in the app; by-phase scores (0–2 / 3–6 / 7+ fainted); 90% bootstrap intervals over games; rating 1500+ slice; placeholder alongside. **Paired gate** `training/compare_runs.py` on a **pinned bank** of future games (`data/train/test_pinned/`, 3,709 games, 174,608 samples); the overnight script installs a model only if the gate doesn't call it worse.
+
 ## v1 model (`training/model.py`)
 Transformer encoder over the 13 tokens, no positions within a side (only own / opponent / field embeddings). Value head on [field token, mean of tokens]. Policy head: move logits from the active Pokémon's token, switch logits per own token, with a mask (no fainted / active; only the first unseen slot). Loss = BCE(value) + 0.5 · CE(policy).
 
@@ -27,7 +35,7 @@ Transformer encoder over the 13 tokens, no positions within a side (only own / o
 AdamW, warmup then cosine, gradient clipping. Saves `last.pt` (resume), `best.pt` (best value loss: what the eval bar uses), `best_policy.pt`, `metrics.jsonl`. Every evaluation also reports the placeholder's score on the same samples, so "beats the baseline" is checked, not assumed. Time budget and SIGTERM/Ctrl-C stop cleanly.
 
 ## Overnight run (`training/overnight.sh`, [[ADR-0005-overnight-training-budget]])
-Builds the full dataset (games since 2026-01-01, ≈650k games / ≈15–16M samples), trains d=384, 6 layers (12.6M params, ≈4.5k samples/s, ≈1 h per epoch) for 9 h with `caffeinate`, scores on future games, then installs the model (`training/export.py` → `data/models/current.pt`). Resumable.
+Builds the full dataset (games since 2026-01-01, ≈650k games / ≈15–16M samples), trains d=256, 6 layers (≈7M params) for 9 h with `caffeinate`, scores on the pinned bank, runs the paired gate against the installed model, and installs (`training/export.py` → `data/models/current.pt`) unless the gate calls it worse. Resumable.
 
 ## Evaluation
 - Value: log-loss, accuracy, Brier, calibration error (ECE), accuracy by turn range; always next to the placeholder.

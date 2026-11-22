@@ -51,7 +51,11 @@ LAYER_MAX = {"spikes": 3, "toxicspikes": 2}
 N_TOKENS = 13
 N_IDS = 8          # species, item, ability, move1-4, tera
 N_MON = 7 + len(STATUSES) + len(BOOSTS) + len(VOLATILES)   # 27
-N_FIELD = 1 + len(WEATHERS) + len(TERRAINS) + len(PSEUDO) + 2 * len(SIDE_CONDS) + 2 + 6  # 42
+# What happened last turn, per side (own, then opponent): who moved first is speed
+# information; the rest are visible outcomes (ps-ppo, Jaxcalibur use similar history).
+EVENT_KEYS = ["moved_first", "crit", "miss", "supereffective", "switched", "fainted"]
+N_FIELD = 1 + len(WEATHERS) + len(TERRAINS) + len(PSEUDO) + 2 * len(SIDE_CONDS) + 2 + 6 + 2 * len(EVENT_KEYS)  # 54
+N_SET = 7          # set labels per opposing Pokemon: item, ability, tera, 4 moves
 N_SWITCH = 6       # policy: switch to own slot 0-5
 
 
@@ -89,8 +93,11 @@ def _unseen(own: bool) -> tuple[list[int], list[float]]:
     return [UNK] * N_IDS, nums
 
 
-def encode(state: dict, side: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
-    """ids [13, 8] int16, mon [13, N_MON] float32, field [N_FIELD] float32, own slot names."""
+def encode(state: dict, side: str, events: dict | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+    """ids [13, 8] int16, mon [13, N_MON] float32, field [N_FIELD] float32, own slot names.
+
+    `events` summarizes the previous turn (see turn_events). The field token's id row
+    holds the last move each side used (own, opponent)."""
     other = "p2" if side == "p1" else "p1"
     ids = np.zeros((N_TOKENS, N_IDS), dtype=np.int16)
     mon = np.zeros((N_TOKENS, N_MON), dtype=np.float32)
@@ -107,6 +114,10 @@ def encode(state: dict, side: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
             else:
                 ids[row], mon[row] = _unseen(block == 0)
     ids[12] = PAD
+    ev = events or {}
+    last = ev.get("last_move", {})
+    ids[12, 0] = MOVES.get(last.get(side) or "", UNK if side in last else PAD)
+    ids[12, 1] = MOVES.get(last.get(other) or "", UNK if other in last else PAD)
     f = state["field"]
     field = [min(state["turn"], 100) / 50.0]
     field += [float(f["weather"] == w) for w in WEATHERS]
@@ -124,7 +135,73 @@ def encode(state: dict, side: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
         rows = mon[block * 6:(block + 1) * 6]
         hp = rows[:, 0] * (1 - rows[:, 1])
         field += [float(hp.sum()) / 6, float((rows[:, 1] < 0.5).sum()) / 6, float((rows[:, 3] < 0.5).sum()) / 6]
+    for s in (side, other):
+        flags = ev.get(s, {})
+        field += [float(flags.get(k, False)) for k in EVENT_KEYS]
     return ids, mon, np.asarray(field, dtype=np.float32), own_names
+
+
+def turn_events(log: str) -> dict[int, dict]:
+    """{turn: {"p1": {flag: bool}, "p2": {...}, "last_move": {side: move_id}}} for what
+    happened DURING that turn. The state at the start of turn t+1 uses entry t."""
+    out: dict[int, dict] = {}
+    turn = 0
+    cur: dict = {"p1": {}, "p2": {}, "last_move": {}}
+    first_mover: str | None = None
+    for line in log.splitlines():
+        if not line.startswith("|"):
+            continue
+        kind, args, tags = _split(line)
+        if kind == "turn":
+            out[turn] = cur
+            turn = int(args[0])
+            cur, first_mover = {"p1": {}, "p2": {}, "last_move": {}}, None
+            continue
+        side = args[0][:2] if args and args[0][:2] in ("p1", "p2") else None
+        if side is None:
+            continue
+        other = "p2" if side == "p1" else "p1"
+        if kind == "move" and len(args) > 1:
+            if first_mover is None:
+                first_mover = side
+                cur[side]["moved_first"] = True
+            cur["last_move"][side] = to_id(args[1])
+            if "miss" in tags:
+                cur[side]["miss"] = True
+        elif kind == "-miss":
+            cur[side]["miss"] = True           # the attacker (args[0]) missed
+        elif kind == "-crit":
+            cur[other]["crit"] = True          # line names the target; the other side landed it
+        elif kind == "-supereffective":
+            cur[other]["supereffective"] = True
+        elif kind == "switch" and "from" not in tags:
+            cur[side]["switched"] = True
+        elif kind == "faint":
+            cur[side]["fainted"] = True
+    out[turn] = cur
+    return out
+
+
+def set_labels(final_side: dict, names: list[str]) -> np.ndarray:
+    """[6, N_SET] ids for the opposing team's tokens (item, ability, tera, 4 moves) as
+    revealed by the END of the game; -1 where never revealed or no token."""
+    out = np.full((6, N_SET), -1, dtype=np.int16)
+    by_name = {m["name"]: m for m in final_side["team"]}
+    for i, name in enumerate(names[:6]):
+        m = by_name.get(name)
+        if m is None:
+            continue
+        item = m.get("orig_item")
+        if item:
+            out[i, 0] = ITEMS.get(item, -1)
+        ability = m.get("base_ability") or m.get("ability")
+        if ability:
+            out[i, 1] = ABILITIES.get(ability, -1)
+        if m.get("tera_known"):
+            out[i, 2] = TYPES.get(to_id(m["tera_known"]), -1)
+        for j, mv in enumerate(m["moves"][:4]):
+            out[i, 3 + j] = MOVES.get(mv, -1)
+    return out
 
 
 # ---------------------------------------------------------------- actions from a log
@@ -177,8 +254,8 @@ def policy_target(action: tuple[str, str] | None, own_names: list[str]) -> int:
 
 
 def game_samples(log: str, rng: np.random.Generator | None = None, both_sides: bool = False):
-    """Yield (ids, mon, field, value_label, policy_label) for each turn of a finished
-    singles game. One random side per turn unless both_sides."""
+    """Yield (ids, mon, field, value_label, policy_label, opp_policy_label, opp_set_labels)
+    for each turn of a finished singles game. One random side per turn unless both_sides."""
     parser = LogParser()
     for line in log.splitlines():
         parser.feed(line)
@@ -192,12 +269,20 @@ def game_samples(log: str, rng: np.random.Generator | None = None, both_sides: b
     if winner_side is None:
         return
     actions = turn_actions(log)
+    events = turn_events(log)
+    final_dict = parser.state.snapshot()
     rng = rng or np.random.default_rng()
     for st in states:
         if st["ended"]:
             continue
+        prev = events.get(st["turn"] - 1) if st["turn"] > 1 else None
         sides = ("p1", "p2") if both_sides else (("p1", "p2")[rng.integers(2)],)
         for side in sides:
-            ids, mon, field, own_names = encode(st, side)
-            pol = policy_target(actions.get(st["turn"], {}).get(side), own_names)
-            yield ids, mon, field, float(side == winner_side), pol
+            other = "p2" if side == "p1" else "p1"
+            ids, mon, field, own_names = encode(st, side, prev)
+            opp_names = [m["name"] for m in st["sides"][other]["team"] if m["seen"]][:6]
+            turn_acts = actions.get(st["turn"], {})
+            pol = policy_target(turn_acts.get(side), own_names)
+            opp_pol = policy_target(turn_acts.get(other), opp_names)
+            labels = set_labels(final_dict["sides"][other], opp_names)
+            yield ids, mon, field, float(side == winner_side), pol, opp_pol, labels

@@ -169,9 +169,11 @@ class LogParser:
             mon.fainted = False
         mon.status = status if status in ("brn", "par", "slp", "frz", "psn", "tox") else ""
 
-    def _reveal_item(self, mon: PokemonState | None, item: str) -> None:
+    def _reveal_item(self, mon: PokemonState | None, item: str, acquired: bool = False) -> None:
         if mon is not None and item:
             mon.item = item
+            if mon.orig_item is None and not acquired:
+                mon.orig_item = item
 
     def _reveal_ability(self, mon: PokemonState | None, ability: str) -> None:
         if mon is None or not ability:
@@ -565,8 +567,9 @@ class LogParser:
     # ---- items and abilities
     def _on_item(self, args, tags, kind):
         mon = self._mon(args[0])
-        self._reveal_item(mon, to_id(args[1]) if len(args) > 1 else "")
         src = tags.get("from", "")
+        # An item gained from Trick / Switcheroo / Thief / Bestow isn't the one it started with.
+        self._reveal_item(mon, to_id(args[1]) if len(args) > 1 else "", acquired=src.startswith("move:"))
         etype, eid = _strip_effect(src) if src else ("", "")
         if etype == "ability" and "of" in tags:
             self._reveal_ability(self._mon(tags["of"]), eid)  # Frisk, Pickpocket...
@@ -578,6 +581,8 @@ class LogParser:
         if mon is None:
             return
         # The item was used up, knocked off, stolen or flung: either way it's gone now.
+        if mon.orig_item is None and len(args) > 1 and mon.item is None:
+            mon.orig_item = to_id(args[1])  # first we hear of it is losing it: it was the original
         mon.item = ""
         src = tags.get("from", "")
         etype, eid = _strip_effect(src) if src else ("", "")

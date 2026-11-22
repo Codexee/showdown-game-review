@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 
 from server.config import ROOT
-from training.features import N_FIELD, N_IDS, N_MON, N_TOKENS, game_samples
+from training.features import N_FIELD, N_IDS, N_MON, N_SET, N_TOKENS, game_samples
 
 MAIN_ID = re.compile(r"^gen9randombattle-\d+$")
 FIELDS = {
@@ -33,6 +33,9 @@ FIELDS = {
     "field": (np.float16, (N_FIELD,)),
     "value": (np.int8, ()),
     "policy": (np.int16, ()),
+    "opp_policy": (np.int16, ()),         # the opponent's choice that turn (auxiliary target)
+    "opp_set": (np.int16, (6, N_SET)),    # opponent's item/ability/tera/moves revealed by game end (aux)
+    "rating": (np.int16, ()),             # the replay's rating (0 = unrated), for the high-rating slice
     "game": (np.int32, ()),
     "split": (np.int8, ()),
 }
@@ -44,12 +47,12 @@ def is_val(game_id: str, val_frac: float) -> bool:
 
 
 def _work(task):
-    gid_index, game_id, log, both, val_frac = task
+    gid_index, game_id, log, rating, both, val_frac = task
     rng = np.random.default_rng(gid_index)
     rows = []
     try:
-        for ids, mon, field, value, pol in game_samples(log, rng, both_sides=both):
-            rows.append((ids, mon, field, value, pol))
+        for row in game_samples(log, rng, both_sides=both):
+            rows.append(row)
     except Exception:
         return gid_index, game_id, None
     if not rows:
@@ -61,6 +64,9 @@ def _work(task):
         "field": np.stack([r[2] for r in rows]).astype(np.float16),
         "value": np.array([r[3] for r in rows], dtype=np.int8),
         "policy": np.array([r[4] for r in rows], dtype=np.int16),
+        "opp_policy": np.array([r[5] for r in rows], dtype=np.int16),
+        "opp_set": np.stack([r[6] for r in rows]).astype(np.int16),
+        "rating": np.full(len(rows), rating, dtype=np.int16),
         "game": np.full(len(rows), gid_index, dtype=np.int32),
         "split": np.full(len(rows), split, dtype=np.int8),
     }
@@ -73,12 +79,12 @@ def iter_hf(pattern: str, since: int, max_games: int):
     for f in sorted(glob.glob(pattern)):
         pf = pq.ParquetFile(f)
         for rg in range(pf.metadata.num_row_groups):
-            t = pf.read_row_group(rg, columns=["id", "log", "uploadtime"])
-            for gid, log, ut in zip(t.column("id").to_pylist(), t.column("log").to_pylist(),
-                                    t.column("uploadtime").to_pylist()):
+            t = pf.read_row_group(rg, columns=["id", "log", "uploadtime", "rating"])
+            for gid, log, ut, rating in zip(t.column("id").to_pylist(), t.column("log").to_pylist(),
+                                            t.column("uploadtime").to_pylist(), t.column("rating").to_pylist()):
                 if not MAIN_ID.match(gid or "") or int(ut or 0) < since or not log:
                     continue
-                yield gid, log
+                yield gid, log, _rating(rating)
                 n += 1
                 if max_games and n >= max_games:
                     return
@@ -90,7 +96,14 @@ def iter_inputlog(folder: Path, max_games: int):
         if max_games and n >= max_games:
             return
         d = json.loads(p.read_text())
-        yield d["id"], d["log"]
+        yield d["id"], d["log"], _rating(d.get("rating"))
+
+
+def _rating(r) -> int:
+    try:
+        return max(0, min(int(float(r)), 32000))
+    except (TypeError, ValueError):
+        return 0
 
 
 def main() -> None:
@@ -110,7 +123,7 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     files = {k: open(out_dir / f"{k}.bin", "wb") for k in FIELDS}
     source = iter_hf(args.hf, since, args.max_games) if args.hf else iter_inputlog(args.inputlog, args.max_games)
-    tasks = ((i, gid, log, args.both_sides, args.val_frac) for i, (gid, log) in enumerate(source))
+    tasks = ((i, gid, log, rating, args.both_sides, args.val_frac) for i, (gid, log, rating) in enumerate(source))
 
     n = games = skipped = 0
     game_ids: list[str] = []
