@@ -11,7 +11,7 @@ updated: 2026-11-22
 Items wait here until they are answered. When an item is answered, record the answer in a `raw/` note, update the affected notes, and move the item to **Resolved**. Items marked *(research)* are for Claude to look up, not for the user.
 
 ## Open
-1. *(test)* **Userscript details to confirm in a real browser:** which URL to call for `searchprivate` and whether the login cookie is sent; whether `GM_xmlhttpRequest` skips Chrome's Local Network Access prompt; whether room ids match replay ids ([[spec-replay-sync]]).
+1. *(test, needs the user)* **First real-browser run of the userscript:** play one game with Tampermonkey on, then check (a) the game appears, (b) whether Chrome showed a Local Network Access prompt, (c) whether the private check works (Tampermonkey log shows `private search:` errors if the login cookie isn't sent to replay.pokemonshowdown.com), (d) after uploading, the poller upgrades the same id, which confirms room ids match replay ids. The `searchprivate` URL is settled: the replay site itself calls `/api/replays/searchprivate?username=` and gets `]` + JSON ([[spec-replay-sync]]).
 2. *(prototype)* **Full-information rebuild:** does running the simulator at the logged commit reproduce the public log exactly, and how many distinct commits do a few weeks of replays span? ([[ADR-0009-randbats-full-info-reconstruction]])
 3. **Accept ADR-0009?** Depends on #2.
 4. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).

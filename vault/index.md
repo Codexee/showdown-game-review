@@ -36,6 +36,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0007-app-stack]]: accepted
 - [[ADR-0008-python-313]]: accepted
 - [[ADR-0009-randbats-full-info-reconstruction]]: proposed, needs a prototype
+- [[ADR-0010-local-api-origin-guard]]: accepted
 
 ## Specs
 - [[spec-review-app]]: replay viewer, eval bar, eval graph (draft)

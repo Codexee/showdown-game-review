@@ -9,9 +9,12 @@ import json
 import logging
 from contextlib import asynccontextmanager
 
+import time
+from urllib.parse import urlparse
+
 import httpx
-from fastapi import FastAPI, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -19,8 +22,20 @@ from .archive import Archive
 from .config import ROOT, Config, load_config
 from .ids import parse_replay_ref, to_id
 from .imports import record_from_file
+from .ingest import BattleIn, PrivateListIn, ingest_battle, ingest_private
 from .showdown import ShowdownClient, ShowdownError, make_http
 from .sync import refresh_profile, sync_user
+
+# Pages allowed to call the ingest routes from the browser (the userscript's fallback
+# path when GM_xmlhttpRequest isn't available). Everything else under /api only
+# accepts requests from this app's own pages on localhost.
+SHOWDOWN_ORIGINS = {"https://play.pokemonshowdown.com", "https://replay.pokemonshowdown.com"}
+USERSCRIPT_FILE = ROOT / "userscript" / "showdown-review.user.js"
+
+
+def _is_local_origin(origin: str) -> bool:
+    host = urlparse(origin).hostname or ""
+    return host in ("127.0.0.1", "localhost", "::1")
 
 log = logging.getLogger("showdown_review")
 
@@ -81,6 +96,50 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
     app = FastAPI(title="Showdown Review", lifespan=lifespan)
     app.state.archive = archive
 
+    @app.middleware("http")
+    async def origin_guard(request: Request, call_next):
+        """Block other websites from calling the local API (CSRF).
+
+        Browsers send an Origin header on cross-site requests and on same-site POST/PUT.
+        Requests with no Origin (curl, GM_xmlhttpRequest, same-page GETs) pass.
+        """
+        path = request.url.path
+        origin = request.headers.get("origin")
+        if not path.startswith("/api/") or not origin:
+            return await call_next(request)
+        ingest = path in ("/api/ingest", "/api/ingest-private")
+        if _is_local_origin(origin):
+            return await call_next(request)
+        if ingest and origin in SHOWDOWN_ORIGINS:
+            cors = {
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "POST",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Private-Network": "true",
+                "Vary": "Origin",
+            }
+            if request.method == "OPTIONS":
+                return Response(status_code=204, headers=cors)
+            response = await call_next(request)
+            response.headers.update(cors)
+            return response
+        return JSONResponse({"detail": "Origin not allowed"}, status_code=403)
+
+    def require_json(request: Request) -> None:
+        # A JSON content type forces a CORS preflight for cross-site page requests,
+        # so a plain HTML form on some other site can't post here.
+        if not request.headers.get("content-type", "").startswith("application/json"):
+            raise HTTPException(415, "Send application/json")
+
+    def sync_start() -> int:
+        """The no-backfill start time; set it now if no sync has run yet."""
+        key = f"sync_start:{to_id(username())}"
+        value = archive.get_setting(key)
+        if value is None:
+            value = str(int(time.time()))
+            archive.set_setting(key, value)
+        return int(value)
+
     # ---- settings and profile ---------------------------------------------
     @app.get("/api/settings")
     def get_settings():
@@ -90,6 +149,8 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             "poll_minutes": poll_minutes(),
             "sync_start": _int(archive.get_setting(f"sync_start:{uid}")),
             "last_sync": _int(archive.get_setting(f"last_sync:{uid}")),
+            "last_ingest": _int(archive.get_setting("last_ingest")),
+            "last_ingest_private": _int(archive.get_setting("last_ingest_private")),
             "poller_enabled": config.poller_enabled,
         }
 
@@ -175,6 +236,31 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
         except (ValueError, json.JSONDecodeError) as e:
             raise HTTPException(400, str(e))
         return {"id": record["id"], "added": added}
+
+    # ---- userscript (stage 2b) -----------------------------------------------
+    @app.post("/api/ingest")
+    def post_ingest(body: BattleIn, request: Request):
+        require_json(request)
+        try:
+            result = ingest_battle(archive, body)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        archive.set_setting("last_ingest", str(int(time.time())))
+        return result
+
+    @app.post("/api/ingest-private")
+    async def post_ingest_private(body: PrivateListIn, request: Request):
+        require_json(request)
+        if to_id(body.username) != to_id(username()):
+            raise HTTPException(409, f"Private list is for {body.username}, but the app is set to {username()}")
+        result = await ingest_private(state["client"], archive, body, sync_start())
+        archive.set_setting("last_ingest_private", str(int(time.time())))
+        return result
+
+    @app.get("/userscript/showdown-review.user.js", include_in_schema=False)
+    def userscript():
+        # Tampermonkey offers to install any URL ending in .user.js.
+        return FileResponse(USERSCRIPT_FILE, media_type="text/javascript")
 
     # ---- frontend (built by `npm run build` in web/) --------------------------
     dist = ROOT / "web" / "dist"

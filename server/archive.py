@@ -9,6 +9,7 @@ Layout (see vault ADR-0006):
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS games (
     source        TEXT NOT NULL,      -- poller | url | upload | userscript
     summary_json  TEXT NOT NULL,
     team_paste    TEXT,               -- the user's own team, Showdown export format
+    own_team_json TEXT,               -- the user's last |request| side data, from the userscript
     added_at      INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS games_played ON games(played_at DESC);
@@ -45,6 +47,23 @@ CREATE TABLE IF NOT EXISTS settings (
 """
 
 
+# Game ids become file names: lowercase letters, digits and single hyphens only.
+_SAFE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){1,4}$")
+
+_RANDOM_SUFFIXES = ("randombattle", "randomdoublesbattle", "challengecup", "challengecup1v1",
+                    "battlefactory", "bssfactory", "hackmonscup")
+
+
+def is_random_format(format_id: str) -> bool:
+    """Formats whose replays include the inputlog (Replays.isSafeInputlog on the server)."""
+    return format_id.endswith(_RANDOM_SUFFIXES)
+
+
+def existing_name(replay: dict, index: int) -> str:
+    players = replay.get("players") or ["", ""]
+    return players[index] if players else ""
+
+
 class Archive:
     def __init__(self, data_dir: Path):
         self.data_dir = Path(data_dir)
@@ -53,6 +72,9 @@ class Archive:
         self.replay_dir.mkdir(parents=True, exist_ok=True)
         with self._db() as db:
             db.executescript(SCHEMA)
+            cols = {r["name"] for r in db.execute("PRAGMA table_info(games)")}
+            if "own_team_json" not in cols:  # added in stage 2b
+                db.execute("ALTER TABLE games ADD COLUMN own_team_json TEXT")
 
     @contextmanager
     def _db(self) -> Iterator[sqlite3.Connection]:
@@ -84,26 +106,47 @@ class Archive:
         with self._db() as db:
             return db.execute("SELECT 1 FROM games WHERE id=?", (game_id,)).fetchone() is not None
 
+    def needs(self, game_id: str) -> bool:
+        """True if the replay server's copy would add something: the game is missing,
+        or it was captured by the userscript (no upload time, no inputlog), or it is a
+        random format stored without its inputlog."""
+        with self._db() as db:
+            row = db.execute(
+                "SELECT source, has_inputlog, format_id FROM games WHERE id=?", (game_id,)
+            ).fetchone()
+        if row is None:
+            return True
+        if row["source"] == "userscript":
+            return True
+        return not row["has_inputlog"] and is_random_format(row["format_id"])
+
     def save_replay(self, replay: dict, source: str) -> bool:
         """Store a replay record (the replay server's .json shape).
 
         Returns True if the game is new. Saving a game that is already stored changes
-        nothing, except that a later copy with an inputlog adds the inputlog.
+        nothing, with two exceptions: a copy with an inputlog adds the inputlog, and a
+        replay-server copy replaces a userscript copy's log and metadata (the server
+        copy is the canonical log; the team paste and own-team data are kept).
         """
-        game_id = replay["id"]
+        game_id = str(replay.get("id") or "")
         log = replay.get("log") or ""
-        if not log:
+        if not _SAFE_ID.match(game_id):
+            raise ValueError(f"Bad game id: {game_id[:60]!r}")
+        if not isinstance(log, str) or not log:
             raise ValueError(f"Replay {game_id} has no log")
         summary = summarize(log)
-        format_id = replay.get("formatid") or to_id(summary.format) or "unknown"
+        format_id = to_id(replay.get("formatid")) or to_id(summary.format) or "unknown"
         inputlog = replay.get("inputlog") or ""
+        if not isinstance(inputlog, str):
+            inputlog = ""
 
         existing = None
         with self._db() as db:
             existing = db.execute(
-                "SELECT has_inputlog, format_id FROM games WHERE id=?", (game_id,)
+                "SELECT has_inputlog, format_id, source FROM games WHERE id=?", (game_id,)
             ).fetchone()
-        if existing and (existing["has_inputlog"] or not inputlog):
+        upgrade = bool(existing) and existing["source"] == "userscript" and source != "userscript"
+        if existing and not upgrade and (existing["has_inputlog"] or not inputlog):
             return False
 
         folder = self.replay_dir / format_id
@@ -115,7 +158,26 @@ class Archive:
 
         with self._db() as db:
             if existing:
-                db.execute("UPDATE games SET has_inputlog=1 WHERE id=?", (game_id,))
+                db.execute(
+                    """UPDATE games SET format=?, p1=?, p2=?, uploadtime=COALESCE(?, uploadtime),
+                           played_at=COALESCE(?, played_at), rating=COALESCE(?, rating),
+                           private=MAX(private, ?), password=COALESCE(?, password),
+                           has_inputlog=MAX(has_inputlog, ?), summary_json=?
+                       WHERE id=?""",
+                    (
+                        replay.get("format") or summary.format or format_id,
+                        summary.p1.name or existing_name(replay, 0),
+                        summary.p2.name or existing_name(replay, -1),
+                        replay.get("uploadtime"),
+                        summary.started_at,
+                        replay.get("rating"),
+                        1 if replay.get("private") else 0,
+                        replay.get("password"),
+                        1 if inputlog else 0,
+                        json.dumps(summary.to_dict()),
+                        game_id,
+                    ),
+                )
                 return False
             db.execute(
                 """INSERT INTO games (id, format_id, format, p1, p2, uploadtime, played_at, rating,
@@ -139,6 +201,10 @@ class Archive:
                 ),
             )
         return True
+
+    def set_own_team(self, game_id: str, side_json: str | None) -> None:
+        with self._db() as db:
+            db.execute("UPDATE games SET own_team_json=? WHERE id=?", (side_json, game_id))
 
     def set_team_paste(self, game_id: str, paste: str | None) -> bool:
         with self._db() as db:
@@ -209,6 +275,7 @@ class Archive:
         inputlog = folder / f"{game_id}.inputlog"
         game["inputlog"] = inputlog.read_text() if inputlog.exists() else None
         game["team_paste"] = row["team_paste"]
+        game["own_team"] = json.loads(row["own_team_json"]) if row["own_team_json"] else None
         game["summary"] = json.loads(row["summary_json"])
         return game
 

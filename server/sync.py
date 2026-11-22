@@ -58,27 +58,42 @@ async def sync_user(client: ShowdownClient, archive: Archive, username: str) -> 
     except ShowdownError as e:
         result.errors.append(str(e))
 
+    # Stop at the newest upload time a previous sync fully processed, not at the first
+    # known game: the userscript stores games the moment they end, so a known game can
+    # sit in front of uploads the poller hasn't seen yet.
+    cursor_key = f"poll_cursor:{to_id(username)}"
+    floor = max(start_at, int(archive.get_setting(cursor_key) or 0))
+    newest = floor
+    ok = True
+
     before: int | None = None
     for _ in range(MAX_PAGES):
         try:
             page = await client.search_user_replays(username, before)
         except ShowdownError as e:
             result.errors.append(str(e))
+            ok = False
             break
         stop = False
         for item in page[:50]:  # the 51st result only signals that another page exists
             result.seen += 1
-            if item["uploadtime"] < start_at or archive.has(item["id"]):
+            if item["uploadtime"] < floor or (item["uploadtime"] == floor and floor > start_at):
                 stop = True
                 break
+            newest = max(newest, item["uploadtime"])
+            if not archive.needs(item["id"]):
+                continue
             try:
                 replay = await client.get_replay(item["id"], item.get("password"))
                 if archive.save_replay(replay, source="poller"):
                     result.added.append(item["id"])
             except (ShowdownError, ValueError) as e:
                 result.errors.append(f"{item['id']}: {e}")
+                ok = False
         if stop or len(page) <= 50:
             break
         before = page[49]["uploadtime"]
+    if ok:
+        archive.set_setting(cursor_key, str(newest))
     archive.set_setting(f"last_sync:{to_id(username)}", str(int(time.time())))
     return result

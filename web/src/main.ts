@@ -122,6 +122,24 @@ fileInput.addEventListener('change', async () => {
   finally { fileInput.value = '' }
 })
 
+// ---- userscript --------------------------------------------------------------------
+const scriptStatus = h('p', { class: 'muted small' })
+const scriptBox = h('details', { class: 'userscript' },
+  h('summary', {}, 'Save every game, even ones you don\'t upload'),
+  h('ol', {},
+    h('li', {}, 'Install the ', h('a', { href: 'https://www.tampermonkey.net/', target: '_blank', rel: 'noopener' }, 'Tampermonkey'), ' browser extension.'),
+    h('li', {}, h('a', { href: '/userscript/showdown-review.user.js' }, 'Install the Showdown Review userscript'), '. Tampermonkey opens an install page.'),
+    h('li', {}, 'Play on play.pokemonshowdown.com with this app running. Each battle is saved here a few seconds after it ends. Private replays you upload are picked up every 15 minutes.')),
+  h('p', { class: 'muted small' }, 'The script only sends battle logs and private replay ids to this app on your computer. Your Showdown password and login stay in your browser.'),
+  scriptStatus)
+
+function renderScriptStatus(s: Settings) {
+  scriptStatus.textContent = s.last_ingest || s.last_ingest_private
+    ? `Last game from the script: ${fmtAgo(s.last_ingest)} · last private replay check: ${fmtAgo(s.last_ingest_private)}`
+    : 'The script hasn\'t sent anything yet.'
+  if (!s.last_ingest && !s.last_ingest_private) scriptBox.open = true
+}
+
 // ---- filters and list ------------------------------------------------------------
 const formatSel = h('select', { id: 'f-format' }, h('option', { value: '' }, 'All formats'))
 const resultSel = h('select', { id: 'f-result' },
@@ -230,6 +248,7 @@ async function loadSettings() {
   if (document.activeElement !== userInput) userInput.value = state.settings.username
   syncInfo.textContent = `Last sync ${fmtAgo(state.settings.last_sync)}` +
     (state.settings.poller_enabled ? ` · auto every ${state.settings.poll_minutes} min` : '')
+  renderScriptStatus(state.settings)
 }
 
 app.append(
@@ -238,7 +257,7 @@ app.append(
   h('main', {},
     h('div', { class: 'col' },
       profileBox,
-      h('section', { class: 'import', 'aria-label': 'Add games' }, urlForm, fileRow),
+      h('section', { class: 'import', 'aria-label': 'Add games' }, urlForm, fileRow, scriptBox),
       h('section', { 'aria-label': 'Your games' }, h('h2', {}, 'Games'), filters, list)),
     detail),
 )

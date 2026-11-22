@@ -36,6 +36,8 @@ export interface Settings {
   poll_minutes: number
   sync_start: number | null
   last_sync: number | null
+  last_ingest: number | null
+  last_ingest_private: number | null
   poller_enabled: boolean
 }
 
