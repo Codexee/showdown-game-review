@@ -10,7 +10,6 @@ Conventions
 """
 from __future__ import annotations
 
-import copy
 from dataclasses import asdict, dataclass, field
 
 
@@ -82,4 +81,4 @@ class BattleState:
     winner: str | None = None       # player name
 
     def snapshot(self) -> dict:
-        return copy.deepcopy(asdict(self))
+        return asdict(self)  # asdict already deep-copies lists and dicts

@@ -25,6 +25,7 @@ from .config import ROOT, Config, load_config
 from .evaluate import METHOD as EVAL_METHOD
 from .evaluate import METHOD_TEXT as EVAL_METHOD_TEXT
 from .evaluate import win_chance
+from .model_eval import load as load_model
 from .ids import parse_replay_ref, to_id
 from .imports import record_from_file
 from .ingest import BattleIn, PrivateListIn, ingest_battle, ingest_private
@@ -247,6 +248,22 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             raise HTTPException(400, "side must be p1 or p2")
         result = parse_log(game["log"])
         events = events_by_turn(game["log"])
+        # The trained model if installed (singles only), else the remaining-HP placeholder.
+        model = load_model(config.data_dir) if result.states and result.states[0]["gametype"] == "singles" else None
+        model_values: list[float] = []
+        if model is not None:
+            try:
+                model_values = model.win_chances([s for s in result.states if not s["ended"]], perspective)
+            except Exception as e:  # fall back rather than break the screen
+                result.warnings.append(f"model failed: {e}")
+                model = None
+        method, method_text = EVAL_METHOD, EVAL_METHOD_TEXT
+        if model is not None:
+            info = model.info
+            method = "model"
+            method_text = (f"Trained model ({info.get('run', 'unnamed run')}): predicted win chance from what both "
+                           f"players could see. It calls the winner {info.get('val_acc_text', 'n/a')}.")
+        values = iter(model_values)
         steps = []
         for i, state in enumerate(result.states):
             view = view_for(state, perspective, result.format_id)
@@ -261,12 +278,13 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
                 "state": view,
                 # first step: the leads; end step: the last turn; otherwise the previous turn
                 "events": events.get(led_by, []),
-                "eval": round(win_chance(state, perspective), 4),
+                "eval": round(next(values) if model is not None and not state["ended"]
+                              else win_chance(state, perspective), 4),
             })
         game.pop("log", None)
         game.pop("inputlog", None)
         return {"game": game, "perspective": perspective, "format_id": result.format_id,
-                "eval_method": EVAL_METHOD, "eval_method_text": EVAL_METHOD_TEXT,
+                "eval_method": method, "eval_method_text": method_text,
                 "steps": steps, "warnings": result.warnings}
 
     @app.get("/sprites/{folder}/{name}.png", include_in_schema=False)

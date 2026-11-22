@@ -25,9 +25,12 @@ tags: [area/vault]
 
 - **Stage 4 built** ([[spec-review-app]], [[visual-style]], [[ADR-0011-review-screen-battle-view]]): the user chose our own turn-by-turn view, CSS pixel art now with SpriteCook later, and a /frontend-design pass ([[2026-11-22-stage4-answers]]). DS two-screen review layout, placeholder eval, cached sprites, games page restyled. Pixelify Sans was dropped for DotGothic16 after the screenshots showed 5 reading as S. Checked in the browser: singles and doubles, light and dark, phone width, keyboard. 68 Python tests.
 
+- **Stage 5 pipeline built** ([[spec-eval-model]], [[ADR-0012-training-data-v1]], [[2026-11-22-training-test-runs]]): 2.0M-game HF dataset downloaded; inputlog collector running (14 days); rebuild pipeline (1,283/1,283 exact after ignoring `|error|` lines); features, model, training, export, app integration. Test model `test2` installed: 66% vs 64% placeholder on future games. The first test model lost to the placeholder until per-side totals were added. Overnight run waiting for the user's go.
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- Next: [[roadmap]] stage 5 (model training on rebuilt randbats games, [[spec-eval-model]]).
+- User: start `./training/overnight.sh` (about 9 h).
+- Then: stage 6 (move labels from the policy and value heads).

@@ -27,6 +27,7 @@ const SERVER_ONLY = new Set([
   'j', 'J', 'l', 'L', 'n', 'N', 'c', 'c:', 'chat', 't:', 'raw', 'html', 'uhtml', 'inactive',
   'inactiveoff', 'b', 'B', 'title', 'init', 'expire', 'notify', 'hidelines', 'unlink', 'zbreak', 'debug',
   'badge', // ladder badge shown at battle start
+  'error', // replies to chat commands typed in the battle room
   '',      // ||text: room messages, e.g. "X is ready for game 2." in best-of-3
 ]);
 // The server, not the simulator, writes these -message lines when a game ends early.

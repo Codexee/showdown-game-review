@@ -37,6 +37,11 @@ Official notes: `WEB-API.md` in smogon/pokemon-showdown-client. Server code: smo
 - **Use for priors:** `https://data.pkmn.cc/randbats/stats/gen9randombattle.json` from pkmn/randbats, with role weights and per-role frequencies of moves, items, abilities and Tera types, plus EVs. Updated with Showdown (last push 2026-11-20).
 - `https://data.pkmn.cc/randbats/gen9randombattle.json`: the same without probabilities.
 
+## Hugging Face replay dataset (training data, [[ADR-0012-training-data-v1]])
+- **HolidayOugi/pokemon-showdown-replays**: `[Gen 9] RANDOMBATTLE_part1..11.parquet`, 4.49 GB, 2,012,698 logs to 2026-10-05. No inputlog; no license stated (local training only). Download: `training/download_hf.sh` → `data/hf/`.
+- Also on HF: jakegrigsby/metamon-raw-replays, milkkarten/pokemon-showdown-replays-merged ([[2026-11-22-training-test-runs]]).
+- About 34 public gen9randombattle replays are uploaded to Showdown per hour.
+
 ## Smogon usage stats (for VGC Reg M-C)
 - `https://www.smogon.com/stats/<YYYY-MM>/<format>-<cutoff>.txt`, cutoffs 0 / 1500 / 1630 / 1760; latest month 2026-10 ([[2026-11-22-research-findings]]).
 - `moveset/` and `chaos/` files give per-species moves, items, spreads and teammates. (unverified)

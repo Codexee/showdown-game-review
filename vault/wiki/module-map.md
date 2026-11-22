@@ -72,6 +72,23 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 | `sim-states.cjs` | `node tools/sim-states.cjs <built-showdown-dir> <replay.json>...`: replays inputlogs and prints the true state at each turn start (ground truth; also the full-information training target, [[ADR-0009-randbats-full-info-reconstruction]]). |
 | `compare_parser.py` | `uv run python -m tools.compare_parser <replays-dir> <truth.jsonl>`: grades the parser field by field and separates "not knowable from the log" ([[2026-11-22-parser-accuracy-results]]). |
 
+## Training: `training/` (stage 5, [[spec-eval-model]])
+| File | Job |
+|---|---|
+| `download_hf.sh` | Downloads the HF Gen 9 randbats parquet files to `data/hf/` (resumable). |
+| `collect.py` | `python -m training.collect --days 14`: recent replays with inputlogs from Showdown's API, 1 req/s, resumable, main server only → `data/train/inputlog/`. |
+| `rebuild.py` | `python -m training.rebuild`: per-commit Showdown checkouts (`data/sim/`), runs `tools/sim-states.cjs`, writes truth + log-match check to `data/train/truth/<sha10>.jsonl.gz`. |
+| `vocab.json` | Fixed vocabulary from Showdown's data at ac7b7da0f9. |
+| `features.py` | `encode(state, side)` → 13 tokens; `turn_actions(log)`; `game_samples(log)`. |
+| `build_dataset.py` | `python -m training.build_dataset --name … --hf … --since …` (or `--inputlog`): multiprocess → memory-mapped arrays in `data/train/ds/<name>/`. |
+| `model.py` | `EvalNet` transformer: value + policy heads, switch mask. |
+| `train.py` | `python -m training.train --data … --run … --hours …`: MPS training, checkpoints, resume, metrics vs placeholder. |
+| `test_model.py` | Scores a run on another dataset (future games). |
+| `export.py` | Installs a run as `data/models/current.pt` for the app. |
+| `overnight.sh` | Build → train 9 h → test → install, with `caffeinate`. Log: `data/models/<run>.log`. |
+
+`server/model_eval.py` loads `data/models/current.pt` (reloads when it changes) for the review endpoint; doubles keep the placeholder.
+
 ## Prototypes: `prototypes/`
 | Folder | Job |
 |---|---|
@@ -81,8 +98,10 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 
 - `test_review.py`: sprite ids and proxy cache, narration, placeholder eval, review endpoint. 68 Python tests in total.
 
+- `test_training.py`: actions, encoding, switch mask, model shapes, review endpoint using an installed model (singles only). 73 Python tests in total.
+
 ## Not built yet
-Model (stage 5), move labels (stage 6). See [[roadmap]].
+Overnight model, move labels (stage 6). See [[roadmap]].
 
 ## Related
 - [[architecture]] · [[spec-replay-sync]] · [[roadmap]]
