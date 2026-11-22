@@ -1,0 +1,22 @@
+---
+title: Roadmap
+type: spec
+status: draft
+tags: [area/vault]
+updated: 2026-11-22
+---
+
+# Roadmap (draft)
+
+The order follows the dependencies in [[architecture]]. Stages are not locked until the interview finishes ([[open-questions]]).
+
+1. **Vault and repo.** This vault, git, project `CLAUDE.md`. *Done 2026-11-22.*
+2. **Replay sync and archive.** Pull user data, list games, save every replay. Useful by itself, and it collects training data. [[spec-replay-sync]]
+3. **Log parser.** Protocol log → battle state per turn, from each side's view. Test on archived games.
+4. **Review app shell.** Game list plus replay player with a placeholder eval (for example, remaining HP). Pixel-art style. [[spec-review-app]], [[visual-style]]
+5. **Eval model, Gen 9 Random Battle.** Small test training, then the overnight run. Plug into the eval bar. [[spec-eval-model]]
+6. **Move review.** Best move, labels such as "mistake", win chance after each choice.
+7. **VGC 2026 Reg M-C.** Doubles parser and model. [[ADR-0002-format-order]]
+
+## Related
+- [[index]] · [[project-overview]]

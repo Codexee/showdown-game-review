@@ -1,0 +1,48 @@
+---
+title: Index (map of content)
+type: moc
+tags: [area/vault]
+updated: 2026-11-22
+---
+
+# Showdown Game Review: index
+
+A local, Lichess-style review tool for Pokémon Showdown games. A trained network gives an eval bar and an eval graph for each turn. The app pulls your games by username and saves every replay locally. The UI uses a Gen 4–5 pixel-art style.
+
+Rules for this vault: [[CLAUDE]].
+
+## Start here
+- [[project-overview]]: what we are building and why
+- [[open-questions]]: decisions still waiting on the user
+- [[roadmap]]: build order
+
+## Wiki (synthesized knowledge)
+- [[formats]]: Showdown formats in scope (Gen 9 Random Battle, Champions VGC Reg M-C, Champions OU)
+- [[data-sources]]: replay API, user API, Smogon usage stats
+- [[bot-landscape]]: foul-play, poke-env, Metamon, AlphaMon and others
+- [[architecture]]: components and data flow
+- [[environment]]: this Mac's hardware and installed tools
+- [[tooling]]: Claude skills and plugins used for this project
+- [[visual-style]]: Gen 4–5 pixel-art direction
+
+## Decisions (ADRs)
+- [[ADR-0001-local-web-app]]: accepted
+- [[ADR-0002-format-order]]: accepted, supersedes Champions OU as the first target
+- [[ADR-0003-vault-as-memory]]: accepted
+- [[ADR-0004-pixel-art-style]]: accepted
+- [[ADR-0005-overnight-training-budget]]: accepted
+- [[ADR-0006-replay-archive]]: proposed
+
+## Specs
+- [[spec-review-app]]: replay viewer, eval bar, eval graph (draft)
+- [[spec-replay-sync]]: pull user data, list games, auto-save replays (draft)
+- [[spec-eval-model]]: the network and training pipeline (draft)
+
+## Logs
+- [[2026-11-22-session-log]]
+- [[environment-quirks]]
+
+## Raw inputs
+- [[2026-11-22-interview-round-1]]
+- [[2026-11-22-research-findings]]
+- [[2026-11-22-second-brain-guide]]
