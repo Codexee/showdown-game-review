@@ -35,10 +35,12 @@ tags: [area/vault]
 
 - **Main run** ([[2026-11-22-main-run-results]]): 672k games / 15.8M samples; stopped at epoch 2.7 (value overfitting after 1.2); step-9000 model beats p0 in every slice and is installed: 67.4% vs 62.9% placeholder on future games.
 
+- **Stage 6 built** ([[ADR-0014-move-review-method]], [[2026-11-22-stage6-results]]): a Node sim service replays the inputlog and plays every top-K choice pair from each turn start; the value head scores the leaves; regret matching+ solves the matrix; 5/10/20 bands, per-turn luck, Lichess accuracy; background jobs and a review UI. Test game: Codexe 93.2 vs 96.6, one mistake (T18 switch to Venusaur, −14.6). Fixed a snapshot-mutation bug, played-choice format, and an ignored request body. 91 Python tests. Limit: grades use the real hidden sets ([[open-questions]] #6).
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- Next: stage 6 move review ([[benchmark-best-in-class]] P1), and fix value overfitting in the next training run.
-- Then: stage 6 (move labels from the policy and value heads).
+- Next: sampled hidden worlds for move review ([[open-questions]] #6), and fix value overfitting in the next training run.
+- Then: stage 7, VGC Reg M-C.

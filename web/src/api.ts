@@ -126,6 +126,55 @@ export interface Review {
   warnings: string[]
 }
 
+export type Verdict = 'best' | 'good' | 'inaccuracy' | 'mistake' | 'blunder' | 'forced' | 'no blame'
+
+export interface SideReview {
+  options: { choice: string; label: string; value: number; mix: number }[]
+  best: string
+  best_label: string
+  best_value: number
+  played?: string
+  played_label?: string
+  played_value?: number
+  regret?: number
+  verdict?: Verdict
+  no_blame?: string
+}
+
+export interface TurnReview {
+  turn: number
+  value_before: number
+  value_after: number
+  equilibrium: number
+  expected_after?: number
+  luck_p1?: number
+  sides: { p1?: SideReview; p2?: SideReview }
+}
+
+export interface PlayerSummary {
+  name: string
+  graded_turns: number
+  counts: Record<'best' | 'good' | 'inaccuracy' | 'mistake' | 'blunder', number>
+  accuracy: number | null
+  avg_regret: number | null
+  luck_points: number
+  worst: { turn: number; played: string; best: string; regret: number }[]
+}
+
+export interface Analysis {
+  status: 'none' | 'queued' | 'running' | 'done' | 'error' | 'unsupported'
+  progress?: [number, number]
+  error?: string
+  stale?: boolean
+  result?: {
+    turns: TurnReview[]
+    summary: { p1: PlayerSummary; p2: PlayerSummary; biggest_luck: { turn: number; luck_p1_points: number }[] }
+    seeds: number
+    model: string
+    seconds: number
+  }
+}
+
 export interface FormatCount {
   format_id: string
   format: string
@@ -168,6 +217,8 @@ export const api = {
   game: (id: string) => call<GameDetail>(`/api/games/${encodeURIComponent(id)}`),
   review: (id: string, side?: 'p1' | 'p2') =>
     call<Review>(`/api/games/${encodeURIComponent(id)}/review${side ? `?side=${side}` : ''}`),
+  analysis: (id: string) => call<Analysis>(`/api/games/${encodeURIComponent(id)}/analysis`),
+  analyze: (id: string) => call<Analysis>(`/api/games/${encodeURIComponent(id)}/analysis`, json('POST', {})),
   saveTeam: (id: string, paste: string) =>
     call<{ ok: boolean }>(`/api/games/${encodeURIComponent(id)}/team`, json('PUT', { paste })),
   importUrl: (url: string) => call<{ id: string; added: boolean }>('/api/import/url', json('POST', { url })),

@@ -1,7 +1,7 @@
 // Review screen (roadmap stage 4, vault ADR-0011): a DS-style pair of screens.
 // Top screen: the battle at the start of the selected turn, with the eval bar beside it.
 // Hinge: turn controls. Bottom screen: eval graph, turn list, and what happened.
-import { api, type Mon, type Review, type SideView, type Step } from './api'
+import { api, type Analysis, type Mon, type Review, type SideReview, type SideView, type Step, type TurnReview } from './api'
 import { errText, fmtDate, h, pct, s, say, sprite } from './dom'
 
 const STAT_SHORT: Record<string, string> = { atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe', accuracy: 'Acc', evasion: 'Eva' }
@@ -15,6 +15,12 @@ const WEATHER_NAMES: Record<string, string> = {
   raindance: 'Rain', sunnyday: 'Harsh sun', sandstorm: 'Sandstorm', snowscape: 'Snow',
   desolateland: 'Extreme sun', primordialsea: 'Heavy rain', deltastream: 'Strong winds',
 }
+const VERDICT_MARK: Record<string, string> = { inaccuracy: '?!', mistake: '?', blunder: '??', 'no blame': '–' }
+const VERDICT_TEXT: Record<string, string> = {
+  best: 'Best choice', good: 'Good', inaccuracy: 'Inaccuracy', mistake: 'Mistake', blunder: 'Blunder',
+  forced: 'Only one option', 'no blame': 'No blame',
+}
+const pts = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(Math.round(x * 100))}`
 const titleCase = (id: string) => id.replace(/(^|[^a-z])([a-z])/g, (_, a, b) => a + b.toUpperCase())
 
 export async function renderReview(root: HTMLElement, id: string, initialStep: number | null) {
@@ -41,6 +47,9 @@ class ReviewScreen {
   private readonly graph = h('div', { class: 'graph' })
   private readonly turnList = h('ol', { class: 'turn-list', 'aria-label': 'Turns' })
   private readonly eventsBox = h('div', { class: 'events', 'aria-live': 'polite' })
+  private readonly analysisBar = h('section', { class: 'analysis-bar frame', 'aria-label': 'Move review' })
+  private analysis: Analysis | null = null
+  private pollTimer = 0
 
   private readonly root: HTMLElement
 
@@ -107,6 +116,7 @@ class ReviewScreen {
 
     this.root.replaceChildren(
       header,
+      this.analysisBar,
       h('div', { class: 'ds' },
         h('div', { class: 'top-row' }, this.topScreen, this.evalBar),
         hinge,
@@ -116,6 +126,100 @@ class ReviewScreen {
 
     this.buildGraph()
     this.buildTurnList()
+    this.renderAnalysisBar()
+    void this.loadAnalysis()
+  }
+
+  // ---------------------------------------------------------------- move review
+  private async loadAnalysis() {
+    try { this.analysis = await api.analysis(this.review.game.id) } catch { this.analysis = null }
+    this.afterAnalysis()
+  }
+
+  private afterAnalysis() {
+    clearTimeout(this.pollTimer)
+    const st = this.analysis?.status
+    if ((st === 'queued' || st === 'running') && this.root.isConnected) {
+      this.pollTimer = window.setTimeout(() => void this.loadAnalysis(), 2000)
+    }
+    this.renderAnalysisBar()
+    if (st === 'done') {
+      this.buildTurnList()
+      this.buildGraph()
+      this.go(this.step, false)
+    }
+  }
+
+  private renderAnalysisBar() {
+    const a = this.analysis
+    const run = h('button', { type: 'button' }, a?.status === 'done' ? 'Analyze again' : 'Analyze game')
+    run.addEventListener('click', async () => {
+      run.disabled = true
+      try { this.analysis = await api.analyze(this.review.game.id) } catch (err) { say(errText(err), 'error') }
+      this.afterAnalysis()
+    })
+    const parts: (Node | string)[] = []
+    if (!a || a.status === 'none') {
+      parts.push(h('p', {}, 'Grade every choice in this game: the engine plays each option on the simulator and shows how much win chance each choice gave up.'), run)
+    } else if (a.status === 'queued' || a.status === 'running') {
+      const [done, total] = a.progress ?? [0, 0]
+      parts.push(h('p', { class: 'analysis-progress' }, total ? `Analyzing: turn ${done} of ${total}` : 'Starting the analysis…'),
+        h('div', { class: 'progress-track' }, h('div', { class: 'progress-fill', style: `width:${total ? (done / total) * 100 : 3}%` })))
+    } else if (a.status === 'unsupported' || a.status === 'error') {
+      parts.push(h('p', { class: 'muted' }, a.error ?? 'This game can’t be analyzed.'))
+      if (a.status === 'error') parts.push(run)
+    } else if (a.status === 'done' && a.result) {
+      const sum = a.result.summary
+      parts.push(h('div', { class: 'scorecards' }, this.scorecard(sum[this.me], 'mine'), this.scorecard(sum[this.them], 'theirs')))
+      parts.push(h('p', { class: 'small muted' },
+        `Each choice is graded by the win chance it gave up against the best option (inaccuracy 5, mistake 10, blunder 20 points). ` +
+        `Luck is what the dice did beyond what both choices made likely.` + (a.stale ? ' A newer model is installed: analyze again to update.' : '')))
+      if (a.stale) parts.push(run)
+    }
+    this.analysisBar.replaceChildren(h('h2', {}, 'Move review'), ...parts)
+  }
+
+  private scorecard(p: { name: string; accuracy: number | null; counts: Record<string, number>; luck_points: number }, who: string) {
+    const counts = (['blunder', 'mistake', 'inaccuracy'] as const)
+      .map(k => p.counts[k] ? h('span', { class: `vchip ${k}` }, `${p.counts[k]} ${k}${p.counts[k] > 1 ? (k === 'inaccuracy' ? '' : 's') : ''}`.replace('inaccuracys', 'inaccuracies')) : null)
+    return h('div', { class: `scorecard ${who}` },
+      h('p', { class: 'sc-name' }, p.name),
+      h('p', { class: 'sc-acc' }, h('span', { class: 'sc-num' }, p.accuracy == null ? '–' : p.accuracy.toFixed(1)), h('span', { class: 'small' }, ' accuracy')),
+      h('p', { class: 'sc-counts' }, ...(counts.some(Boolean) ? counts : [h('span', { class: 'small muted' }, 'No mistakes')])),
+      h('p', { class: 'small' }, `Luck ${p.luck_points >= 0 ? '+' : '−'}${Math.abs(p.luck_points).toFixed(0)} points`))
+  }
+
+  /** The turn whose events (and choices) row i of the turn list describes. */
+  private eventTurn(i: number): number | null {
+    const st = this.steps[i]
+    if (i === 0 || !st) return null
+    return st.ended ? st.turn : st.turn - 1
+  }
+
+  private reviewFor(turn: number | null): TurnReview | null {
+    if (turn == null || this.analysis?.status !== 'done') return null
+    return this.analysis.result?.turns.find(t => t.turn === turn) ?? null
+  }
+
+  private reviewBox(tr: TurnReview) {
+    const line = (who: 'p1' | 'p2', r: SideReview | undefined, name: string) => {
+      if (!r || !r.played) return null
+      const v = r.verdict ?? 'good'
+      const showBest = r.best !== r.played && (r.regret ?? 0) >= 0.5
+      return h('li', { class: `rv ${who === this.me ? 'mine' : 'theirs'}` },
+        h('span', { class: `vchip ${v.replace(' ', '-')}` }, VERDICT_TEXT[v] ?? v),
+        h('span', {}, `${name}: ${r.played_label}`,
+          (r.regret ?? 0) >= 0.5 ? h('span', { class: 'muted' }, ` (−${(r.regret ?? 0).toFixed(1)} points)`) : null,
+          showBest ? h('span', {}, `. Best: ${r.best_label} (${Math.round(r.best_value * 100)}%)`) : null,
+          r.no_blame ? h('span', { class: 'muted' }, ` (${r.no_blame})`) : null))
+    }
+    const names = { p1: this.steps[0].state.sides.p1.name, p2: this.steps[0].state.sides.p2.name }
+    const luck = tr.luck_p1 == null ? null : (this.me === 'p1' ? tr.luck_p1 : -tr.luck_p1)
+    return h('div', { class: 'review-box' },
+      h('ul', {}, line(this.me, tr.sides[this.me], names[this.me]), line(this.them, tr.sides[this.them], names[this.them])),
+      luck != null && Math.abs(luck) >= 0.02
+        ? h('p', { class: `luck ${luck >= 0 ? 'up' : 'down'}` }, `Luck this turn: ${pts(luck)} points for you`)
+        : null)
   }
 
   // ---------------------------------------------------------------- navigation
@@ -278,6 +382,13 @@ class ReviewScreen {
       s('path', { d, class: 'line' }))
     this.graphMarker = s('line', { y1: 0, y2: H, class: 'marker' })
     this.graphDot = s('rect', { width: 8, height: 8, class: 'dot' })
+    this.steps.forEach((_st, i) => {
+      const v = this.reviewFor(this.eventTurn(i))?.sides[this.me]?.verdict
+      if (v === 'mistake' || v === 'blunder') {
+        svg.append(s('rect', { x: x(i) - 3, y: v === 'blunder' ? 2 : 4, width: 6, height: v === 'blunder' ? 10 : 6,
+          class: `gmark ${v}` }))
+      }
+    })
     svg.append(this.graphMarker, this.graphDot)
     const pick = (ev: PointerEvent) => {
       const r = svg.getBoundingClientRect()
@@ -304,8 +415,14 @@ class ReviewScreen {
       const prev = i > 0 ? this.steps[i - 1].eval : st.eval
       const delta = Math.round((st.eval - prev) * 100) / 100 // whole points, so no "−0"
       const moves = st.events.filter(e => e.kind === 'move').map(e => e.text.replace(/\.$/, '').replace(/ on .*/, ''))
+      const tr = this.reviewFor(this.eventTurn(i))
+      const chip = (side: 'p1' | 'p2') => {
+        const v = tr?.sides[side]?.verdict
+        return v && VERDICT_MARK[v] ? h('span', { class: `vmark ${v.replace(' ', '-')} ${side === this.me ? 'mine' : 'theirs'}`,
+          title: `${side === this.me ? 'You' : 'Opponent'}: ${VERDICT_TEXT[v]}` }, VERDICT_MARK[v]) : null
+      }
       const btn = h('button', { type: 'button', class: 'turn-btn' },
-        h('span', { class: 'turn-n' }, st.ended ? 'End' : i === 0 ? 'Leads' : `T${st.turn - 1}`),
+        h('span', { class: 'turn-n' }, st.ended ? 'End' : i === 0 ? 'Leads' : `T${st.turn - 1}`, chip(this.me), chip(this.them)),
         h('span', { class: 'turn-moves' }, moves.length ? moves.join(', ') : st.events[0]?.text ?? ''),
         h('span', { class: `turn-eval ${Math.abs(delta) < 0.005 ? 'flat' : delta > 0 ? 'up' : 'down'}` },
           i === 0 ? pct(st.eval) : `${delta >= 0 ? '+' : '−'}${Math.abs(Math.round(delta * 100))}`))
@@ -316,8 +433,10 @@ class ReviewScreen {
 
   private renderEvents(st: Step) {
     const heading = this.step === 0 ? 'Leads' : st.ended ? `Turn ${st.turn}, the last` : `Turn ${st.turn - 1}`
+    const tr = this.reviewFor(this.eventTurn(this.step))
     this.eventsBox.replaceChildren(
       h('p', { class: 'events-when' }, heading),
+      ...(tr ? [this.reviewBox(tr)] : []),
       st.events.length
         ? h('ul', {}, ...st.events.map(e =>
           h('li', { class: `ev ${e.kind} ${e.side === this.me ? 'mine' : e.side === this.them ? 'theirs' : ''}` }, e.text)))

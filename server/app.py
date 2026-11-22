@@ -26,6 +26,7 @@ from .evaluate import METHOD as EVAL_METHOD
 from .evaluate import METHOD_TEXT as EVAL_METHOD_TEXT
 from .evaluate import win_chance
 from .model_eval import load as load_model
+from .review.jobs import Jobs
 from .ids import parse_replay_ref, to_id
 from .imports import record_from_file
 from .ingest import BattleIn, PrivateListIn, ingest_battle, ingest_private
@@ -54,6 +55,11 @@ class SettingsBody(BaseModel):
     poll_minutes: float | None = Field(default=None, ge=1, le=24 * 60)
 
 
+class AnalyzeBody(BaseModel):
+    seeds: int = Field(default=16, ge=4, le=128)
+    top_k: int = Field(default=6, ge=2, le=13)
+
+
 class ImportUrlBody(BaseModel):
     url: str = Field(max_length=500)
 
@@ -66,6 +72,7 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
     config = config or load_config()
     archive = Archive(config.data_dir)
     sprites = SpriteCache(config.data_dir)
+    jobs = Jobs(config.data_dir, lambda gid: _game_for_review(archive, gid))
     state: dict = {"sync_lock": asyncio.Lock(), "last_result": None}
 
     def username() -> str:
@@ -289,6 +296,21 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
                 "eval_method": method, "eval_method_text": method_text,
                 "steps": steps, "warnings": result.warnings}
 
+    # ---- move review (stage 6) ------------------------------------------------
+    @app.get("/api/games/{game_id}/analysis")
+    def get_analysis(game_id: str):
+        if archive.get_game(game_id, username()) is None:
+            raise HTTPException(404, "No such game")
+        return jobs.get(game_id)
+
+    @app.post("/api/games/{game_id}/analysis")
+    def post_analysis(game_id: str, body: AnalyzeBody | None = None):
+        body = body or AnalyzeBody()
+        res = jobs.start(game_id, seeds=body.seeds, top_k=body.top_k)
+        if res.get("status") == "error" and res.get("error") == "No such game":
+            raise HTTPException(404, "No such game")
+        return res
+
     @app.get("/sprites/{folder}/{name}.png", include_in_schema=False)
     async def sprite(folder: str, name: str):
         try:
@@ -370,6 +392,14 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             return FileResponse(dist / "index.html")
 
     return app
+
+
+def _game_for_review(archive: Archive, game_id: str) -> dict | None:
+    game = archive.get_game(game_id, "")
+    if game is None:
+        return None
+    return {"log": game["log"], "inputlog": game["inputlog"], "gametype": game["gametype"],
+            "format_id": game["format_id"]}
 
 
 def _int(v: str | None) -> int | None:

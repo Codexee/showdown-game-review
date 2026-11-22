@@ -16,6 +16,7 @@ Items wait here until they are answered. When an item is answered, record the an
 3. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
 4. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
 5. **Install SpriteCook** when the UI stage starts ([[tooling]]).
+6. *(research)* **Hindsight in move review:** the simulator uses the real hidden sets, so a grade can use information the player didn't have. How often does sampling hidden sets from the randbats priors change a verdict? Measure before trusting close calls ([[ADR-0014-move-review-method]]).
 
 ## Resolved
 - **P0 before the overnight run** → yes; built and passed the paired gate vs test2 ([[2026-11-22-p0-ab-results]]), 2026-11-22.

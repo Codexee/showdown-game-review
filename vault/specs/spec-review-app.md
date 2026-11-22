@@ -22,13 +22,14 @@ Lichess-style game review for Showdown games ([[project-overview]]). Runs locall
    - **Bottom screen:** stepped eval graph (click to jump), turn list (moves of that turn, change in win chance), "What happened" (that turn's events, coloured by side).
    - Header: players, format, date, result, link to the Showdown replay, **View as the opponent**.
    - Your team paste (moved here from the games page).
+   - **Move review** (stage 6, Gen 9 Random Battle only; [[ADR-0014-move-review-method]]): an *Analyze game* button runs a background job with a progress bar. When done: an accuracy card per player (verdict counts, luck), Lichess marks on turn-list rows (`?!` inaccuracy, `?` mistake, `??` blunder; the opponent's faded), a review box in "What happened" (each side's choice, verdict, points lost, the best choice, luck this turn) and graph markers on your mistakes and blunders. A result from an older model says so and offers to re-run.
    - Keyboard: ← → step, Home / End first and last.
 
 ## Steps
 Step *k* = the state at the start of a turn plus the events that led to it: step 0 shows the leads; the last step is the end of the game. This matches a Lichess move list (position after the move, with the move shown).
 
 ## API
-`GET /api/games/{id}/review?side=p1|p2` (default: your side) returns the game, the perspective, `eval_method` (`placeholder`), and `steps[]` with `state` (that player's view, with sprite ids), `events`, `eval`. Sprites: `GET /sprites/gen5[-back]/<id>.png`.
+`GET /api/games/{id}/review?side=p1|p2` (default: your side) returns the game, the perspective, `eval_method` (`placeholder`), and `steps[]` with `state` (that player's view, with sprite ids), `events`, `eval`. Sprites: `GET /sprites/gen5[-back]/<id>.png`. Move review: `GET /api/games/{id}/analysis` (status `none|queued|running|done|error|unsupported`, progress, result, `stale`) and `POST` to start (`seeds` 4–128, `top_k` 2–13).
 
 ## Done when (stage 4)
 - [x] A saved game opens, steps turn by turn, and the bar and graph move with the values.

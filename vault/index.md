@@ -42,9 +42,10 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0011-review-screen-battle-view]]: accepted
 - [[ADR-0012-training-data-v1]]: accepted
 - [[ADR-0013-post-game-analysis-only]]: accepted (formalizes current behavior)
+- [[ADR-0014-move-review-method]]: accepted (stage 6: regret over a simulated choice matrix)
 
 ## Specs
-- [[spec-review-app]]: review screen and games page (built; eval is a placeholder)
+- [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
 - [[spec-replay-sync]]: pull user data, list games, auto-save replays (draft)
 - [[spec-eval-model]]: the network and training pipeline (v1 built; overnight run pending)
 
@@ -52,6 +53,7 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-session-log]]
 - [[environment-quirks]]
 - [[2026-11-22-bug-forme-change-team]]
+- [[2026-11-22-bug-sim-snapshot-mutation]]
 
 ## Raw inputs
 - [[2026-11-22-interview-round-1]]
@@ -67,4 +69,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-prior-art-jaxcalibur-mikumiku]]
 - [[2026-11-22-p0-ab-results]]
 - [[2026-11-22-main-run-results]]
+- [[2026-11-22-stage6-results]]
 - [[2026-11-22-second-brain-guide]]
