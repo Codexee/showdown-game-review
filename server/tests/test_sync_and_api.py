@@ -97,6 +97,20 @@ def test_import_files(client):
     assert bad.status_code == 400
 
 
+def test_turns_endpoint(client, fake):
+    fake.add(load_replay(RANDBATS_ID), uploadtime=1)
+    client.post("/api/import/url", json={"url": RANDBATS_ID})
+    r = client.get(f"/api/games/{RANDBATS_ID}/turns").json()
+    assert r["perspective"] == "p1" and r["format_id"] == "gen9randombattle"  # Codexe was p1
+    assert len(r["turns"]) == 26 and not r["warnings"]
+    opp = r["turns"][3]["sides"]["p2"]["team"]
+    assert all(not m["hp_exact"] for m in opp)  # opponent HP as percentages
+    full = client.get(f"/api/games/{RANDBATS_ID}/turns?side=all").json()
+    assert any(m["hp_exact"] for m in full["turns"][3]["sides"]["p2"]["team"])
+    assert client.get(f"/api/games/{RANDBATS_ID}/turns?side=p3").status_code == 400
+    assert client.get("/api/games/nope-1/turns").status_code == 404
+
+
 def test_team_paste_and_settings(client, fake):
     fake.add(load_replay(RANDBATS_ID), uploadtime=1)
     client.post("/api/import/url", json={"url": RANDBATS_ID})

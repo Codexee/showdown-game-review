@@ -21,9 +21,11 @@ tags: [area/vault]
 
 - **Rebuild prototype** ([[2026-11-22-rebuild-prototype-results]]): 61/61 `gen9randombattle` replays rebuilt exactly at their commit; a wrong commit gives visible and silent errors. The user accepted ADR-0009 ([[2026-11-22-adr-0009-decision]]). Also fixed `parse_replay_ref` to accept side-server ids (`impulse-…`, `smogtours-…`).
 
+- **Stage 3 built** ([[battle-parser]]): log parser + per-player view + `/turns` API, graded against Showdown's simulator: 99.4% of turn states exact on 100 unseen games, 100% on all 261 after fixes ([[2026-11-22-parser-accuracy-results]]). Doubles (VGC) parse plausibly but are unverified.
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- Next build stage: [[roadmap]] stage 3 (per-turn parser), which feeds both the rebuild pipeline ([[ADR-0009-randbats-full-info-reconstruction]]) and the review screen.
+- Next: [[roadmap]] stage 4 (review screen: replay player, eval bar placeholder, pixel-art style) or stage 5 (model training on rebuilt randbats games).

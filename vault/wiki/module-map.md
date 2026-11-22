@@ -32,12 +32,13 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 | `sync.py` | Poller logic. The first sync records a start time; only replays uploaded after it are saved (no backfill). Pages with `before=`. Stops at a per-user high-water mark (`poll_cursor:<user>`), **not** at the first known game, because the userscript can store a newer game first. Fetches a known game again only if `archive.needs()` (userscript copy, or a random format missing its inputlog). |
 | `ingest.py` | Stage 2b. `/api/ingest`: room id → game id, drops client-only lines (`\|init\|`, `\|request\|`, …), stores with `source=userscript`, keeps your `\|request\|` side data as `own_team`. `/api/ingest-private`: downloads `<id>-<pw>pw.json` for each listed private replay newer than the start time. |
 | `imports.py` | Uploaded `.log`, replay `.json`, or saved replay `.html` → replay record. Uploads without a replay id get `upload-<sha1>`. |
+| `battle/` | Stage 3 log parser ([[battle-parser]]). `state.py` dataclasses; `parser.py` protocol → state at each `\|turn\|` + final; `view.py` per-player view (opponent HP as Showdown displays it); `data/forme_abilities.json` (126 in-battle formes → their fixed ability, generated from Showdown's pokedex at ac7b7da0f9). |
 | `app.py` | FastAPI routes (below), origin guard middleware ([[ADR-0010-local-api-origin-guard]]), background poller task, serves `web/dist` and the userscript. |
 
 `archive.py` also validates every game id and format id before using them as file names (an uploaded `.json` could otherwise write outside `data/`).
 
 ### API
-`GET/PUT /api/settings` · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
+`GET/PUT /api/settings` · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
 
 ## Userscript: `userscript/`
 | File | Job |
@@ -57,13 +58,21 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 - `conftest.py`: `FakeShowdown`, an `httpx.MockTransport` that serves users, search (with `before`) and replays (with password suffixes).
 - 27 tests: log summaries, id parsing, no-backfill first sync, add-once, paging, private replays, URL and file import, filters, team paste, settings; ingest, userscript-copy upgrade, the poller regression, private ingest, origin guard, path traversal.
 
+## Tools: `tools/`
+| File | Job |
+|---|---|
+| `sim-states.cjs` | `node tools/sim-states.cjs <built-showdown-dir> <replay.json>...`: replays inputlogs and prints the true state at each turn start (ground truth; also the full-information training target, [[ADR-0009-randbats-full-info-reconstruction]]). |
+| `compare_parser.py` | `uv run python -m tools.compare_parser <replays-dir> <truth.jsonl>`: grades the parser field by field and separates "not knowable from the log" ([[2026-11-22-parser-accuracy-results]]). |
+
 ## Prototypes: `prototypes/`
 | Folder | Job |
 |---|---|
 | `inputlog-rebuild/` | `rebuild.cjs` runs a built Showdown checkout on replay inputlogs and checks the rebuilt log against the replay ([[ADR-0009-randbats-full-info-reconstruction]]). Data and checkouts live in `data/proto/` (git-ignored). |
 
+- `test_battle_parser.py`: 17 real replays in `fixtures/battles/` covering the tricky mechanics, graded against simulator truth (`fixtures/battles/truth.jsonl`), plus unit tests. Also grades all 261 local games in `data/proto` when present (skipped otherwise). 56 tests in total.
+
 ## Not built yet
-Per-turn parser (stage 3), review screen (stage 4), model (stage 5). See [[roadmap]].
+Review screen (stage 4), model (stage 5). See [[roadmap]].
 
 ## Related
 - [[architecture]] · [[spec-replay-sync]] · [[roadmap]]

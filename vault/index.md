@@ -22,6 +22,7 @@ Rules for this vault: [[CLAUDE]].
 - [[bot-landscape]]: foul-play, poke-env, Metamon, AlphaMon and others
 - [[architecture]]: components and data flow
 - [[module-map]]: what each code file does, and how to run it
+- [[battle-parser]]: per-turn battle state from a log; accuracy and limits
 - [[environment]]: this Mac's hardware and installed tools
 - [[tooling]]: Claude skills and plugins used for this project
 - [[visual-style]]: Gen 4–5 pixel-art direction
@@ -55,4 +56,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-research-round-2]]
 - [[2026-11-22-rebuild-prototype-results]]
 - [[2026-11-22-adr-0009-decision]]
+- [[2026-11-22-parser-accuracy-results]]
 - [[2026-11-22-second-brain-guide]]

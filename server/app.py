@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .archive import Archive
+from .battle import parse_log, view_for
 from .config import ROOT, Config, load_config
 from .ids import parse_replay_ref, to_id
 from .imports import record_from_file
@@ -204,6 +205,25 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
         if not game:
             raise HTTPException(404, "No such game")
         return game
+
+    @app.get("/api/games/{game_id}/turns")
+    def get_turns(game_id: str, side: str | None = None):
+        """Battle state at the start of every turn (stage 3 parser).
+
+        side=p1|p2 gives that player's view (opponent HP as Showdown showed it);
+        side=all gives everything the log reveals. Default: your side if you played.
+        """
+        game = archive.get_game(game_id, username())
+        if not game:
+            raise HTTPException(404, "No such game")
+        result = parse_log(game["log"])
+        perspective = side or game["user_side"] or "all"
+        if perspective not in ("p1", "p2", "all"):
+            raise HTTPException(400, "side must be p1, p2 or all")
+        states = result.states if perspective == "all" else \
+            [view_for(s, perspective, result.format_id) for s in result.states]
+        return {"id": game_id, "format_id": result.format_id, "perspective": perspective,
+                "turns": states, "warnings": result.warnings}
 
     @app.put("/api/games/{game_id}/team")
     def put_team(game_id: str, body: TeamBody):
