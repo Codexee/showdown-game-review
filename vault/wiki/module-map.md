@@ -33,12 +33,15 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 | `ingest.py` | Stage 2b. `/api/ingest`: room id → game id, drops client-only lines (`\|init\|`, `\|request\|`, …), stores with `source=userscript`, keeps your `\|request\|` side data as `own_team`. `/api/ingest-private`: downloads `<id>-<pw>pw.json` for each listed private replay newer than the start time. |
 | `imports.py` | Uploaded `.log`, replay `.json`, or saved replay `.html` → replay record. Uploads without a replay id get `upload-<sha1>`. |
 | `battle/` | Stage 3 log parser ([[battle-parser]]). `state.py` dataclasses; `parser.py` protocol → state at each `\|turn\|` + final; `view.py` per-player view (opponent HP as Showdown displays it); `data/forme_abilities.json` (126 in-battle formes → their fixed ability, generated from Showdown's pokedex at ac7b7da0f9). |
+| `battle/narrate.py` | Readable event lines per turn ("Metagross was paralyzed (Static).") for the review screen. |
+| `evaluate.py` | **Placeholder** win chance per state: logistic on the remaining-HP lead (0.5 per Pokémon of HP; unseen opponents count as full). Replaced by the model in stage 5. |
+| `sprites.py` | `sprite_id(species)` (Showdown's naming: `palafin-hero`, `hooh`, `kommoo-totem`) and a disk cache for `/sprites/gen5[-back]/<id>.png` (remembers 404s too). |
 | `app.py` | FastAPI routes (below), origin guard middleware ([[ADR-0010-local-api-origin-guard]]), background poller task, serves `web/dist` and the userscript. |
 
 `archive.py` also validates every game id and format id before using them as file names (an uploaded `.json` could otherwise write outside `data/`).
 
 ### API
-`GET/PUT /api/settings` · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
+`GET/PUT /api/settings` · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `GET /api/games/{id}/review?side=p1|p2` · `GET /sprites/{gen5|gen5-back}/{id}.png` · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
 
 ## Userscript: `userscript/`
 | File | Job |
@@ -46,12 +49,17 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 | `showdown-review.user.js` | Tampermonkey script for play.pokemonshowdown.com. Wraps `app.receive` (old client) or `PS.receive` (new client); buffers each battle room from `\|init\|battle`; sends 4 s after `\|win\|`/`\|tie` (so rating lines are included), or as `incomplete` on `\|deinit` before the end. Every 15 min it lists private replays with your browser login and sends ids + passwords only. Queues sends in `GM_setValue` when the app is down. |
 | `userscript.test.mjs` | 7 Node tests running the script in a `vm` sandbox with a fake client: `node --test userscript/*.test.mjs`. |
 
-## Frontend: `web/` (Vite + TypeScript, no framework yet)
+## Frontend: `web/` (Vite + TypeScript, no framework)
 | File | Job |
 |---|---|
-| `src/api.ts` | Typed fetch wrappers for the API. |
-| `src/main.ts` | Game list page: username + sync, ratings, add by URL/file, filters, game list, detail panel with team paste and raw log. Builds DOM with `textContent` only, because player names come from other people. Refreshes every 60 s. |
-| `src/style.css` | Plain working styles with light/dark tokens. Replaced by the pixel-art design in stage 4 ([[visual-style]]). |
+| `src/main.ts` | Hash router (`#/`, `#/game/<id>/<step>`), fonts, global key handler. |
+| `src/api.ts` | Typed fetch wrappers and types for the API (incl. `Review`, `Step`, `Mon`). |
+| `src/dom.ts` | `h()` / `s()` element builders (text via `textContent` only: names come from other people), formatters, status line, `sprite()`. |
+| `src/list.ts` | Games page: trainer card, add a game, userscript help, filtered game list with mini team sprites. Refreshes every 60 s. |
+| `src/review.ts` | Review screen ([[spec-review-app]]): DS top screen, eval bar, hinge, graph, turn list, events, view-as-opponent, team paste. |
+| `src/style.css` | Design tokens and all styles ([[visual-style]]). |
+
+Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible`.
 
 ## Tests: `server/tests/`
 - `fixtures/`: two real replays by Codexe (a `gen9randombattle` game with an inputlog, and a `gen9championsvgc2026regmc` game).
@@ -71,8 +79,10 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 
 - `test_battle_parser.py`: 17 real replays in `fixtures/battles/` covering the tricky mechanics, graded against simulator truth (`fixtures/battles/truth.jsonl`), plus unit tests. Also grades all 261 local games in `data/proto` when present (skipped otherwise). 56 tests in total.
 
+- `test_review.py`: sprite ids and proxy cache, narration, placeholder eval, review endpoint. 68 Python tests in total.
+
 ## Not built yet
-Review screen (stage 4), model (stage 5). See [[roadmap]].
+Model (stage 5), move labels (stage 6). See [[roadmap]].
 
 ## Related
 - [[architecture]] · [[spec-replay-sync]] · [[roadmap]]

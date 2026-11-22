@@ -1,30 +1,39 @@
 ---
 title: Spec: review app
 type: spec
-status: draft
+status: active
 tags: [area/ui]
 updated: 2026-11-22
 ---
 
-# Spec: review app (draft)
+# Spec: review app
 
-Lichess-style game review for Showdown games ([[project-overview]]). Runs locally ([[ADR-0001-local-web-app]]) in a Gen 4–5 pixel-art style ([[ADR-0004-pixel-art-style]], [[visual-style]]).
+Lichess-style game review for Showdown games ([[project-overview]]). Runs locally ([[ADR-0001-local-web-app]]) in a Gen 4–5 pixel-art style ([[visual-style]]). Battle view: [[ADR-0011-review-screen-battle-view]].
+
+> [!note] Status 2026-11-22: stage 4 built
+> Games page and review screen work for singles and doubles, light and dark, phone and desktop. The eval is a **placeholder** (remaining HP) until stage 5. Not built: move labels (best / mistake…), best-move suggestions, forced-switch decision points mid-turn.
 
 ## Screens
-1. **Profile and game list:** ratings plus the games list from [[spec-replay-sync]].
-2. **Review screen** for one game:
-   - Battle view that plays the replay turn by turn. Plan: use Showdown's own replay/battle client code or the `@pkmn` libraries for animations. (unverified which works best; check licences)
-   - **Eval bar** next to the battle: win chance for the user's side after each turn, styled like an HP bar.
-   - **Eval graph** under it: win chance over all turns. Click a point to jump to that turn.
-   - **Turn list**: each choice with a label (best / good / inaccuracy / mistake / blunder) based on the win-chance drop, plus the model's preferred move. (Labels come in roadmap stage 6.)
-   - Keyboard: ←/→ for previous/next turn.
+1. **Games** (`#/`): trainer card (username, sync, top ladder ratings), add a game (URL, file, userscript help), your games with filters. Each row links to its review.
+2. **Review** (`#/game/<id>/<step>`), a DS:
+   - **Top screen:** the battle at the start of the selected turn: sprites (front for the opponent, back for you), HP boxes (name, level, HP bar, exact HP for you, % for them, status, boosts, Tera, Substitute/confusion/seeding), party balls (fainted, statused, unseen), field and side conditions. Hover an HP box for its revealed item, ability and moves.
+   - **Eval bar** beside it: estimated win chance for you, blue from the bottom.
+   - **Hinge:** previous / next, "Turn N of M".
+   - **Bottom screen:** stepped eval graph (click to jump), turn list (moves of that turn, change in win chance), "What happened" (that turn's events, coloured by side).
+   - Header: players, format, date, result, link to the Showdown replay, **View as the opponent**.
+   - Your team paste (moved here from the games page).
+   - Keyboard: ← → step, Home / End first and last.
 
-## API (local server)
-- `GET /api/profile` · `GET /api/games?format=&result=` · `GET /api/games/<id>` (log plus metadata) · `GET /api/games/<id>/eval` (per-turn values; computed once and cached) · `POST /api/sync`.
+## Steps
+Step *k* = the state at the start of a turn plus the events that led to it: step 0 shows the leads; the last step is the end of the game. This matches a Lichess move list (position after the move, with the move shown).
 
-## Done when
-- A saved game opens, plays turn by turn, and the bar and graph move with the model's values.
-- Works offline for archived games.
+## API
+`GET /api/games/{id}/review?side=p1|p2` (default: your side) returns the game, the perspective, `eval_method` (`placeholder`), and `steps[]` with `state` (that player's view, with sprite ids), `events`, `eval`. Sprites: `GET /sprites/gen5[-back]/<id>.png`.
+
+## Done when (stage 4)
+- [x] A saved game opens, steps turn by turn, and the bar and graph move with the values.
+- [x] Works offline for archived games once sprites are cached.
+- [x] Doubles layout (Codexe's VGC Reg M-C game) shows all four Pokémon.
 
 ## Related
-- [[spec-eval-model]] · [[spec-replay-sync]] · [[architecture]] · [[roadmap]]
+- [[spec-eval-model]] · [[spec-replay-sync]] · [[architecture]] · [[roadmap]] · [[battle-parser]]

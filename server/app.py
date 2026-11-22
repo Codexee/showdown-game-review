@@ -20,11 +20,16 @@ from pydantic import BaseModel, Field
 
 from .archive import Archive
 from .battle import parse_log, view_for
+from .battle.narrate import events_by_turn
 from .config import ROOT, Config, load_config
+from .evaluate import METHOD as EVAL_METHOD
+from .evaluate import METHOD_TEXT as EVAL_METHOD_TEXT
+from .evaluate import win_chance
 from .ids import parse_replay_ref, to_id
 from .imports import record_from_file
 from .ingest import BattleIn, PrivateListIn, ingest_battle, ingest_private
 from .showdown import ShowdownClient, ShowdownError, make_http
+from .sprites import SpriteCache, sprite_id
 from .sync import refresh_profile, sync_user
 
 # Pages allowed to call the ingest routes from the browser (the userscript's fallback
@@ -59,6 +64,7 @@ class TeamBody(BaseModel):
 def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     config = config or load_config()
     archive = Archive(config.data_dir)
+    sprites = SpriteCache(config.data_dir)
     state: dict = {"sync_lock": asyncio.Lock(), "last_result": None}
 
     def username() -> str:
@@ -224,6 +230,55 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             [view_for(s, perspective, result.format_id) for s in result.states]
         return {"id": game_id, "format_id": result.format_id, "perspective": perspective,
                 "turns": states, "warnings": result.warnings}
+
+    @app.get("/api/games/{game_id}/review")
+    def get_review(game_id: str, side: str | None = None):
+        """Everything the review screen needs, one step per turn start plus the end.
+
+        Step k: the state at the start of that turn (from `side`'s view), the events
+        that led to it (the leads for turn 1, the previous turn otherwise), and the
+        estimated win chance for `side`.
+        """
+        game = archive.get_game(game_id, username())
+        if not game:
+            raise HTTPException(404, "No such game")
+        perspective = side or game["user_side"] or "p1"
+        if perspective not in ("p1", "p2"):
+            raise HTTPException(400, "side must be p1 or p2")
+        result = parse_log(game["log"])
+        events = events_by_turn(game["log"])
+        steps = []
+        for i, state in enumerate(result.states):
+            view = view_for(state, perspective, result.format_id)
+            for s in view["sides"].values():
+                for mon in s["team"]:
+                    mon["sprite"] = sprite_id(mon["species"])
+            turn = state["turn"]
+            led_by = 0 if i == 0 else (result.states[i - 1]["turn"])
+            steps.append({
+                "turn": turn,
+                "ended": state["ended"],
+                "state": view,
+                # first step: the leads; end step: the last turn; otherwise the previous turn
+                "events": events.get(led_by, []),
+                "eval": round(win_chance(state, perspective), 4),
+            })
+        game.pop("log", None)
+        game.pop("inputlog", None)
+        return {"game": game, "perspective": perspective, "format_id": result.format_id,
+                "eval_method": EVAL_METHOD, "eval_method_text": EVAL_METHOD_TEXT,
+                "steps": steps, "warnings": result.warnings}
+
+    @app.get("/sprites/{folder}/{name}.png", include_in_schema=False)
+    async def sprite(folder: str, name: str):
+        try:
+            path = await sprites.get(state["client"].http, folder, name)
+        except httpx.HTTPError:
+            path = None
+        if path is None:
+            raise HTTPException(404, "No sprite")
+        return FileResponse(path, media_type="image/png",
+                            headers={"Cache-Control": "public, max-age=604800"})
 
     @app.put("/api/games/{game_id}/team")
     def put_team(game_id: str, body: TeamBody):

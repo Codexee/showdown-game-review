@@ -63,6 +63,69 @@ export interface Profile {
   ratings: Record<string, Rating>
 }
 
+export interface Mon {
+  name: string
+  species: string
+  sprite: string
+  level: number
+  hp: number
+  maxhp: number
+  hp_exact: boolean
+  status: string
+  fainted: boolean
+  active: boolean
+  position: number | null
+  seen: boolean
+  boosts: Record<string, number>
+  volatiles: string[]
+  item: string | null
+  ability: string | null
+  moves: string[]
+  tera_type: string
+}
+
+export interface SideView {
+  id: 'p1' | 'p2'
+  name: string
+  team_size: number | null
+  team: Mon[]
+  conditions: Record<string, number>
+}
+
+export interface BattleView {
+  turn: number
+  gametype: string
+  sides: { p1: SideView; p2: SideView }
+  field: { weather: string; terrain: string; pseudo_weather: string[] }
+  ended: boolean
+  winner: string | null
+  perspective: 'p1' | 'p2'
+}
+
+export interface BattleEvent {
+  text: string
+  side: 'p1' | 'p2' | null
+  kind: string
+}
+
+export interface Step {
+  turn: number
+  ended: boolean
+  state: BattleView
+  events: BattleEvent[]
+  eval: number
+}
+
+export interface Review {
+  game: Game & { team_paste: string | null }
+  perspective: 'p1' | 'p2'
+  format_id: string
+  eval_method: string
+  eval_method_text: string
+  steps: Step[]
+  warnings: string[]
+}
+
 export interface FormatCount {
   format_id: string
   format: string
@@ -103,6 +166,8 @@ export const api = {
     return call<Game[]>(`/api/games?${p}`)
   },
   game: (id: string) => call<GameDetail>(`/api/games/${encodeURIComponent(id)}`),
+  review: (id: string, side?: 'p1' | 'p2') =>
+    call<Review>(`/api/games/${encodeURIComponent(id)}/review${side ? `?side=${side}` : ''}`),
   saveTeam: (id: string, paste: string) =>
     call<{ ok: boolean }>(`/api/games/${encodeURIComponent(id)}/team`, json('PUT', { paste })),
   importUrl: (url: string) => call<{ id: string; added: boolean }>('/api/import/url', json('POST', { url })),

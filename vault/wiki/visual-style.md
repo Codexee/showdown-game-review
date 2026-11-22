@@ -1,25 +1,45 @@
 ---
 title: Visual style
 type: wiki
-status: draft
+status: active
 tags: [area/ui]
 updated: 2026-11-22
 ---
 
 # Visual style: Gen 4–5 pixel art
 
-Set by [[ADR-0004-pixel-art-style]]. The user asked for "a bit more aesthetic than showdown (gen4-5 pixel art style)" ([[2026-11-22-interview-round-1]]).
+Set by [[ADR-0004-pixel-art-style]]; the review screen's battle view by [[ADR-0011-review-screen-battle-view]]. Direction set with `/frontend-design` on 2026-11-22 ([[2026-11-22-stage4-answers]]). Code: `web/src/style.css`.
 
-## Direction (draft, to settle with /frontend-design when the UI work starts)
-- A DS-era (Diamond/Pearl/Platinum, Black/White) feel: chunky pixel borders on panels, a limited palette, a pixel font for headings and HP-bar-style meters.
-- The **eval bar** can look like an HP bar: a green / yellow / red fill that shows one side's win chance.
-- Keep body text in a clear font. Pixel fonts are hard to read at small sizes.
-- Render pixel assets with `image-rendering: pixelated` at whole-number scales (2×, 3×).
+## The one bold idea
+The review screen is a **DS**: a top screen (the battle) and a bottom screen (eval graph, turns, what happened), joined by a **hinge** that holds the turn controls. The eval bar stands beside the top screen like an HP bar on its end. Everything else stays quiet.
+
+## Tokens
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--frame` | `#24375A` | `#0A1222` | DS frame, panel borders (Gen 4 text-box navy) |
+| `--screen` | `#EEF3F8` | `#1B2740` | screen and panel background |
+| `--grass-1/2`, `--sky-1/2` | grass `#A8DC86` / `#79BC5E` | night teal `#2C5566` / `#1E3A4A` | battle field |
+| `--hp-green/yellow/red` | `#3CC468` / `#F5C032` / `#E34040` | same | HP bars (green > 50%, yellow > 20%) |
+| `--you` / `--them` | `#3B7DD8` / `#D23A56` | `#6AA2F0` / `#F0708A` | the two sides everywhere (eval bar, graph, HP box borders, event lines) |
+| `--btn` | `= --frame` | `#3D6098` | buttons (lighter than the screen in dark mode) |
+
+Pixel frame: a thick border with the four corner pixels cut away (`clip-path`, `--px: 4px`). No soft shadows, no blur. HP and eval bars animate in 8 steps, not smoothly; reduced motion turns this off.
+
+## Type
+- **DotGothic16** (pixel, one weight) for headings, numbers, HP, levels, turn counters. A Japanese dot-matrix gothic, close to the type DS games used. `font-synthesis-weight: none` stops fake bold.
+- **Atkinson Hyperlegible** for everything you read: event text, labels, help.
+- Both self-hosted with `@fontsource`, so the app works offline.
+- **Pixelify Sans was tried first and rejected:** its "5" reads as "S" and its bold "C" as "O" ("Turn 4 of 2S", "Oodexe"). Numbers are the pixel font's main job.
 
 ## Assets
-- Pokémon battle sprites: Showdown's own sprite sets (including Gen 5 animated sprites) are served from `play.pokemonshowdown.com/sprites/`. (unverified) Use them for battle display rather than drawing new ones.
-- Our own original art (frame borders, icons, background tiles, the eval bar): generate with **SpriteCook** ([[tooling]]). Not installed yet.
-- Do not copy Nintendo or Game Freak UI art directly. Use the era's style with original assets.
+- Pokémon: Showdown's Gen 5-style sprites (front for the opponent, back for your side), through the local caching proxy `/sprites/gen5[-back]/<id>.png`. 192 px (2×) in singles, 144 px in doubles, 96 px on phones.
+- UI art is CSS only (frames, HP bars, party balls, field). No Nintendo UI art is copied.
+- **SpriteCook** (plugin, not installed): planned to replace the CSS art with generated sprites/UI kit later ([[tooling]]).
+
+## Rules kept
+- Status abbreviations (BRN, PAR…) stay in capitals: game vernacular, not decoration.
+- Meta details are separate elements with gaps, not joined by middle dots.
+- Text left-aligned; line lengths short; visible focus ring (`--focus`, yellow).
 
 ## Related
-- [[spec-review-app]] · [[tooling]] · [[ADR-0004-pixel-art-style]]
+- [[spec-review-app]] · [[ADR-0011-review-screen-battle-view]] · [[tooling]]

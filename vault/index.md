@@ -38,9 +38,10 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0008-python-313]]: accepted
 - [[ADR-0009-randbats-full-info-reconstruction]]: accepted (prototype 61/61)
 - [[ADR-0010-local-api-origin-guard]]: accepted
+- [[ADR-0011-review-screen-battle-view]]: accepted
 
 ## Specs
-- [[spec-review-app]]: replay viewer, eval bar, eval graph (draft)
+- [[spec-review-app]]: review screen and games page (built; eval is a placeholder)
 - [[spec-replay-sync]]: pull user data, list games, auto-save replays (draft)
 - [[spec-eval-model]]: the network and training pipeline (draft)
 
@@ -57,4 +58,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-rebuild-prototype-results]]
 - [[2026-11-22-adr-0009-decision]]
 - [[2026-11-22-parser-accuracy-results]]
+- [[2026-11-22-stage4-answers]]
 - [[2026-11-22-second-brain-guide]]

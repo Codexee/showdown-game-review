@@ -23,9 +23,11 @@ tags: [area/vault]
 
 - **Stage 3 built** ([[battle-parser]]): log parser + per-player view + `/turns` API, graded against Showdown's simulator: 99.4% of turn states exact on 100 unseen games, 100% on all 261 after fixes ([[2026-11-22-parser-accuracy-results]]). Doubles (VGC) parse plausibly but are unverified.
 
+- **Stage 4 built** ([[spec-review-app]], [[visual-style]], [[ADR-0011-review-screen-battle-view]]): the user chose our own turn-by-turn view, CSS pixel art now with SpriteCook later, and a /frontend-design pass ([[2026-11-22-stage4-answers]]). DS two-screen review layout, placeholder eval, cached sprites, games page restyled. Pixelify Sans was dropped for DotGothic16 after the screenshots showed 5 reading as S. Checked in the browser: singles and doubles, light and dark, phone width, keyboard. 68 Python tests.
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- Next: [[roadmap]] stage 4 (review screen: replay player, eval bar placeholder, pixel-art style) or stage 5 (model training on rebuilt randbats games).
+- Next: [[roadmap]] stage 5 (model training on rebuilt randbats games, [[spec-eval-model]]).
