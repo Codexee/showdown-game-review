@@ -23,9 +23,10 @@ Short entries. Newest first.
 ## 2026-11-22: `searchprivate` ignores `before`
 - The private replay search parses `before` but never passes it on. Page with `page=` instead ([[2026-11-22-research-round-2]]).
 
-## 2026-11-22: Long replay crawls get connection resets
-- After about 16,700 replays at 1 request/s, `replay.pokemonshowdown.com` reset a connection (`httpx.ReadError: [Errno 54] Connection reset by peer`). Just before that, throughput fell from about 2 minutes to about 20 minutes per 100 replays (`data/train/collect.log`).
-- `training/collect.py` had no retry, so the run ended. It now retries network errors, 429 and 5xx up to 8 times, waiting 30 s and doubling each time (15 min at most), and resumes from `_state.json`.
+## 2026-11-22: Long runs stall when the lid is closed on battery
+- The inputlog crawl crashed at 16,700 replays with `httpx.ReadError: [Errno 54] Connection reset by peer`. *Corrected the same day:* this note first blamed the replay server. The real cause is that the Mac was in clamshell sleep on battery (`pmset -g log`: `Entering Sleep state due to 'Clamshell Sleep' … Using Batt`). It wakes for about 2 s every 16 min ("DarkWake"), so a run saves a few items per wake, and the connection it had open is gone after each sleep, which gives the reset. The server answers in about 0.3 s when the Mac is awake.
+- Claude's keep-awake assertion (`PreventUserIdleSystemSleep`) stops idle sleep only. Closing the lid on battery still sleeps. Long runs (crawls, [[ADR-0005-overnight-training-budget]] training) need the lid open, or power plus an external display.
+- `training/collect.py` now retries network errors, 429 and 5xx up to 8 times (30 s doubling, 15 min at most) and resumes from `_state.json`, so a sleep no longer ends the run.
 
 ## Related
 - [[environment]] · [[data-sources]] · [[template-debug-log]]
