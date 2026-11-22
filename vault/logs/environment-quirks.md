@@ -15,7 +15,13 @@ Short entries. Newest first.
 - **Fix:** send an explicit `User-Agent` header with a generic client name (not personal details). Keep a delay between requests.
 
 ## 2026-11-22: System Python is 3.14 from Anaconda
-- PyTorch and other ML packages may not have wheels for 3.14 yet. Make a `uv` venv on an older supported version ([[environment]], [[open-questions]] #8).
+- Don't use it for the project. Use the uv venv on 3.13 ([[ADR-0008-python-313]]). PyTorch does ship 3.14 wheels, but foul-play's poke-engine build is tested on 3.13.
+
+## 2026-11-22: poke-engine has no wheels
+- `pip install poke-engine` compiles Rust. Pass the Gen 9 feature flags, or it builds for the default generation ([[ADR-0008-python-313]]).
+
+## 2026-11-22: `searchprivate` ignores `before`
+- The private replay search parses `before` but never passes it on. Page with `page=` instead ([[2026-11-22-research-round-2]]).
 
 ## Related
 - [[environment]] · [[data-sources]] · [[template-debug-log]]

@@ -13,9 +13,11 @@ tags: [area/vault]
 
 - **Same session, later:** interview rounds 2 and 3 ([[2026-11-22-interview-round-2]]). Settled: standard Gen 9 Random Battle; save every finished game from now on, with no backfill, private games included; list all formats; URL, file and team-paste input; keep 1.5% for VGC; FastAPI + Vite/TS. Accepted [[ADR-0006-replay-archive]], added [[ADR-0007-app-stack]]. What's left in [[open-questions]] is mostly research.
 
+- **Research round 2** ([[2026-11-22-research-round-2]]): solved all four research items from the open questions. Big find: random-battle replays include an inputlog with seeds and the Showdown commit, so full hidden information may be rebuildable ([[ADR-0009-randbats-full-info-reconstruction]], proposed). Added [[ADR-0008-python-313]].
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
-- Research the open items in [[open-questions]] (private replays, userscript hook, Python version, randbats set data).
-- Then start [[roadmap]] stage 2a ([[spec-replay-sync]]).
+- Start [[roadmap]] stage 2a ([[spec-replay-sync]]): uv venv on 3.13, FastAPI skeleton, poller, archive.
+- Prototype the inputlog rebuild on a few replays ([[open-questions]] #2).

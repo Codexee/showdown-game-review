@@ -33,6 +33,8 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0005-overnight-training-budget]]: accepted
 - [[ADR-0006-replay-archive]]: accepted
 - [[ADR-0007-app-stack]]: accepted
+- [[ADR-0008-python-313]]: accepted
+- [[ADR-0009-randbats-full-info-reconstruction]]: proposed, needs a prototype
 
 ## Specs
 - [[spec-review-app]]: replay viewer, eval bar, eval graph (draft)
@@ -47,4 +49,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-interview-round-1]]
 - [[2026-11-22-interview-round-2]]
 - [[2026-11-22-research-findings]]
+- [[2026-11-22-research-round-2]]
 - [[2026-11-22-second-brain-guide]]

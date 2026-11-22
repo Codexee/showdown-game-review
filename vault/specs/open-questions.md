@@ -11,15 +11,18 @@ updated: 2026-11-22
 Items wait here until they are answered. When an item is answered, record the answer in a `raw/` note, update the affected notes, and move the item to **Resolved**. Items marked *(research)* are for Claude to look up, not for the user.
 
 ## Open
-1. *(research)* **Private replays:** how to list and fetch a user's private replays without the app storing the password. Fallback: the userscript captures private games going forward ([[ADR-0006-replay-archive]]).
-2. *(research)* **Userscript hook:** which Showdown client event marks a finished battle, and whether the browser allows a request from play.pokemonshowdown.com to localhost ([[spec-replay-sync]]).
-3. *(research)* **Python version** that PyTorch, poke-env and poke-engine all support on this Mac ([[environment]]).
-4. *(research)* **Gen 9 Random Battle set data:** where Showdown keeps the random-set pools (file path and format) so the model can use them as priors ([[spec-eval-model]]).
-5. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
-6. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
-7. **Install SpriteCook** when the UI stage starts ([[tooling]]).
+1. *(test)* **Userscript details to confirm in a real browser:** which URL to call for `searchprivate` and whether the login cookie is sent; whether `GM_xmlhttpRequest` skips Chrome's Local Network Access prompt; whether room ids match replay ids ([[spec-replay-sync]]).
+2. *(prototype)* **Full-information rebuild:** does running the simulator at the logged commit reproduce the public log exactly, and how many distinct commits do a few weeks of replays span? ([[ADR-0009-randbats-full-info-reconstruction]])
+3. **Accept ADR-0009?** Depends on #2.
+4. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
+5. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
+6. **Install SpriteCook** when the UI stage starts ([[tooling]]).
 
 ## Resolved
+- **Private replays method** → the userscript lists them with your browser login and sends only ids and passwords; the server fetches `<id>-<pw>pw.json` with no login ([[spec-replay-sync]], [[2026-11-22-research-round-2]]), 2026-11-22.
+- **Userscript hook** → wrap `app.receive` / `PS.receive`, finish on `|win|` / `|tie`, send through Tampermonkey `GM_xmlhttpRequest` ([[spec-replay-sync]]), 2026-11-22.
+- **Python version** → 3.13 in a uv venv ([[ADR-0008-python-313]]), 2026-11-22.
+- **Randbats set data** → `sets.json` + `teams.ts` in Showdown; probabilities from `data.pkmn.cc/randbats/stats/` ([[data-sources]]), 2026-11-22.
 - **Format target** → Gen 9 randbats, then VGC Reg M-C ([[ADR-0002-format-order]]), 2026-11-22.
 - **Which randbats** → standard [Gen 9] Random Battle, `gen9randombattle` ([[2026-11-22-interview-round-2]]), 2026-11-22.
 - **Training time** → overnight 8–12 h ([[ADR-0005-overnight-training-budget]]), 2026-11-22.

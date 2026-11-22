@@ -9,32 +9,41 @@ updated: 2026-11-22
 # Data sources
 
 ## Showdown replay server
-| Endpoint | Returns | Checked? |
-|---|---|---|
-| `https://replay.pokemonshowdown.com/search.json?format=<id>` | 51 replays per page, newest first, with `uploadtime` and rating | Yes ([[2026-11-22-research-findings]]) |
-| `search.json?user=<userid>` (optionally `&format=<id>`) | One user's public replays | (unverified) |
-| `search.json?...&before=<uploadtime>` | Next page | (unverified; paging worked in research but the parameter name was not recorded) |
-| `https://replay.pokemonshowdown.com/<replay-id>.json` | Replay metadata plus the full `log` | (unverified) |
-| `https://replay.pokemonshowdown.com/<replay-id>.log` | Raw battle log, one protocol line per row | (unverified) |
+Official notes: `WEB-API.md` in smogon/pokemon-showdown-client. Server code: smogon/pokemon-showdown-loginserver `src/replays.ts` and `src/actions.ts` ([[2026-11-22-research-round-2]]).
 
-- Public replays go back only about 10 days per 3,000 games in Champions OU ([[2026-11-22-research-findings]]). Old games disappear from the search fast; this is why [[spec-replay-sync]] saves everything locally.
-- **Only uploaded replays exist on the server.** A game the user never uploaded (or whose upload expired) cannot be fetched. (unverified, but this matches how Showdown works) See [[ADR-0006-replay-archive]].
-- Private replays need the user's login. **Unknown:** how the search API returns them. Logged in [[open-questions]].
-- Send a normal user agent. Python's default user agent gets HTTP 403 ([[environment-quirks]]).
+| Endpoint | Returns |
+|---|---|
+| `https://replay.pokemonshowdown.com/search.json?user=<id>&format=<id>` | Up to 51 public replays, newest first (`uploadtime`, `id`, `format`, `players`, `rating`, `private`, `password`) |
+| `…&user2=<id>` | Games between two users |
+| `…&before=<uploadtime>` | Next page. Use the `uploadtime` of the last result; a 51st result means another page exists. `page=` is "poorly supported". |
+| `https://replay.pokemonshowdown.com/<id>.json` | Metadata plus `log`, and `inputlog` for random formats |
+| `<id>.log` / `<id>.inputlog` | Raw log / inputlog |
+| `/api/replays/searchprivate?username=<id>` | The user's **private** replays. Needs a login session; only for your own username. Uses `page=` only, max 100 pages. |
+
+- All public APIs send `Access-Control-Allow-Origin: *` ([[2026-11-22-research-round-2]]).
+- Do not scrape the replay **HTML** pages (WEB-API.md asks this). Use the `.json` endpoints, with a delay between requests ([[environment-quirks]]).
+- **Private replays:** search results include a `password`. The full id is `<id>-<password>pw`, and `<fullid>.json` works **without** a login. Only the search needs the login.
+- **Inputlog:** included for formats ending in `randombattle`, `randomdoublesbattle`, `challengecup`, `battlefactory`, `bssfactory`, `hackmonscup`. It holds the Showdown commit, the battle seed, both team seeds and every choice. See [[ADR-0009-randbats-full-info-reconstruction]].
+- Only uploaded games exist on the server. 3,000 Champions OU replays covered only about 10 days ([[2026-11-22-research-findings]]).
+- Python's default user agent gets HTTP 403 ([[environment-quirks]]).
 
 ## Showdown user data
-- `https://pokemonshowdown.com/users/<userid>.json`: rating per format (Elo, GXE, Glicko). (unverified)
-- The user id is the username lowercased with non-alphanumerics removed. (unverified)
+- `https://pokemonshowdown.com/users/<userid>.json`: profile and ladder ratings (listed in WEB-API.md). Exact fields not checked yet.
+- `https://pokemonshowdown.com/ladder/<format>.json`: ladder top list.
+- `userid` = lowercased name with non-alphanumerics removed (`toID` in the server code). `Codexe` → `codexe`.
 
-## Smogon usage stats
-- `https://www.smogon.com/stats/<YYYY-MM>/<format>-<cutoff>.txt`, cutoffs 0 / 1500 / 1630 / 1760. Latest month as of 2026-11-22: 2026-10 ([[2026-11-22-research-findings]]).
-- Moveset files (`moveset/<format>-<cutoff>.txt`) and `chaos/<format>-<cutoff>.json` give per-species moves, items, spreads and teammates. (unverified)
-- Used for set priors in [[spec-eval-model]].
+## Random Battle set data
+- Source of truth: `data/random-battles/gen9/sets.json` plus the item/ability logic in `teams.ts` (smogon/pokemon-showdown). 509 species; each role gives a move pool, abilities and Tera types; items are picked in code ([[2026-11-22-research-round-2]]).
+- **Use for priors:** `https://data.pkmn.cc/randbats/stats/gen9randombattle.json` from pkmn/randbats, with role weights and per-role frequencies of moves, items, abilities and Tera types, plus EVs. Updated with Showdown (last push 2026-11-20).
+- `https://data.pkmn.cc/randbats/gen9randombattle.json`: the same without probabilities.
+
+## Smogon usage stats (for VGC Reg M-C)
+- `https://www.smogon.com/stats/<YYYY-MM>/<format>-<cutoff>.txt`, cutoffs 0 / 1500 / 1630 / 1760; latest month 2026-10 ([[2026-11-22-research-findings]]).
+- `moveset/` and `chaos/` files give per-species moves, items, spreads and teammates. (unverified)
 
 ## Training data
-- Public replays (above), scraped and stored by [[spec-replay-sync]].
+- `gen9randombattle` public replays, scraped by format with the same code as [[spec-replay-sync]]. Each one is rebuilt to full information from its inputlog ([[ADR-0009-randbats-full-info-reconstruction]]).
 - Self-play games on a local Showdown server ([[spec-eval-model]]).
-- Metamon publishes 5M+ reconstructed trajectories, but not for Champions or the formats in scope ([[bot-landscape]]).
 
 ## Related
-- [[formats]] · [[spec-replay-sync]] · [[architecture]]
+- [[formats]] · [[spec-replay-sync]] · [[architecture]] · [[spec-eval-model]]
