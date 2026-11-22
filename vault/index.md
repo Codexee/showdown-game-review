@@ -66,4 +66,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-prior-art-research]]
 - [[2026-11-22-prior-art-jaxcalibur-mikumiku]]
 - [[2026-11-22-p0-ab-results]]
+- [[2026-11-22-main-run-results]]
 - [[2026-11-22-second-brain-guide]]

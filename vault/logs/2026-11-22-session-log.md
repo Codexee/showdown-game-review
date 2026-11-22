@@ -33,10 +33,12 @@ tags: [area/vault]
 
 - **P0 done** ([[2026-11-22-p0-ab-results]]): dex property tables, randbats priors, last-turn events, opponent-choice and hidden-set heads, smaller model, temperature, by-phase / bootstrap / 1500+ metrics, pinned bank, paired gate. p0 beats test2 on future games (log-loss −0.011 [−0.018, −0.004]; late game −0.040) and is installed. Found the train/test rating gap (median 1676 vs 1427).
 
+- **Main run** ([[2026-11-22-main-run-results]]): 672k games / 15.8M samples; stopped at epoch 2.7 (value overfitting after 1.2); step-9000 model beats p0 in every slice and is installed: 67.4% vs 62.9% placeholder on future games.
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- User: start `./training/overnight.sh` (about 9 h; installs only if it passes the gate vs p0).
+- Next: stage 6 move review ([[benchmark-best-in-class]] P1), and fix value overfitting in the next training run.
 - Then: stage 6 (move labels from the policy and value heads).

@@ -9,7 +9,8 @@ updated: 2026-11-22
 # Spec: eval model and training
 
 > [!note] Status 2026-11-22
-> v1.1 (`p0`, P0 changes) is installed: on 3,709 pinned future games it calls the winner **66.2% vs 62.9%** for the placeholder and beats the previous model in a paired gate (log-loss −0.011, 90% band [−0.018, −0.004]) ([[2026-11-22-p0-ab-results]]). The overnight run (`./training/overnight.sh`, now d=256 / 6 layers with the gate before install) has not been run yet.
+> **Installed: `main` (v1.1 on all 2026 games, 672k games):** on the pinned future games it calls the winner **67.4% vs 62.9%** for the placeholder and beats `p0` in every slice (log-loss 0.5854 vs 0.6026, 90% band [−0.021, −0.013]) ([[2026-11-22-main-run-results]]). The value head overfits after ≈1.2 epochs; next run: fewer correlated turns per game or a lower value weight after epoch 1.
+> Previously: v1.1 (`p0`, P0 changes): on 3,709 pinned future games it calls the winner **66.2% vs 62.9%** for the placeholder and beats the previous model in a paired gate (log-loss −0.011, 90% band [−0.018, −0.004]) ([[2026-11-22-p0-ab-results]]). The overnight run (`./training/overnight.sh`, now d=256 / 6 layers with the gate before install) has not been run yet.
 
 ## Goal
 For any turn of a game, output (a) the win chance for each side, which drives the eval bar, and (b) a ranking of the choices, for move review. First format: Gen 9 Random Battle; then VGC 2026 Reg M-C ([[ADR-0002-format-order]]).
