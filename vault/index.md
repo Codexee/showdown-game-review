@@ -23,7 +23,7 @@ Rules for this vault: [[CLAUDE]].
 - [[architecture]]: components and data flow
 - [[module-map]]: what each code file does, and how to run it
 - [[battle-parser]]: per-turn battle state from a log; accuracy and limits
-- [[benchmark-best-in-class]]: how we compare with PS Dashboard, ps-ppo, Metamon and others; ranked gaps
+- [[benchmark-best-in-class]]: how we compare with PS Dashboard, Jaxcalibur, mikumiku37, ps-ppo, Metamon and others; ranked gaps
 - [[environment]]: this Mac's hardware and installed tools
 - [[tooling]]: Claude skills and plugins used for this project
 - [[visual-style]]: Gen 4–5 pixel-art direction
@@ -41,6 +41,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0010-local-api-origin-guard]]: accepted
 - [[ADR-0011-review-screen-battle-view]]: accepted
 - [[ADR-0012-training-data-v1]]: accepted
+- [[ADR-0013-post-game-analysis-only]]: accepted (formalizes current behavior)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval is a placeholder)
@@ -63,4 +64,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-stage4-answers]]
 - [[2026-11-22-training-test-runs]]
 - [[2026-11-22-prior-art-research]]
+- [[2026-11-22-prior-art-jaxcalibur-mikumiku]]
 - [[2026-11-22-second-brain-guide]]

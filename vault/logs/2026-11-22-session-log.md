@@ -29,6 +29,8 @@ tags: [area/vault]
 
 - **Prior-art research** ([[2026-11-22-prior-art-research]], [[benchmark-best-in-class]]): PS Dashboard is the bar (simulator search, calibrated win%, 5/10/20 regret bands, decision vs luck, paired bootstrap gate, engine protocol); ps-ppo (1900+ randbats Elo) shows property features, priors and last-turn events. Ranked gaps P0–P2; P0 waits on the user. Also fixed: the review page scrolled on every turn step (`scrollIntoView` scrolled the window).
 
+- **Jaxcalibur and mikumiku37** ([[2026-11-22-prior-art-jaxcalibur-mikumiku]]): the #1 bots in our two formats, both ~8.5M-param self-play transformers on custom fast engines, with one-ply / pUCT search over sampled worlds. P0 gains auxiliary heads and a smaller model; stage 6's matrix-over-worlds plan is confirmed; self-play needs a fast engine. Added [[ADR-0013-post-game-analysis-only]].
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 

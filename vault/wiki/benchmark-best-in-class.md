@@ -8,7 +8,17 @@ updated: 2026-11-22
 
 # Benchmark: how we compare, and what to change
 
-Sources: [[2026-11-22-prior-art-research]]. The closest analogue and the bar to beat is **PS Dashboard** (a "chess engine for Showdown replays"). The best neural Gen 9 Random Battle model on record is **ps-ppo** (1900+ ladder Elo from self-play).
+Sources: [[2026-11-22-prior-art-research]], [[2026-11-22-prior-art-jaxcalibur-mikumiku]]. The closest analogue and the bar to beat for the *review tool* is **PS Dashboard** (a "chess engine for Showdown replays"). The strongest *models* are **Jaxcalibur** (Gen 9 Random Battle: #1 on the ladder, peak 2557 Elo / 95.3 GXE, 8.5M params, self-play) and **mikumiku37** (Champions VGC Reg M-C: #1, 1857 Elo / 81.2 GXE, 8.7M params, self-play). Both keep code and weights private.
+
+## What the two #1 bots tell us
+- **Self-play beats human data at the top.** Both trained only by self-play (Jaxcalibur ~100M games in a week on one H100; mikumiku ~330M games in 48 h on one RTX 5090). Our human-data model is the right v1 for a review tool (it learns how real games go), but the strongest value function needs self-play later. That needs a **fast engine**: both built their own (JAX on GPU; Rust ≈650× Showdown). For us the realistic option is **poke-engine** (Rust, already a dependency through foul-play; unverified speed for self-play).
+- **Small networks:** ~8.5M parameters, trained longer, beat larger ones (Jaxcalibur). Our overnight plan used 12.6M; drop to ≈6–8M.
+- **Static dex data as inputs** (both): types, base stats, move data. Confirms P0 item 1.
+- **Auxiliary heads** (Jaxcalibur): predict each opposing Pokémon's item, ability, moves and Tera type, and the **opponent's next action**; the latter "made the bot substantially stronger". We have labels for both: the opponent's next action from every log, and hidden sets exactly from the inputlog rebuild (ADR-0009) or partly from what gets revealed later in the same game.
+- **History and matchup tokens** (Jaxcalibur): last 16 events; damage calcs per Pokémon pair, added halfway through.
+- **Search = one ply over sampled worlds, solved as a matrix game** (mikumiku: 16 worlds, top-8 × top-8, several RNG seeds per cell, regret matching; Jaxcalibur: pUCT over 32 worlds). This is exactly our planned move-review method (P1 item 6), with our value net at the leaf and hidden sets sampled from randbats priors / the set-prediction head. Use 64–128 seeds per cell for stable grades (mikumiku: 4 seeds gave nonsense). Search adds ~100–150 Elo; most of the strength is the network.
+- **Doubles policy:** each slot's action includes its target; slot 2 conditioned on slot 1 (pairwise term) with pair legality masks (mikumiku). For stage 7.
+- **Fair play:** both withheld their bots over ladder and tournament cheating. Our tool must only analyze **finished** games ([[ADR-0013-post-game-analysis-only]]).
 
 ## Where we already stand out
 | | Us | Best known |
@@ -24,7 +34,9 @@ Sources: [[2026-11-22-prior-art-research]]. The closest analogue and the bar to 
 ### P0: before the overnight run (they change the model's inputs or how it's judged)
 1. **Properties, not just ids** (ps-ppo): base stats and types for each Pokémon; base power, accuracy, type, category, priority for each move. Helps with rare species and with **drift** (the value edge fell from +4.1 to +2.2 accuracy points on newer games, [[2026-11-22-training-test-runs]]).
 2. **Randbats set priors for unrevealed information:** for each opponent Pokémon, the distribution of possible moves, items, abilities and Tera types from pkmn's randbats stats ([[data-sources]]), as a weighted bag. Randbats sets come from fixed pools, so this is information the player really has, and the others don't use it this way.
-3. **Last turn's events as input** (ps-ppo): who moved first (speed information), crits, misses, super-effective hits.
+3. **Recent events as input** (ps-ppo: last turn; Jaxcalibur: last 16 events as tokens): who moved first (speed information), moves used, crits, misses, super-effective hits.
+3b. **Auxiliary heads** (Jaxcalibur): opponent's next action (labels in every log) and opponent's hidden set (exact labels from the inputlog rebuild; partial labels from later reveals in the same game).
+3c. **Smaller model, trained longer** (Jaxcalibur, mikumiku: ~8.5M): change the overnight default from 12.6M to ≈6–8M.
 4. **Measurement like PS Dashboard:** bootstrap confidence intervals over games; calibration and Brier **by game phase**; a **high-rating slice** (the dataset has ratings for 72% of games); a **paired comparison** of old vs new model on the same pinned test games before switching the installed model.
 5. **Post-hoc calibration** (temperature or per-phase scaling) fitted on validation, checked on the future-games test set.
 
@@ -39,7 +51,7 @@ Sources: [[2026-11-22-prior-art-research]]. The closest analogue and the bar to 
 11. **PS Dashboard engine protocol** (`ps-dashboard-engine/1`, JSON over HTTP): expose our model as an engine, so it works inside PS Dashboard too. Cheap, and puts our value function next to theirs.
 12. **Play your own line** (variations from any turn): needs the simulator behind the review screen.
 13. **Endgame exactness:** a small solver for ≤2–3 Pokémon a side, to grade the model where truth is computable.
-14. **Self-play fine-tuning** (ps-ppo, Metamon) to go beyond human play; **distributional value head**.
+14. **Self-play fine-tuning** (Jaxcalibur, mikumiku, ps-ppo, Metamon) to go beyond human play; needs a fast engine (poke-engine first); **distributional value head**. **Matchup tokens** with damage calcs (Jaxcalibur).
 15. **VGC Reg M-C:** read PokaiTrainer (belief-state equilibrium search, 2026) and VGC-Bench before building.
 
 ### Engineering practices worth copying
