@@ -24,6 +24,10 @@ def supported(game: dict) -> str | None:
                 "random formats. Add the replay by URL or sync it after uploading.")
     if game.get("gametype") != "singles" or "randombattle" not in game.get("format_id", ""):
         return "Move review currently supports Gen 9 Random Battle (singles) only."
+    # Custom-rule tournament games still carry the gen9randombattle id but break the
+    # simulator restore (vault 2026-11-23-bug-custom-rules-randbats).
+    if "@@@" in game["inputlog"][:400]:
+        return "Move review doesn't support custom-rule games (for example tournament mods)."
     return None
 
 

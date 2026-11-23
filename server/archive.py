@@ -9,12 +9,13 @@ Layout (see vault ADR-0006):
 from __future__ import annotations
 
 import json
+import logging
 import re
 import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator
 
 from .ids import to_id
 from .logsummary import result_for, summarize, user_side
@@ -67,6 +68,9 @@ def existing_name(replay: dict, index: int) -> str:
 class Archive:
     def __init__(self, data_dir: Path):
         self.data_dir = Path(data_dir)
+        # Called with the game id whenever a game's data is written (new, or upgraded with
+        # an inputlog / the replay server's copy). The app uses it for auto-analysis.
+        self.on_saved: Callable[[str], None] | None = None
         self.replay_dir = self.data_dir / "replays"
         self.db_path = self.data_dir / "archive.sqlite3"
         self.replay_dir.mkdir(parents=True, exist_ok=True)
@@ -178,29 +182,39 @@ class Archive:
                         game_id,
                     ),
                 )
-                return False
-            db.execute(
-                """INSERT INTO games (id, format_id, format, p1, p2, uploadtime, played_at, rating,
-                       private, password, has_inputlog, source, summary_json, added_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    game_id,
-                    format_id,
-                    replay.get("format") or summary.format or format_id,
-                    summary.p1.name or (replay.get("players") or ["", ""])[0],
-                    summary.p2.name or (replay.get("players") or ["", ""])[-1],
-                    replay.get("uploadtime"),
-                    summary.started_at,
-                    replay.get("rating"),
-                    1 if replay.get("private") else 0,
-                    replay.get("password"),
-                    1 if inputlog else 0,
-                    source,
-                    json.dumps(summary.to_dict()),
-                    int(time.time()),
-                ),
-            )
-        return True
+            else:
+                db.execute(
+                    """INSERT INTO games (id, format_id, format, p1, p2, uploadtime, played_at, rating,
+                           private, password, has_inputlog, source, summary_json, added_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        game_id,
+                        format_id,
+                        replay.get("format") or summary.format or format_id,
+                        summary.p1.name or (replay.get("players") or ["", ""])[0],
+                        summary.p2.name or (replay.get("players") or ["", ""])[-1],
+                        replay.get("uploadtime"),
+                        summary.started_at,
+                        replay.get("rating"),
+                        1 if replay.get("private") else 0,
+                        replay.get("password"),
+                        1 if inputlog else 0,
+                        source,
+                        json.dumps(summary.to_dict()),
+                        int(time.time()),
+                    ),
+                )
+        # After the commit, so the hook sees the saved game.
+        self._notify_saved(game_id)
+        return not existing
+
+    def _notify_saved(self, game_id: str) -> None:
+        if self.on_saved is None:
+            return
+        try:
+            self.on_saved(game_id)
+        except Exception:  # a failing hook must never lose a saved game
+            logging.getLogger("showdown_review").exception("on_saved hook failed for %s", game_id)
 
     def set_own_team(self, game_id: str, side_json: str | None) -> None:
         with self._db() as db:

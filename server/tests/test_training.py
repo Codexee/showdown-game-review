@@ -69,6 +69,7 @@ def client_with_model(tmp_path, transport):
 
 
 def test_review_uses_installed_model_for_singles_only(client_with_model, fake):
+    client_with_model.put("/api/settings", json={"auto_analyze": False})
     fake.add(load_replay(RANDBATS_ID), uploadtime=1)
     fake.add(load_replay(VGC_ID), uploadtime=2)
     client_with_model.post("/api/import/url", json={"url": RANDBATS_ID})
@@ -141,6 +142,7 @@ def test_compare_runs_refuses_different_samples():
 def test_review_blends_search_after_a_current_worlds_review(client_with_model, fake, tmp_path):
     import json
     from server.review.analyze import ANALYSIS_VERSION, SEARCH_BLEND
+    client_with_model.put("/api/settings", json={"auto_analyze": False})   # this test writes the review itself
     fake.add(load_replay(RANDBATS_ID), uploadtime=1)
     client_with_model.post("/api/import/url", json={"url": RANDBATS_ID})
     before = client_with_model.get(f"/api/games/{RANDBATS_ID}/review").json()

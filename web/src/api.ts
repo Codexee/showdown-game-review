@@ -39,6 +39,7 @@ export interface Settings {
   last_ingest: number | null
   last_ingest_private: number | null
   poller_enabled: boolean
+  auto_analyze: boolean
 }
 
 export interface SyncResult {
@@ -207,7 +208,7 @@ const json = (method: string, body: unknown): RequestInit => ({
 
 export const api = {
   settings: () => call<Settings>('/api/settings'),
-  saveSettings: (s: Partial<Pick<Settings, 'username' | 'poll_minutes'>>) =>
+  saveSettings: (s: Partial<Pick<Settings, 'username' | 'poll_minutes' | 'auto_analyze'>>) =>
     call<Settings>('/api/settings', json('PUT', s)),
   profile: (refresh = false) => call<Profile>(`/api/profile${refresh ? '?refresh=true' : ''}`),
   sync: () => call<SyncResult>('/api/sync', { method: 'POST' }),

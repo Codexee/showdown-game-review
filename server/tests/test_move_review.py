@@ -161,3 +161,27 @@ def test_engine_applies_worlds():
         cells = eng.expand_jobs(18, [{"world": world, "seed": 0, "pairs": [("move 1", "move 1")]}])
         assert not cells[0]["invalid"]
         assert any("|Headbutt|" in ln for ln in cells[0]["branches"][0]["lines"])
+
+
+# ---- auto-analysis of saved games (2026-11-23)
+def test_auto_analyze_setting_and_queueing(client, fake, monkeypatch):  # noqa: F811
+    from server.review.jobs import Jobs
+    calls: list[str] = []
+    monkeypatch.setattr(Jobs, "start", lambda self, gid, **kw: calls.append(gid) or {"status": "queued"})
+    assert client.get("/api/settings").json()["auto_analyze"] is True        # on by default
+    fake.add(load_replay(RANDBATS_ID), uploadtime=1)
+    client.post("/api/import/url", json={"url": RANDBATS_ID})
+    assert calls == [RANDBATS_ID]                                            # queued on save
+    client.post("/api/import/url", json={"url": RANDBATS_ID})                # already saved: nothing new
+    assert calls == [RANDBATS_ID]
+    assert client.put("/api/settings", json={"auto_analyze": False}).json()["auto_analyze"] is False
+    fake.add(load_replay(VGC_ID), uploadtime=2)
+    client.post("/api/import/url", json={"url": VGC_ID})
+    assert calls == [RANDBATS_ID]                                            # off: not queued
+
+
+def test_custom_rule_games_are_unsupported():
+    from server.review.jobs import supported
+    base = {"gametype": "singles", "format_id": "gen9randombattle", "log": ""}
+    assert supported({**base, "inputlog": '>version x\n>start {"formatid":"gen9randombattle"}'}) is None
+    assert "custom-rule" in supported({**base, "inputlog": '>version x\n>start {"formatid":"gen9randombattle@@@Inverse Mod"}'})

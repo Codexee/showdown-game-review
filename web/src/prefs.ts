@@ -2,21 +2,12 @@
 // until the user picks, they follow the system settings (index.html sets them before paint).
 import { h } from './dom'
 import { icon } from './list'
+import { toggle } from './switch'
 
 const KEY = { theme: 'sr-theme', motion: 'sr-motion' }
 const root = document.documentElement
 const saved = (k: string) => { try { return localStorage.getItem(k) } catch { return null } }
 const save = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* private mode: not saved */ } }
-
-function toggle(label: string, isOn: () => boolean, set: (on: boolean) => void, ...icons: Element[]) {
-  const knob = h('span', { class: 'switch-knob' })
-  const btn = h('button', { type: 'button', role: 'switch', class: 'toggle-switch', 'aria-label': label, title: label },
-    icons[0], h('span', { class: 'switch-track', 'aria-hidden': 'true' }, knob), icons[1] ?? null)
-  const sync = () => btn.setAttribute('aria-checked', String(isOn()))
-  btn.addEventListener('click', () => { set(!isOn()); sync() })
-  sync()
-  return { el: btn, sync }
-}
 
 export function prefsBar(): HTMLElement {
   const theme = toggle('Dark mode', () => root.dataset.theme === 'dark', on => {

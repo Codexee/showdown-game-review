@@ -1,6 +1,7 @@
 // Games page: trainer card (username, sync, ratings), adding games, and the game list.
 import { api, type Game, type Profile, type Settings } from './api'
 import { errText, fmtAgo, fmtDate, h, say, sprite } from './dom'
+import { toggle } from './switch'
 
 // 8×8 pixel icons ('#' = filled). Each has a title for its meaning.
 const ICONS: Record<string, string[]> = {
@@ -114,6 +115,16 @@ function wire() {
   }, 60_000)
 }
 
+// Auto-analysis: the server reviews each newly saved game (setting kept on the server, so it
+// works while this page is closed). Optimistic: flips at once, reverts if the save fails.
+const autoSwitch = toggle('Auto-analyze new games', () => state.settings?.auto_analyze ?? true, on => {
+  if (state.settings) state.settings.auto_analyze = on
+  api.saveSettings({ auto_analyze: on })
+    .then(s => { state.settings = s; say(on ? 'New games will be analyzed.' : 'Auto-analysis off.') })
+    .catch(err => { if (state.settings) state.settings.auto_analyze = !on; autoSwitch.sync(); say(errText(err), 'error') })
+}, h('span', { class: 'switch-text' }, 'Auto-analyze'))
+const autoRow = h('div', { class: 'auto-row', title: 'Review every new Random Battle game in the background (about a minute each)' }, autoSwitch.el)
+
 const userForm = h('form', { class: 'user-form' },
   h('label', { for: 'username' }, 'Username'),
   h('div', { class: 'row' }, userInput, h('button', { type: 'submit', class: 'quiet' }, 'Save'), syncBtn))
@@ -130,7 +141,7 @@ export async function renderList(root: HTMLElement) {
     h('header', { class: 'app-head' }, h('h1', {}, 'Showdown Review')),
     h('section', { class: 'home frame', 'aria-label': 'Your profile and games' },
       h('div', { class: 'home-side' },
-        h('div', { class: 'home-profile', 'aria-label': 'Your profile' }, userForm, syncInfo, profileBox),
+        h('div', { class: 'home-profile', 'aria-label': 'Your profile' }, userForm, syncInfo, autoRow, profileBox),
         h('div', { class: 'add', 'aria-label': 'Add games' },
           h('h2', {}, 'Add a game'),
           // One grid, so the drop zone lines up with the link box (the Add button sits beside the link).
@@ -152,6 +163,7 @@ async function loadSettings() {
   state.settings = await api.settings()
   const s = state.settings
   if (document.activeElement !== userInput) userInput.value = s.username
+  autoSwitch.sync()
   syncInfo.textContent = `Synced ${fmtAgo(s.last_sync)}`
   syncInfo.title = s.poller_enabled ? `Checks for new games every ${s.poll_minutes} minutes` : ''
   scriptStatus.textContent = s.last_ingest || s.last_ingest_private

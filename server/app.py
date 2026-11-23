@@ -55,6 +55,7 @@ MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 class SettingsBody(BaseModel):
     username: str | None = Field(default=None, max_length=18)
     poll_minutes: float | None = Field(default=None, ge=1, le=24 * 60)
+    auto_analyze: bool | None = None
 
 
 class AnalyzeBody(BaseModel):
@@ -92,6 +93,23 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
     archive = Archive(config.data_dir)
     sprites = SpriteCache(config.data_dir)
     jobs = Jobs(config.data_dir, lambda gid: _game_for_review(archive, gid))
+
+    def auto_analyze_on() -> bool:
+        return archive.get_setting("auto_analyze", "1") == "1"   # on unless turned off
+
+    def auto_analyze(game_id: str) -> None:
+        """Queue a move review for a game that was just saved, if the setting is on and the
+        game can be reviewed. Games already reviewed with the current model are left alone."""
+        if not auto_analyze_on():
+            return
+        cur = jobs.get(game_id)
+        if cur.get("status") in ("queued", "running") or (cur.get("status") == "done" and not cur.get("stale")):
+            return
+        res = jobs.start(game_id)
+        if res.get("status") == "queued":
+            log.info("auto-analyze: queued %s", game_id)
+
+    archive.on_saved = auto_analyze
     state: dict = {"sync_lock": asyncio.Lock(), "last_result": None}
 
     def username() -> str:
@@ -186,6 +204,7 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             "last_ingest": _int(archive.get_setting("last_ingest")),
             "last_ingest_private": _int(archive.get_setting("last_ingest_private")),
             "poller_enabled": config.poller_enabled,
+            "auto_analyze": auto_analyze_on(),
         }
 
     @app.put("/api/settings")
@@ -196,6 +215,8 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             archive.set_setting("username", body.username.strip())
         if body.poll_minutes is not None:
             archive.set_setting("poll_minutes", str(body.poll_minutes))
+        if body.auto_analyze is not None:
+            archive.set_setting("auto_analyze", "1" if body.auto_analyze else "0")
         return get_settings()
 
     @app.get("/api/profile")

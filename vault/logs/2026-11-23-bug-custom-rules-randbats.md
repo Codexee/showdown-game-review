@@ -18,8 +18,8 @@ The game is a tournament battle with custom rules. Its inputlog format is `gen9r
 - 2026 training data (10,000-game sample of `data/hf`): 13 games (0.13%) with non-standard rules.
 - 53 games in the pinned bank plus `data/train/inputlog` carry a team-pick choice.
 
-## Fix (not done yet)
-- The move review's `supported()` (`server/review/jobs.py`) and `training/build_dataset.py` should reject inputlogs whose format has `@@@` and logs with rules outside the standard four (Species Clause, HP Percentage Mod, Sleep Clause Mod, Illusion Level Mod). Until then, the move review fails on such games with this error.
+## Fix
+- *Done 2026-11-23 for the move review:* `supported()` (`server/review/jobs.py`) rejects inputlogs with `@@@` in the format (auto-analysis would otherwise hit them). Still to do: `training/build_dataset.py` should reject inputlogs whose format has `@@@` and logs with rules outside the standard four (Species Clause, HP Percentage Mod, Sleep Clause Mod, Illusion Level Mod). Until then, the move review fails on such games with this error.
 - `search_eval.py` now records a failing game and goes on.
 
 ## Related

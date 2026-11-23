@@ -631,3 +631,7 @@ button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-of
 @media (max-width: 560px) {
   .app-head, .review-head { padding-right: 0; padding-top: 34px; }
 }
+
+/* Auto-analyze switch in the profile block */
+.auto-row { grid-column: 1; }
+.switch-text { font-family: var(--pixel); font-size: 0.85rem; }
