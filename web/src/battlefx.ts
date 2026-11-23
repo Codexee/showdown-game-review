@@ -95,8 +95,17 @@ export function moveStrip(mon: Mon, dex: Dex | undefined) {
 }
 
 const STAT_ORDER = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const
-const STAT_SHORT: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' }
+const STAT_SHORT: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe', accuracy: 'Acc', evasion: 'Eva' }
 const boostMul = (b: number) => (b >= 0 ? (2 + b) / 2 : 2 / (2 - b))
+const VOLATILE_NAMES: Record<string, string> = {
+  confusion: 'Confused', leechseed: 'Leech Seed', substitute: 'Substitute', taunt: 'Taunt', encore: 'Encore',
+  torment: 'Torment', disable: 'Disable', yawn: 'Drowsy', perishsong: 'Perish Song', curse: 'Cursed',
+  attract: 'Infatuated', focusenergy: 'Focus Energy', saltcure: 'Salt Cure', healblock: 'Heal Block',
+  partiallytrapped: 'Trapped', trapped: 'Trapped', aquaring: 'Aqua Ring', ingrain: 'Ingrain', protect: 'Protect',
+  followme: 'Follow Me', ragepowder: 'Rage Powder', helpinghand: 'Helping Hand', magnetrise: 'Magnet Rise',
+  embargo: 'Embargo', throatchop: 'Throat Chop', charge: 'Charge', stockpile: 'Stockpile', smackdown: 'Smack Down',
+  dynamax: 'Dynamax', typechange: 'Type changed', mustrecharge: 'Must recharge', flashfire: 'Flash Fire',
+}
 const pctP = (p: number) => ` (${Math.round(p * 100)}%)`
 
 export function typeChip(t: string, cls = '') {
@@ -129,6 +138,10 @@ export function infoCard(mon: Mon, dex: Dex | undefined, random: boolean): HTMLE
     fact('Ability', 'Possible abilities', mon.ability ? titleCase(mon.ability) : null, odds(roles, r => r.abilities)),
     fact('Item', 'Possible items', mon.item !== null ? (mon.item ? titleCase(mon.item) : '(none)') : null, odds(roles, r => r.items)),
     random || mon.tera_type ? fact('Tera Type', 'Possible Tera Types', mon.tera_type || null, odds(roles, r => r.tera)) : null,
+    // Every condition and stat stage, in words: the HP box may only have room for some.
+    mon.volatiles.length ? line(label('Effects: '), shown(mon.volatiles.map(v => VOLATILE_NAMES[v] ?? titleCase(v)).join(', '))) : null,
+    Object.keys(mon.boosts).length ? line(label('Stat changes: '), shown(Object.entries(mon.boosts)
+      .map(([k, v]) => `${v > 0 ? '+' : '−'}${Math.abs(v)} ${STAT_SHORT[k] ?? k}`).join(', '))) : null,
     roles.length ? line(label(roles.length > 1 ? 'Possible roles: ' : 'Role: '),
       h('span', { class: 'tip-guess' }, roles.map(r => r.name + (roles.length > 1 ? pctP(r.weight / roles.reduce((a, x) => a + x.weight, 0)) : '')).join(', '))) : null,
   ]

@@ -116,4 +116,6 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-publish-model]]
 - [[2026-11-23-bigger-vgc-sprites-and-design-audit]]
 - [[2026-11-23-design-audit-codex-claude]]
+- [[2026-11-23-audit-fixes-go-sprite-project-official]]
+- [[2026-11-23-open-questions-2-to-5]]
 - [[2026-11-22-second-brain-guide]]

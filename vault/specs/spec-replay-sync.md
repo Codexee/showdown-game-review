@@ -24,7 +24,7 @@ The app knows my Showdown username (`Codexe`). It shows my ratings and a list of
 
 ## Functions
 1. **Profile.** Fetch `users/<userid>.json`: rating, GXE and games per format ([[data-sources]]). Refresh when the app opens.
-2. **Poller (stage 1).** Page through `search.json?user=codexe` until a replay is already in the archive or is older than the start date. Download `.json` and `.log` for each new one. Run when the app opens and every N minutes while the server runs (N **unknown**; 15 is a guess).
+2. **Poller (stage 1).** Page through `search.json?user=codexe` until a replay is already in the archive or is older than the start date. Download `.json` and `.log` for each new one. Run when the app opens and every N minutes while the server runs (N = 5, the user's answer 2026-11-23, [[2026-11-23-open-questions-2-to-5]]).
    - Paginate with `before=<last uploadtime>` ([[data-sources]]). Store the `inputlog` too when present (random formats).
    - **Private replays:** included. Listing them needs a login (`/api/replays/searchprivate`), but fetching one needs only its password suffix: `<id>-<password>pw.json` ([[2026-11-22-research-round-2]]). So the **userscript**, which already runs in your logged-in browser, calls `searchprivate` for `codexe` and sends only the list of ids and passwords to `/api/ingest-private`. The local server then fetches each `<fullid>.json` with no login. The app never sees your password or session cookie ([[ADR-0006-replay-archive]]).
      - (unverified) The exact URL the userscript should call (`replay.pokemonshowdown.com/api/replays/searchprivate` or the play site's action endpoint) and whether the `sid` cookie is sent. Test once in the browser.

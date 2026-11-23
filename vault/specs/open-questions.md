@@ -12,10 +12,6 @@ Items wait here until they are answered. When an item is answered, record the an
 
 ## Open
 1. *(test, needs the user)* **First real-browser run of the userscript:** play one game with Tampermonkey on, then check (a) the game appears, (b) whether Chrome showed a Local Network Access prompt, (c) whether the private check works (Tampermonkey log shows `private search:` errors if the login cookie isn't sent to replay.pokemonshowdown.com), (d) after uploading, the poller upgrades the same id, which confirms room ids match replay ids. The `searchprivate` URL is settled: the replay site itself calls `/api/replays/searchprivate?username=` and gets `]` + JSON ([[spec-replay-sync]]).
-2. **Side-server replays** (e.g. `impulse-…`): include them in training data (each adds a checkout) or filter to main-server ids only? Recommendation: main server only.
-3. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
-4. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
-5. **Install SpriteCook** when the UI stage starts ([[tooling]]).
 
 6. **Codex review, model-testing changes:** items 1–3 done 2026-11-23 ([[ADR-0016-two-view-scoring-strict-gate]]). Still open: adopt items 4–5 in [[plan-run-v12]] (gate fix, two-view scoring, strict pairing, game-balanced value test, careful C/D readout)? Recommendation: 1–3 now (small, checked), 4 as one extra ~50 min test before the overnight run ([[2026-11-23-codex-review]]).
 7. *(research)* **Verify the new references** before relying on them: Nessie, Mew's Truck, Ninjask, Eevenator, Mega Evolution rules for Reg M-C ([[2026-11-23-codex-review]]).
@@ -28,10 +24,14 @@ Items wait here until they are answered. When an item is answered, record the an
 13. **Verdict bank labels:** how many choices will the user label blind (the bank also works with search-based references alone) ([[plan-grade-quality]])?
 
 
-14. **Sprites for Gen 6+ Pokémon may not be official** (Codex audit #6, [[2026-11-23-design-audit-codex-claude]]). The battle view uses Showdown's `gen5` sprites for every species; for species after Gen 5 (e.g. Gholdengo) these are Black & White-style sprites drawn by the Smogon sprite project, not game assets (https://github.com/smogon/sprites#license, unverified by Claude). This conflicts with the rule "official Pokémon sprites only" ([[visual-style]]). Options: keep gen5-style for all (consistent look), use official Gen 6+ models/home sprites for newer species (mixed look), or ask the user to relax the rule for these.
-15. **Which design-audit fixes to make** ([[2026-11-23-design-audit-codex-claude]]). Recommendation: first the confirmed bugs and accessibility (arrow double-binding, focus ring, light-mode green text, phone doubles layout, selected-turn hover), then layout items.
 
 ## Resolved
+- **Side-server replays** (was #2) → main server only, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]); `training/collect.py` already skips them.
+- **Poll interval** (was #3) → 5 minutes; `SGR_POLL_MINUTES` default changed from 15 to 5, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]).
+- **Frontend UI framework** (was #4) → not relevant anymore (built in plain TypeScript), 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]).
+- **Install SpriteCook** (was #5) → yes, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]). Install is the user's step (plugin card offered); battle visuals still use official sprites only, so SpriteCook is for UI art ([[visual-style]]).
+- **Sprites for Gen 6+ Pokémon** (was #14): resolved 2026-11-23. Smogon sprite project sprites count as official ([[2026-11-23-audit-fixes-go-sprite-project-official]]).
+- **Which design-audit fixes** (was #15): resolved 2026-11-23. The confirmed bugs and accessibility items first ([[2026-11-23-audit-fixes-go-sprite-project-official]]).
 - **Publish the trained model** → yes: release `model-main-9000`, downloaded and checked by `setup.sh` ([[2026-11-23-publish-model]], [[ADR-0021-publish-model]]), 2026-11-23.
 - **Change of emphasis** → adopted: after `v12` is read, close model testing; then grade quality, then the UI ([[2026-11-23-adopt-grade-quality-next]], [[ADR-0018-grade-quality-before-ui]]), 2026-11-23.
 - **Search weight 0.75 on fresh games** → holds: −0.0063 [−0.0109, −0.0022] on 100 new games; 0.7–0.8 flat ([[2026-11-23-search-blend-fresh-check]]), 2026-11-23.

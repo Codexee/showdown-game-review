@@ -218,6 +218,8 @@ async function loadFormats() {
 async function loadGames() {
   try {
     const [games] = await Promise.all([api.games(state.filters), loadFormats()])
+    // The rows are rebuilt (relative times change), so keyboard focus is put back afterwards.
+    const focusedHref = (document.activeElement as HTMLElement | null)?.closest?.('a.game')?.getAttribute('href') ?? null
     const first = seenGames.size === 0
     let k = 0
     list.replaceChildren(...games.map(g => {
@@ -229,6 +231,10 @@ async function loadGames() {
       }
       return row
     }))
+    if (focusedHref) {   // same game, if it's still listed
+      const again = [...list.querySelectorAll<HTMLAnchorElement>('a.game')].find(a => a.getAttribute('href') === focusedHref)
+      again?.focus({ preventScroll: true })
+    }
     if (!games.length) {
       const s = state.settings
       const filtered = state.filters.format || state.filters.result || state.filters.opponent

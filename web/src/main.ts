@@ -10,7 +10,7 @@ import { h, statusLine } from './dom'
 import { renderList } from './list'
 import { renderGallery } from './gallery'
 import { prefsBar } from './prefs'
-import { renderReview, reviewKeyHandler, setCurrent } from './review'
+import { leaveRoute, renderReview, reviewKeyHandler } from './review'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 const view = h('div', { class: 'view' })
@@ -19,6 +19,7 @@ app.append(prefsBar(), statusLine, view)
 function route() {
   const m = location.hash.match(/^#\/game\/([^/]+)(?:\/(\d+))?$/)
   statusLine.textContent = ''
+  leaveRoute()
   if (location.hash === '#/gallery') {
     document.body.dataset.page = 'review'
     void renderGallery(view)
@@ -27,7 +28,6 @@ function route() {
     void renderReview(view, decodeURIComponent(m[1]), m[2] ? Number(m[2]) : null)
   } else {
     document.body.dataset.page = 'list'
-    setCurrent(null)
     void renderList(view)
   }
   window.scrollTo(0, 0)

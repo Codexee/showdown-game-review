@@ -25,6 +25,10 @@
   --you: #3b7dd8;
   --them: #d23a56;
   --focus: #f5c032;
+  --focus-edge: #0b1424;   /* the focus ring is two-tone, so one edge always stands out */
+  --good-text: #21643d;    /* green/red as text: darker than the fills to pass 4.5:1 */
+  --bad-text: #9e1c38;
+  --you-text: #1d56a8;     /* your blue as text and links (4.8:1 on the page, 6.4:1 on screens) */
   --v-inacc: #e2ad1c;
   --v-mistake: #e8862a;
   --v-blunder: #e34040;
@@ -61,6 +65,9 @@
   --them: #f0708a;
   --btn: #3d6098;
   --btn-hover: #4c73b0;
+  --good-text: #3cc468;
+  --bad-text: #f48ca1;
+  --you-text: var(--you);
   color-scheme: dark;
 }
 
@@ -78,12 +85,16 @@ body {
 h1, h2 { font-family: var(--pixel); font-weight: 400; line-height: 1.15; margin: 0; }
 h1 { font-size: 1.75rem; }
 h2 { font-size: 1.15rem; margin-bottom: 8px; }
-a { color: var(--you); text-underline-offset: 3px; }
+a { color: var(--you-text); text-underline-offset: 3px; }
 p { margin: 0 0 8px; }
 .small { font-size: 0.875rem; }
 .muted { color: var(--ink-soft); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--focus-edge); outline-offset: 2px; box-shadow: 0 0 0 2px var(--focus); }
+/* Pixel-framed controls clip anything outside their border, so their ring is drawn inside. */
+:is(.frame, .screen, .hp-box, .evalbar, button, input, select, textarea, .turn-btn, .sprite):focus-visible {
+  outline-offset: -2px; box-shadow: inset 0 0 0 4px var(--focus);
+}
 
 /* Pixel frame: a thick border with the four corner pixels cut away. */
 .frame, .screen, .hp-box, .evalbar, button, input, select, textarea {
@@ -117,7 +128,7 @@ button:hover:not(:disabled) { background: var(--btn-hover); }
 button:active:not(:disabled) { transform: translateY(2px); }
 button:disabled { opacity: 0.45; cursor: default; }
 button.quiet { background: var(--screen); color: var(--ink); }
-.link-btn { background: none; color: var(--you); border: 0; padding: 0; clip-path: none; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.link-btn { background: none; color: var(--you-text); border: 0; padding: 0; clip-path: none; font: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .link-btn:hover:not(:disabled) { background: none; }
 textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; margin: 6px 0; }
 label { font-weight: 700; }
@@ -126,7 +137,7 @@ input[type='url'], input[type='search'] { flex: 1 1 220px; min-width: 0; }
 input[type='file'] { border-style: dashed; max-width: 100%; }
 
 .status { min-height: 1.5em; margin: 0 0 8px; font-weight: 700; }
-.status[data-kind='error'] { color: var(--them); }
+.status[data-kind='error'] { color: var(--bad-text); }
 .loading, .error { font-family: var(--pixel); font-size: 1.2rem; padding: 32px 0; }
 
 /* ───────────── Games page ───────────── */
@@ -172,14 +183,15 @@ a.game {
   font-family: var(--pixel); font-weight: 700; color: #fff; background: var(--ink-soft); }
 .pip.win { background: var(--hp-green); color: #10301c; }
 .pip.loss { background: var(--them); }
+:root[data-theme='dark'] .pip.loss { color: #172238; }   /* white was 2.8:1 on the light pink */
 .pip.tie { background: var(--hp-yellow); color: #3a2a00; }
 .who { grid-area: who; display: flex; flex-direction: column; min-width: 0; }
 .opp { font-weight: 700; font-size: 1.05rem; overflow-wrap: anywhere; }
 .fmt { color: var(--ink-soft); }
 .when { grid-area: when; text-align: right; }
 .delta { grid-area: delta; font-family: var(--pixel); font-size: 1.15rem; text-align: right; font-weight: 700; }
-.delta.up { color: var(--hp-green); }
-.delta.down { color: var(--them); }
+.delta.up { color: var(--good-text); }
+.delta.down { color: var(--bad-text); }
 .mini-team { display: flex; flex-wrap: wrap; gap: 0; }
 .mini-team.mine { grid-area: mine; }
 .mini-team.theirs { grid-area: theirs; justify-content: flex-end; }
@@ -198,13 +210,13 @@ img.mini { width: 40px; height: 40px; image-rendering: pixelated; margin: -4px -
 .review-head .back { font-family: var(--pixel); font-weight: 500; text-decoration: none; }
 .review-head .back::before { content: '◀ '; }
 .review-head h1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; margin: 6px 0; }
-.review-head .me { color: var(--you); }
+.review-head .me { color: var(--you-text); }
 .review-head .them { color: var(--them); }
 .review-head .vs { font-size: 1rem; color: var(--ink-soft); }
 .review-head .meta { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; color: var(--ink-soft); }
 .result { font-family: var(--pixel); font-weight: 700; }
-.result-win { color: var(--hp-green); }
-.result-loss { color: var(--them); }
+.result-win { color: var(--good-text); }
+.result-loss { color: var(--bad-text); }
 
 /* The DS: two screens in a frame, joined by the hinge. */
 .ds { background: var(--frame); padding: 12px; clip-path: polygon(0 8px, 8px 8px, 8px 0, calc(100% - 8px) 0, calc(100% - 8px) 8px, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 8px), 0 calc(100% - 8px)); }
@@ -314,12 +326,12 @@ img.missing { visibility: hidden; }
   font-family: var(--body); font-weight: 400; }
 .turn-list li + li .turn-btn { border-top: 1px solid var(--line); }
 .turn-btn:hover:not(:disabled) { background: var(--screen-2); }
-.turn-btn[aria-current='step'] { background: var(--frame); color: #fff; }
+.turn-btn[aria-current='step'], .turn-btn[aria-current='step']:hover:not(:disabled) { background: var(--frame); color: #fff; }
 .turn-n { font-family: var(--pixel); font-weight: 700; }
 .turn-moves { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .turn-eval { font-family: var(--pixel); text-align: right; }
-.turn-eval.up { color: var(--hp-green); }
-.turn-eval.down { color: var(--them); }
+.turn-eval.up { color: var(--good-text); }
+.turn-eval.down { color: var(--bad-text); }
 .turn-btn[aria-current='step'] .turn-eval { color: #fff; }
 
 .events { border: 2px solid var(--line); padding: 8px 10px; min-height: 120px; max-height: 320px; overflow-y: auto; }
@@ -329,7 +341,7 @@ img.missing { visibility: hidden; }
 .ev.mine { border-left-color: var(--you); }
 .ev.theirs { border-left-color: var(--them); }
 .ev.move { font-weight: 700; }
-.ev.faint { color: var(--them); font-weight: 700; }
+.ev.faint { color: var(--bad-text); font-weight: 700; }
 .ev.info { color: var(--ink-soft); }
 
 .keys { font-size: 0.85rem; color: var(--ink-soft); margin-top: 10px; }
@@ -365,8 +377,8 @@ img.missing { visibility: hidden; }
 .rv { display: flex; gap: 8px; align-items: baseline; font-size: 0.9rem; padding: 2px 0; }
 .rv .vchip { flex: none; min-width: 7.5em; text-align: center; }
 .luck { margin: 4px 0 0; font-size: 0.85rem; font-weight: 700; }
-.luck.up { color: var(--v-good); }
-.luck.down { color: var(--them); }
+.luck.up { color: var(--good-text); }
+.luck.down { color: var(--bad-text); }
 .graph-svg .gmark { vector-effect: non-scaling-stroke; stroke: var(--ink); stroke-width: 1; }
 .graph-svg .gmark.mistake { fill: var(--v-mistake); }
 .graph-svg .gmark.blunder { fill: var(--v-blunder); }
@@ -502,7 +514,7 @@ img.missing { visibility: hidden; }
   .file-drop { transition: background-color 120ms ease, color 120ms ease; }
   .file-drop:hover { background: var(--screen-2); color: var(--ink); }
 }
-#replay-file:focus-visible + .file-drop { outline: 3px solid var(--focus); outline-offset: 2px; }
+#replay-file:focus-visible + .file-drop { outline: 2px solid var(--focus-edge); outline-offset: -2px; box-shadow: inset 0 0 0 4px var(--focus); }
 
 /* Motion. Rows rise in on the first load and when a new game arrives (not on every refresh);
    ladder bars fill once, stepped like the HP bars; the sync icon turns while syncing. */
@@ -610,6 +622,8 @@ kbd { font-family: var(--pixel); border: 2px solid var(--line); border-bottom-wi
 :root[data-motion='off'] *, :root[data-motion='off'] *::before, :root[data-motion='off'] *::after {
   animation: none !important; transition: none !important;
 }
+/* Those elements only leave through their animation; without it they'd cover the new state. */
+:root[data-motion='off'] :is(.sprite.faint-ghost, .sprite.recall-ghost, .hp-box.faint-box:not(.final), .hp-ghost) { display: none; }
 
 /* ------------------------------------------------------------------ display switches (top right) */
 #app { position: relative; }
@@ -619,7 +633,6 @@ button.toggle-switch { display: inline-flex; align-items: center; gap: 5px; padd
   color: var(--ink); border: 2px solid var(--frame); font: inherit; }
 button.toggle-switch:hover:not(:disabled) { background: var(--screen-2); }
 button.toggle-switch:active:not(:disabled) { transform: none; }
-button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .toggle-switch .pxicon { width: 12px; height: 12px; }
 .switch-track { position: relative; width: 30px; height: 16px; background: var(--hp-track); border: 2px solid var(--frame); flex: none; }
 .switch-knob { position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; background: #fff; }
@@ -707,7 +720,6 @@ button.pmini:active:not(:disabled) { transform: none; }
 .pmini-status.par { background: #c9a300; } .pmini-status.brn { background: #d8632b; } .pmini-status.slp { background: #7c7f93; }
 .pmini-status.frz { background: #4fa3c7; }
 .pmini.unknown { width: 28px; }
-button.pmini:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
 /* Pokemon details, docked in the review column, laid out like Showdown's tooltip. */
 .inspect-panel { padding: 10px 12px; }
@@ -720,7 +732,7 @@ button.pmini:focus-visible { outline: 2px solid var(--focus); outline-offset: -2
 .tip-k { color: var(--ink-soft); }
 .tip-guess { color: var(--ink-soft); font-style: italic; }
 .tip-stats { font-family: var(--pixel); font-size: 0.75rem; }
-.tip-stats .up { color: var(--hp-green); } .tip-stats .down { color: var(--them); }
+.tip-stats .up { color: var(--good-text); } .tip-stats .down { color: var(--bad-text); }
 .tip-sep { color: var(--ink-soft); }
 .tip-moves { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; }
 .tip-moves li { padding-left: 8px; border-left: 4px solid var(--c, var(--line)); line-height: 1.3; }
@@ -763,7 +775,6 @@ button.icon-btn { display: inline-grid; place-items: center; width: 26px; height
 button.icon-btn:hover:not(:disabled) { background: var(--screen-2); color: var(--ink); }
 button.icon-btn[aria-pressed='true'] { color: var(--ink); border-color: var(--you); background: color-mix(in srgb, var(--you) 22%, var(--screen)); }
 button.icon-btn .pxicon { width: 14px; height: 14px; }
-button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 /* Not-yet-seen party slot: a Poke Ball sprite. */
 .pmini-ball { width: 24px; height: 24px; image-rendering: pixelated; opacity: 0.8; }
@@ -772,8 +783,8 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .elo-tag { display: inline-flex; align-items: baseline; gap: 4px; font-size: 0.95rem; }
 .elo-n { color: var(--ink-soft); }
 .elo-d { font-size: 0.85rem; }
-.elo-d.up { color: var(--hp-green); }
-.elo-d.down { color: var(--them); }
+.elo-d.up { color: var(--good-text); }
+.elo-d.down { color: var(--bad-text); }
 
 /* ------------------------------------------------------------------ layout v3 (2026-11-23)
    Left: battle box, hinge, then the Pokemon details in the bottom screen. Right: a compact
@@ -886,3 +897,21 @@ a.icon-link .pxicon { width: 14px; height: 14px; }
 /* Side tags: two short tags per line at most beside the party icons. */
 .side-tags { max-width: 52%; gap: 3px; }
 .side-tags .tag { font-size: 0.62rem; padding: 0 4px; line-height: 1.5; }
+
+/* HP-box chips: a little larger than before (was 9.6 px), and a "+N" chip for any that don't fit. */
+.hp-box .chips .chip { font-size: 0.66rem; }
+.hp-box .chips .chip.more { flex: none; border-color: var(--ink-soft); font-family: var(--pixel); }
+.hp-box .chips .chip[hidden] { display: none; }
+
+/* Phone doubles (audit 2026-11-23): two HP boxes beside two sprites left each box 87 px, so names
+   were cut to one letter. Each side gets a sprite row and a full-width row of two HP boxes. */
+@media (max-width: 640px) {
+  .field.doubles .side.theirs { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'party' 'boxes' 'sprites'; }
+  .field.doubles .side.mine { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'sprites' 'boxes' 'party'; }
+  .field.doubles .hp-boxes { flex-direction: row; align-items: stretch; gap: 4px; }
+  .field.doubles .hp-boxes > * { flex: 1 1 0; min-width: 0; width: auto; }
+  .field.doubles .hp-slot .hp-box { width: 100%; }
+  .field.doubles .sprite { --dsprite: min(112px, calc(100cqi / 1.44));
+    width: var(--dsprite); height: var(--dsprite); margin: calc(var(--dsprite) * -0.12) calc(var(--dsprite) * -0.14); }
+  .field.doubles .hp-box { padding: 3px 5px 4px; }
+}

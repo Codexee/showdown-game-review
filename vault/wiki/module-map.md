@@ -19,7 +19,7 @@ cd web && npm run dev                                         # dev server on :5
 ```
 The Claude desktop preview config is `.claude/launch.json` (`review-server`).
 
-Setup: `./start.sh` (first run calls `./setup.sh`), see `README.md` ([[ADR-0020-distribution]]). Environment variables (`server/config.py`): `SGR_DATA_DIR` (default `./data`), `SGR_USERNAME` (default empty; the app's saved setting wins), `SGR_POLL_MINUTES` (15), `SGR_REQUEST_DELAY` (1.0 s between Showdown requests), `SGR_POLLER=0` turns the background poller off.
+Setup: `./start.sh` (first run calls `./setup.sh`), see `README.md` ([[ADR-0020-distribution]]). Environment variables (`server/config.py`): `SGR_DATA_DIR` (default `./data`), `SGR_USERNAME` (default empty; the app's saved setting wins), `SGR_POLL_MINUTES` (5; was 15 until 2026-11-23, [[2026-11-23-open-questions-2-to-5]]), `SGR_REQUEST_DELAY` (1.0 s between Showdown requests), `SGR_POLLER=0` turns the background poller off.
 
 ## Backend: `server/` (Python 3.13, FastAPI; [[ADR-0007-app-stack]], [[ADR-0008-python-313]])
 | File | Job |

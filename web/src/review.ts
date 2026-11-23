@@ -27,15 +27,18 @@ const titleCase = (id: string) => id.replace(/(^|[^a-z])([a-z])/g, (_, a, b) => 
 
 export async function renderReview(root: HTMLElement, id: string, initialStep: number | null) {
   root.replaceChildren(h('p', { class: 'loading' }, 'Loading game…'))
+  const route = ++routeId
   let review: Review
   try {
     review = await api.review(id)
+    if (route !== routeId) return   // the user went elsewhere while it loaded
   } catch (err) {
+    if (route !== routeId) return
     root.replaceChildren(h('p', { class: 'error' }, `Couldn't open this game: ${errText(err)}`),
       h('a', { href: '#/' }, 'Back to games'))
     return
   }
-  setCurrent(new ReviewScreen(root, review, initialStep))
+  new ReviewScreen(root, review, initialStep)   // registers itself as the live screen
 }
 
 class ReviewScreen {
@@ -73,11 +76,19 @@ class ReviewScreen {
     this.root = root
     this.review = review
     this.step = clampStep(initialStep ?? 0, review.steps.length)
+    current = this   // before the first render, so the liveness checks below pass
+    // Bound once: build() runs again on "View as", and re-binding made each click skip turns.
+    this.prevBtn.addEventListener('click', () => this.go(this.step - 1))
+    this.nextBtn.addEventListener('click', () => this.go(this.step + 1))
+    this.prevBtn.title = 'Previous turn'
+    this.nextBtn.title = 'Next turn'
     this.build()
     this.go(this.step, false)
   }
 
   private get steps(): Step[] { return this.review.steps }
+  /** False once the router has moved on (another game, the games page): late replies are dropped. */
+  private get alive(): boolean { return current === this }
   private get isRandom(): boolean { return teamIsRandom(this.review.format_id) }
   private get me(): 'p1' | 'p2' { return this.review.perspective }
   private get them(): 'p1' | 'p2' { return this.me === 'p1' ? 'p2' : 'p1' }
@@ -91,7 +102,9 @@ class ReviewScreen {
       h('span', { 'aria-hidden': 'true' }, '⇄ '), themName)
     swap.addEventListener('click', async () => {
       try {
-        this.review = await api.review(g.id, this.them)
+        const r = await api.review(g.id, this.them)
+        if (!this.alive) return
+        this.review = r
         this.root.replaceChildren()
         this.build()
         this.go(this.step, false)
@@ -111,8 +124,6 @@ class ReviewScreen {
           : h('a', { href: `https://replay.pokemonshowdown.com/${g.id}`, target: '_blank', rel: 'noopener', title: 'Replay on Showdown' }, 'Replay ↗'),
         swap))
 
-    this.prevBtn.addEventListener('click', () => this.go(this.step - 1))
-    this.nextBtn.addEventListener('click', () => this.go(this.step + 1))
     // Turn controls: between the two screens on phones; on a desktop they sit in the Turns
     // panel header, leaving a thin hinge, so the battle box has more height.
     const nav = h('div', { class: 'turn-nav' }, this.prevBtn, this.turnLabel, this.nextBtn)
@@ -182,14 +193,17 @@ class ReviewScreen {
   // ---------------------------------------------------------------- move review
   private async loadAnalysis() {
     if (this.review.game.id === 'upload-gallery') { this.analysis = null; this.afterAnalysis(); return }
-    try { this.analysis = await api.analysis(this.review.game.id) } catch { this.analysis = null }
+    let a: Analysis | null = null
+    try { a = await api.analysis(this.review.game.id) } catch { a = null }
+    if (!this.alive) return
+    this.analysis = a
     this.afterAnalysis()
   }
 
   private async refreshEval() {
     try {
       const r = await api.review(this.review.game.id, this.me)
-      if (r.eval_method !== 'model+search') return
+      if (!this.alive || r.eval_method !== 'model+search') return
       this.review = r
       this.renderMethod()
       this.buildGraph()
@@ -219,6 +233,7 @@ class ReviewScreen {
 
   private afterAnalysis() {
     clearTimeout(this.pollTimer)
+    if (!this.alive) return
     const was = this.lastStatus
     const st = this.analysis?.status
     this.lastStatus = st
@@ -228,7 +243,7 @@ class ReviewScreen {
       this.revealGraph = true
       window.setTimeout(() => { this.revealGraph = false }, 1500)
     }
-    if ((st === 'queued' || st === 'running') && this.root.isConnected) {
+    if (st === 'queued' || st === 'running') {
       this.pollTimer = window.setTimeout(() => void this.loadAnalysis(), 2000)
     }
     this.renderAnalysisBar()
@@ -248,7 +263,7 @@ class ReviewScreen {
     run.addEventListener('click', async () => {
       run.disabled = true
       try { this.analysis = await api.analyze(this.review.game.id) } catch (err) { say(errText(err), 'error') }
-      this.afterAnalysis()
+      if (this.alive) this.afterAnalysis()
     })
     const parts: (Node | string)[] = []
     if (!a || a.status === 'none') {
@@ -326,12 +341,16 @@ class ReviewScreen {
 
   // ---------------------------------------------------------------- navigation
   go(step: number, focusList = true) {
+    if (!this.alive) return
     const from = this.step
     this.step = clampStep(step, this.steps.length)
     const now = performance.now()
     // Animate a single step forward unless steps come fast (a held key): then render instantly,
     // so motion never slows down scrubbing.
+    // Motion off cancels the animations that would remove the leaving Pokemon's ghost and HP
+    // box, so with Motion off they are never drawn.
     const motion = this.opened && this.step === from + 1 && now - this.lastStepAt > 180
+      && document.documentElement.dataset.motion !== 'off'
     this.lastStepAt = now
     this.prevMons = motion ? snapMons(this.steps[from]) : null
     this.root.classList.toggle('still', !motion)
@@ -381,7 +400,27 @@ class ReviewScreen {
     this.hovered = null
     // Field effects are tags only (no official Pokemon sprite exists for them; vault visual-style).
     this.topScreen.replaceChildren(field, tags)
+    this.fitChips()
     this.renderInspect()
+  }
+
+  /** A crowded HP box: hide the chips that don't fit and say how many with a "+N" chip whose
+   *  title names them (the details card lists them all). */
+  private fitChips() {
+    for (const row of this.topScreen.querySelectorAll<HTMLElement>('.hp-box .chips')) {
+      if (row.scrollWidth <= row.clientWidth + 1) continue
+      const chips = [...row.children] as HTMLElement[]
+      const more = h('span', { class: 'chip more' })
+      row.append(more)
+      const hidden: string[] = []
+      for (let i = chips.length - 1; i >= 0 && row.scrollWidth > row.clientWidth + 1; i--) {
+        chips[i].hidden = true
+        hidden.unshift(chips[i].textContent ?? '')
+        more.textContent = `+${hidden.length}`
+      }
+      more.title = hidden.join(', ')
+      more.setAttribute('aria-label', `Also: ${hidden.join(', ')}`)
+    }
   }
 
   /** Hover, focus or click a Pokemon to see its details in the docked panel. */
@@ -528,7 +567,9 @@ class ReviewScreen {
       // makes the box taller.
       h('div', { class: 'hp-foot' },
         mon.status ? h('span', { class: `status-tag ${mon.status}${newStatus ? ' pop' : ''}` }, STATUS_LABEL[mon.status] ?? mon.status) : null,
-        h('span', { class: 'chips' }, ...boosts, ...extra),
+        // Conditions first (they explain a turn more often than a stat stage); what doesn't
+        // fit folds into a "+N" chip (fitChips).
+        h('span', { class: 'chips' }, ...extra, ...boosts),
         h('span', { class: 'hp-num' }, hpText)),
       moveStrip(mon, this.review.dex))
     this.inspectOn(box, mine ? this.me : this.them, mon)
@@ -718,7 +759,11 @@ export function teamIsRandom(formatId: string): boolean {
 function clampStep(i: number, n: number) { return Math.max(0, Math.min(n - 1, Number.isFinite(i) ? i : 0)) }
 
 // The router keeps one live screen so the key handler can reach it.
+// Each route change bumps routeId and clears it, so a review still loading or polling in the
+// background can't draw over the new page or rewrite its URL.
 let current: { handleKey(e: KeyboardEvent): void } | null = null
+let routeId = 0
 export function reviewKeyHandler(e: KeyboardEvent) { current?.handleKey(e) }
 export function setCurrent(screen: { handleKey(e: KeyboardEvent): void } | null) { current = screen }
+export function leaveRoute() { routeId++; current = null }
 export { ReviewScreen }
