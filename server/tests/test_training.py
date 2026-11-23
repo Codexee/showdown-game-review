@@ -104,3 +104,34 @@ def test_metrics_temperature_and_paired_gate():
     b = {"key": np.arange(20000), "p": sigmoid(logit / 2.0), "label": y, "game": games}
     r = paired(a, b, boot=200)
     assert r["delta_log_loss"] < 0 and r["delta_log_loss_ci90"][1] < 0   # the calibrated one wins clearly
+
+
+# ---- two-view scoring and strict pairing (vault 2026-11-23-codex-review, fixes 2-3)
+def test_two_view_averages_paired_rows():
+    import numpy as np
+    from training.metrics import two_view, two_view_report
+    p = np.array([0.7, 0.4, 0.2, 0.9])      # rows: (p1, p2) of position 1, then of position 2
+    y = np.array([1.0, 0.0, 0.0, 1.0])
+    g = np.array([5, 5, 6, 6])
+    q = two_view(p, y, g)
+    assert np.allclose(q, [0.65, 0.35, 0.15, 0.85])
+    assert two_view_report(p[1:], y[1:], g[1:]) is None   # unpaired rows: no two-view score
+    try:
+        two_view(p[1:], y[1:], g[1:])
+        raise AssertionError("expected ValueError")
+    except ValueError:
+        pass
+
+
+def test_compare_runs_refuses_different_samples():
+    import numpy as np
+    import pytest
+    from training.compare_runs import check_same
+    a = {"key": np.array(["g#0", "g#1", "h#0", "h#1"]), "label": np.array([1.0, 0.0, 0.0, 1.0])}
+    check_same(a, dict(a))
+    with pytest.raises(SystemExit):
+        check_same(a, {k: v[:2] for k, v in a.items()})
+    with pytest.raises(SystemExit):
+        check_same(a, {"key": a["key"][::-1], "label": a["label"][::-1]})
+    with pytest.raises(SystemExit):
+        check_same(a, {"key": a["key"], "label": 1 - a["label"]})

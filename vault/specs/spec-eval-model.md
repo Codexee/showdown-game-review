@@ -27,7 +27,7 @@ For any turn of a game, output (a) the win chance for each side, which drives th
 - **Last turn's events** on the field token: per side moved first, crit, miss, super-effective, switched, fainted; plus each side's last move (id + properties).
 - **Auxiliary heads** (Jaxcalibur): the opponent's choice this turn (weight 0.25) and each opposing Pokémon's item / ability / Tera / moves as revealed by the end of the game (weight 0.1 each; multi-positive loss for moves). The parser now keeps `orig_item` so a knocked-off item is still a label.
 - **Smaller default:** d=256, 6 layers.
-- **Measurement** (`training/metrics.py`): temperature fitted on validation and applied in the app; by-phase scores (0–2 / 3–6 / 7+ fainted); 90% bootstrap intervals over games; rating 1500+ slice; placeholder alongside. **Paired gate** `training/compare_runs.py` on a **pinned bank** of future games (`data/train/test_pinned/`, 3,709 games, 174,608 samples); the overnight script installs a model only if the gate doesn't call it worse.
+- **Measurement** (`training/metrics.py`): temperature fitted on validation and applied in the app; by-phase scores (0–2 / 3–6 / 7+ fainted); 90% bootstrap intervals over games; rating 1500+ slice; placeholder alongside. **Paired gate** `training/compare_runs.py` on a **pinned bank** of future games (`data/train/test_pinned/`, 3,709 games, 174,608 samples); both models are scored from both players' views and the files must cover exactly the same samples; the overnight script installs a model only if the gate calls it better ([[ADR-0016-two-view-scoring-strict-gate]], 2026-11-23).
 
 ## v1 model (`training/model.py`)
 Transformer encoder over the 13 tokens, no positions within a side (only own / opponent / field embeddings). Value head on [field token, mean of tokens]. Policy head: move logits from the active Pokémon's token, switch logits per own token, with a mask (no fainted / active; only the first unseen slot). Loss = BCE(value) + 0.5 · CE(policy).
@@ -36,7 +36,7 @@ Transformer encoder over the 13 tokens, no positions within a side (only own / o
 AdamW, warmup then cosine, gradient clipping. Saves `last.pt` (resume), `best.pt` (best value loss: what the eval bar uses), `best_policy.pt`, `metrics.jsonl`. Every evaluation also reports the placeholder's score on the same samples, so "beats the baseline" is checked, not assumed. Time budget and SIGTERM/Ctrl-C stop cleanly.
 
 ## Overnight run (`training/overnight.sh`, [[ADR-0005-overnight-training-budget]])
-Builds the full dataset (games since 2026-01-01, ≈650k games / ≈15–16M samples), trains d=256, 6 layers (≈7M params) for 9 h with `caffeinate`, scores on the pinned bank, runs the paired gate against the installed model, and installs (`training/export.py` → `data/models/current.pt`) unless the gate calls it worse. Resumable.
+Builds the full dataset (games since 2026-01-01, ≈650k games / ≈15–16M samples), trains d=256, 6 layers (≈7M params) for 9 h with `caffeinate`, scores on the pinned bank, runs the paired gate against the installed model, and installs (`training/export.py` → `data/models/current.pt`) only if the gate calls it better. Since 2026-11-23: `RUN` must be a new name, the dataset is named after its dates and checked, settings are variables, `DRY_RUN=1` checks without training or installing, `RESUME=1` continues a run ([[ADR-0016-two-view-scoring-strict-gate]]).
 
 ## Evaluation
 - Value: log-loss, accuracy, Brier, calibration error (ECE), accuracy by turn range; always next to the placeholder.

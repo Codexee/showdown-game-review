@@ -17,8 +17,10 @@ Items wait here until they are answered. When an item is answered, record the an
 4. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
 5. **Install SpriteCook** when the UI stage starts ([[tooling]]).
 
-6. **Codex review, model-testing changes:** adopt items 1–5 in [[plan-run-v12]] (gate fix, two-view scoring, strict pairing, game-balanced value test, careful C/D readout)? Recommendation: 1–3 now (small, checked), 4 as one extra ~50 min test before the overnight run ([[2026-11-23-codex-review]]).
+6. **Codex review, model-testing changes:** items 1–3 done 2026-11-23 ([[ADR-0016-two-view-scoring-strict-gate]]). Still open: adopt items 4–5 in [[plan-run-v12]] (gate fix, two-view scoring, strict pairing, game-balanced value test, careful C/D readout)? Recommendation: 1–3 now (small, checked), 4 as one extra ~50 min test before the overnight run ([[2026-11-23-codex-review]]).
 7. *(research)* **Verify the new references** before relying on them: Nessie, Mew's Truck, Ninjask, Eevenator, Mega Evolution rules for Reg M-C ([[2026-11-23-codex-review]]).
+
+8. **What "public" means for the encoder** (Codex finding 2, second part): uploaded randbats logs carry exact HP for both sides, and the encoder leaves out the player's own unseen bench. Decide one mask for training, testing and the move review's leaf. Impact unmeasured ([[2026-11-23-codex-review]]).
 
 ## Resolved
 - **Hindsight in move review** → it matters: grading with the real sets changes 21% of verdicts and 6% of flags on 12 games, about 3× sampling noise; worlds mode is now the default ([[ADR-0015-move-review-sampled-worlds]], [[2026-11-22-worlds-vs-perfect-results]]), 2026-11-22.

@@ -49,13 +49,18 @@ Readout: best value loss and its epoch, pinned-bank log-loss, gate A vs B, B vs 
 - About 14k steps per epoch at 1.24M games, so roughly 4.5 epochs in 9 h; `best.pt` keeps the best value step.
 - Then: test on the pinned bank, paired gate vs `main`, install if not worse. Record results in `raw/` and [[spec-eval-model]].
 
-## Changes from the Codex review (proposed 2026-11-23, waiting on the user)
+## Changes from the Codex review (items 1–3 done 2026-11-23, [[ADR-0016-two-view-scoring-strict-gate]]; 4–5 wait on the user)
 Source: [[2026-11-23-codex-review]]. Items 1–3 are checked; 4–5 are test-design advice.
 1. **Fix the install gate in `overnight.sh` before any overnight run.** Fresh run name (not `main`), dataset rebuilt or checked against `SINCE`, B/C settings passed through, and install only on "b is better" or an explicit rule; "no clear difference" or a skipped gate keeps `main`.
 2. **Two-view scoring** for the eval bar, `test_model` and the gate, the same as the move review's leaf: measured −0.0026 log-loss on `main` with no retraining.
 3. **Strict pairing in `compare_runs`:** fail if the two prediction files don't have the same keys.
 4. **A game-balanced value test** (a fifth small run): sample games evenly, a few positions per game for the value loss, dense policy labels. It tests the "one label per game" diagnosis directly.
 5. **Read C and D carefully:** C's schedule depends on the configured epoch count (4 here, 8 in the overnight script). D changes data age, game count and update count together, so a D win doesn't mean all of 2025 helps. The pinned bank has now informed several choices; keep a later window of collected games for one final check against `main`.
+
+### Readout so far, two-view scoring (2026-11-23)
+- A vs B: log-loss 0.59736 vs 0.59734, no clear difference (single view had B ahead by 0.0017, band crossing zero). So far regularisation changes the validation curve's shape (B stays flat to epoch 4) more than the score on future games.
+- `main` vs B: B worse by 0.0145, band [+0.0103, +0.0186]. `main` two-view: 0.58285.
+- The overnight script's settings defaults are still the old ones (dropout 0.1, wd 0.05, no schedule, 4 epochs); set them from the test winner when the overnight run is approved.
 
 ## Needs from the user
 - The Mac must stay awake: lid open, or on power with an external display. Clamshell sleep on battery pauses runs ([[environment-quirks]]).

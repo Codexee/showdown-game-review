@@ -30,6 +30,8 @@ def main() -> None:
     test_file = MODELS / args.run / f"test_{args.test_data}.json"
     t = json.loads(test_file.read_text()) if test_file.exists() else {}
     src, label = (t, "newer games it never saw") if t.get("value_acc") is not None else (m, "held-out games")
+    if t.get("two_view"):  # the bar averages both players' views (server/model_eval.py), so quote that score
+        src = {**t, "value_acc": t["two_view"]["acc"]}
     info = {
         "run": args.run, "step": ck["step"], "val_value_loss": m.get("value_loss"),
         "val_acc": m.get("value_acc"), "baseline_val_acc": m.get("baseline_value_acc"),

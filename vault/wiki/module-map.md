@@ -85,14 +85,14 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 | `build_dataset.py` | `python -m training.build_dataset --name … --hf … --since …` (or `--inputlog`): multiprocess → memory-mapped arrays in `data/train/ds/<name>/`. |
 | `tables.py` | Fixed lookup tables built from `dex.json` (Showdown dex: base stats, types, move properties) and `randbats_gen9.json` (pkmn/randbats priors, MIT). |
 | `model.py` | `EvalNet` v1.1: tokens with property tables and randbats-prior mixes; value, policy, opponent's-choice and hidden-set heads; switch mask per side. |
-| `metrics.py` | Temperature fit, ECE, by-phase scores, bootstrap CIs over games, 1500+ slice, paired comparison. |
-| `compare_runs.py` | Paired gate: two runs' predictions on the same pinned samples (`preds_<data>.npz`), Δ log-loss / Brier with 90% bands. |
+| `metrics.py` | Temperature fit, ECE, by-phase scores, bootstrap CIs over games, 1500+ slice, paired comparison, `two_view` (both players' views averaged; needs `--both-sides` rows). |
+| `compare_runs.py` | Paired gate: two runs' predictions on the same pinned samples (`preds_<data>.npz`), Δ log-loss / Brier with 90% bands. Stops unless both files have the same keys and labels. `--view two` (default) or `single`. |
 | `train.py` | `python -m training.train --data … --run … --hours …`: MPS training, checkpoints, resume, metrics vs placeholder. |
-| `test_model.py` | Scores a run on another dataset (the pinned bank `test_pinned`) with the validation temperature; writes the report and per-sample predictions. |
+| `test_model.py` | Scores a run on another dataset (the pinned bank `test_pinned`) with the validation temperature; writes the report (with a `two_view` section) and per-sample predictions. |
 | `export.py` | Installs a run as `data/models/current.pt` for the app. |
-| `overnight.sh` | Build → train 9 h → test → install, with `caffeinate`. Log: `data/models/<run>.log`. |
+| `overnight.sh` | Build or check the dataset → train (9 h ceiling) → test → gate → install only if better, with `caffeinate`. `RUN=<new name>`; variables `SINCE`/`RANGES`, `EPOCHS`, `DROPOUT`, `WD`, `VW_FLOOR`; `RESUME=1`, `DRY_RUN=1`, `INSTALL_IF_TIE=1`. Log: `data/models/<run>.log`. |
 
-`server/model_eval.py` loads `data/models/current.pt` (reloads when it changes) for the review endpoint; doubles keep the placeholder.
+`server/model_eval.py` loads `data/models/current.pt` (reloads when it changes) for the review endpoint; it averages both players' views ([[ADR-0016-two-view-scoring-strict-gate]]); doubles keep the placeholder.
 
 `tests_v12.sh` runs the four v1.2 tests and gates ([[plan-run-v12]]). `train.py` also takes `--dropout` and `--value-weight-floor`; `build_dataset.py` takes `--ranges` for several date ranges.
 

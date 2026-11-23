@@ -51,6 +51,35 @@ def _scores(p: np.ndarray, y: np.ndarray) -> dict:
             "acc": float(((p > 0.5) == (y > 0.5)).mean()), "ece": ece(p, y), "n": int(len(y))}
 
 
+def two_view(p: np.ndarray, y: np.ndarray, game: np.ndarray) -> np.ndarray:
+    """Each position scored from both players' views, as the move review's leaf does:
+    p1's chance = (p1's view + 1 - p2's view) / 2. Needs a dataset built with --both-sides,
+    whose rows come in (p1, p2) pairs for the same position (training.features.game_samples).
+    Measured on main@9000, pinned bank: log-loss 0.58543 -> 0.58285 (vault 2026-11-23-codex-review)."""
+    if len(p) % 2 or not (np.array_equal(game[0::2], game[1::2]) and np.allclose(y[0::2] + y[1::2], 1)):
+        raise ValueError("two-view scoring needs rows in (p1, p2) pairs of the same position (build with --both-sides)")
+    avg = (p[0::2] + 1 - p[1::2]) / 2
+    q = np.empty_like(p)
+    q[0::2], q[1::2] = avg, 1 - avg
+    return q
+
+
+def is_paired(y: np.ndarray, game: np.ndarray) -> bool:
+    return len(y) % 2 == 0 and np.array_equal(game[0::2], game[1::2]) and bool(np.allclose(y[0::2] + y[1::2], 1))
+
+
+def two_view_report(p: np.ndarray, y: np.ndarray, game: np.ndarray, boot: int = 200) -> dict | None:
+    """Scores of the two-view estimate (see two_view), or None if the rows aren't paired."""
+    if not is_paired(y, game):
+        return None
+    q = two_view(p, y, game)
+    out = _scores(q, y)
+    if boot:
+        out["log_loss_ci90"] = bootstrap(lambda w: float((_ll(q, y) * w).sum() / w.sum()), game, boot)
+        out["acc_ci90"] = bootstrap(lambda w: float((((q > 0.5) == (y > 0.5)) * w).sum() / w.sum()), game, boot)
+    return out
+
+
 def bootstrap(stat, games: np.ndarray, n: int = 200, seed: int = 0, level: float = 0.9) -> tuple[float, float]:
     """Percentile interval of stat(mask) when resampling whole games with replacement."""
     rng = np.random.default_rng(seed)

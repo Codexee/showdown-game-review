@@ -4,7 +4,8 @@ games, by phase and on the high-rating slice. Uses the temperature fitted on val
 
     uv run python -m training.test_model --run main --data test
 
-Writes data/models/<run>/test_<data>.json (report) and preds_<data>.npz (per-sample
+Writes data/models/<run>/test_<data>.json (report; `two_view` = both players' views
+averaged, for datasets built with --both-sides) and preds_<data>.npz (per-sample
 predictions keyed by game id and sample number, for training.compare_runs).
 """
 from __future__ import annotations
@@ -16,7 +17,7 @@ import numpy as np
 import torch
 
 from training.build_dataset import load
-from training.metrics import sigmoid
+from training.metrics import sigmoid, two_view_report
 from training.model import EvalNet, ModelConfig
 from training.train import MODELS, collect, pick_device, summarize
 from server.config import ROOT
@@ -49,6 +50,8 @@ def main() -> None:
     temperature = float(ck.get("temperature", 1.0))
     m = summarize(arr, temperature=temperature, boot=args.boot)
     m.update(run=args.run, checkpoint=args.which, step=ck["step"], data=args.data)
+    # Both players' views averaged, as the eval bar and move review use the model (2026-11-23).
+    m["two_view"] = two_view_report(sigmoid(arr["logit"] / temperature), arr["label"], arr["game"], boot=args.boot)
     (MODELS / args.run / f"test_{args.data}.json").write_text(json.dumps(m, indent=1))
     np.savez_compressed(MODELS / args.run / f"preds_{args.data}.npz", key=sample_keys(args.data, arr["game"]),
                         p=sigmoid(arr["logit"] / temperature), p_raw=sigmoid(arr["logit"]), label=arr["label"], game=arr["game"],
@@ -60,7 +63,8 @@ def main() -> None:
                                    for k, v in c["by_phase"].items()},
                       "rating_1500_plus": c.get("rating_1500_plus"), "policy_top1": m["policy_top1"],
                       "policy_top3": m["policy_top3"], "opp_policy_top3": m["opp_policy_top3"],
-                      "set_prediction": m["set_prediction"], "temperature": temperature}, indent=1))
+                      "set_prediction": m["set_prediction"], "temperature": temperature,
+                      "two_view": m["two_view"]}, indent=1))
 
 
 if __name__ == "__main__":

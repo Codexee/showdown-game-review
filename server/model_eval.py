@@ -36,14 +36,21 @@ class ModelEval:
         if not states:
             return []
         ev = events or {}
-        enc = [encode(s, side, ev.get(s["turn"] - 1) if s["turn"] > 1 else None) for s in states]
+        other = "p2" if side == "p1" else "p1"
+        # Both players' views, averaged: side's chance = (side's view + 1 - other's view) / 2.
+        # The same estimate as the move review's leaf; on the pinned bank it beat one view,
+        # log-loss 0.58543 -> 0.58285 for main@9000 (vault 2026-11-23-codex-review).
+        enc = [encode(s, who, ev.get(s["turn"] - 1) if s["turn"] > 1 else None)
+               for who in (side, other) for s in states]
         t = self.torch
         with t.no_grad():
             ids = t.from_numpy(np.stack([e[0] for e in enc]).astype(np.int64))
             mon = t.from_numpy(np.stack([e[1] for e in enc]))
             field = t.from_numpy(np.stack([e[2] for e in enc]))
             value, _ = self.model(ids, mon, field)
-            return t.sigmoid(value / self.temperature).tolist()
+            p = t.sigmoid(value / self.temperature).numpy()
+        n = len(states)
+        return ((p[:n] + 1 - p[n:]) / 2).tolist()
 
 
 def load(data_dir: Path) -> ModelEval | None:

@@ -44,6 +44,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0013-post-game-analysis-only]]: accepted (formalizes current behavior)
 - [[ADR-0014-move-review-method]]: accepted (stage 6: regret over a simulated choice matrix)
 - [[ADR-0015-move-review-sampled-worlds]]: accepted (grade on what each player could see; amends ADR-0014)
+- [[ADR-0016-two-view-scoring-strict-gate]]: accepted (both players' views; install only if better)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
@@ -76,4 +77,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-v12-tests-go]]
 - [[2026-11-22-direction-codex-review]]
 - [[2026-11-23-codex-review]]
+- [[2026-11-23-codex-fixes-go]]
 - [[2026-11-22-second-brain-guide]]
