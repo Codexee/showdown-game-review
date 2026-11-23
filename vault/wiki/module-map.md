@@ -36,13 +36,13 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 | `battle/narrate.py` | Readable event lines per turn ("Metagross was paralyzed (Static).") for the review screen. |
 | `evaluate.py` | **Placeholder** win chance per state: logistic on the remaining-HP lead (0.5 per Pokémon of HP; unseen opponents count as full). Replaced by the model in stage 5. |
 | `sprites.py` | `sprite_id(species)` (Showdown's naming: `palafin-hero`, `hooh`, `kommoo-totem`) and a disk cache for `/sprites/gen5[-back]/<id>.png` (remembers 404s too). |
-| `review/` | Stage 6 move review ([[ADR-0014-move-review-method]]). `engine.py` drives `tools/review-engine.cjs` (one Node process per game, built at the inputlog's commit via `training.rebuild.checkout`). `analyze.py` prunes choices with the policy head, expands pairs, scores leaves with the value head, solves the matrix (regret matching+), and returns per-turn verdicts, luck and a per-player summary. `jobs.py` runs one job at a time in a thread and caches results in `data/analysis/<id>.json`, tagged with the model. |
+| `review/` | Stage 6 move review ([[ADR-0014-move-review-method]]). `engine.py` drives `tools/review-engine.cjs` (one Node process per game, built at the inputlog's commit via `training.rebuild.checkout`). `analyze.py` prunes choices with the policy head, expands pairs, scores leaves with the value head, solves the matrix (regret matching+), and returns per-turn verdicts, luck and a per-player summary. `worlds.py` samples the opponent's hidden set parts from the randbats data for worlds mode ([[ADR-0015-move-review-sampled-worlds]]). `jobs.py` runs one job at a time in a thread and caches results in `data/analysis/<id>.json`, tagged with the model. |
 | `app.py` | FastAPI routes (below), origin guard middleware ([[ADR-0010-local-api-origin-guard]]), background poller task, serves `web/dist` and the userscript. |
 
 `archive.py` also validates every game id and format id before using them as file names (an uploaded `.json` could otherwise write outside `data/`).
 
 ### API
-`GET/PUT /api/settings` · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `GET /api/games/{id}/review?side=p1|p2` · `GET/POST /api/games/{id}/analysis` · `GET /sprites/{gen5|gen5-back}/{id}.png` · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
+`GET/PUT /api/settings` · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `GET /api/games/{id}/review?side=p1|p2` · `GET/POST /api/games/{id}/analysis` (body: `seeds`, `top_k`, `mode` worlds|perfect) · `GET /sprites/{gen5|gen5-back}/{id}.png` · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
 
 ## Userscript: `userscript/`
 | File | Job |
@@ -71,7 +71,7 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 | File | Job |
 |---|---|
 | `sim-states.cjs` | `node tools/sim-states.cjs <built-showdown-dir> <replay.json>...`: replays inputlogs and prints the true state at each turn start (ground truth; also the full-information training target, [[ADR-0009-randbats-full-info-reconstruction]]). |
-| `review-engine.cjs` | `node tools/review-engine.cjs <built-showdown-dir>`: JSON-lines service. `load` replays an inputlog and keeps each turn-start snapshot (as a JSON string), the legal choices and the played choice; `expand` runs choice pairs from a snapshot with seeded PRNGs and branches over forced replacements. |
+| `review-engine.cjs` | `node tools/review-engine.cjs <built-showdown-dir>`: JSON-lines service. `load` replays an inputlog and keeps each turn-start snapshot (as a JSON string), the legal choices and the played choice; `expand` runs choice pairs from a snapshot with seeded PRNGs and branches over forced replacements; `options` and `expand_jobs` do the same inside a sampled world (overridden moves, item, ability, Tera type). |
 | `compare_parser.py` | `uv run python -m tools.compare_parser <replays-dir> <truth.jsonl>`: grades the parser field by field and separates "not knowable from the log" ([[2026-11-22-parser-accuracy-results]]). |
 
 ## Training: `training/` (stage 5, [[spec-eval-model]])
@@ -105,10 +105,10 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 
 - `test_training.py`: actions, encoding, switch mask, model shapes, review endpoint using an installed model (singles only). 73 Python tests in total.
 
-- `test_move_review.py`: accuracy curve, verdict bands, the matrix solver, labels, summary, job gating, analysis API validation, and the engine against the real sim build (skipped without it). 91 Python tests in total.
+- `test_move_review.py`: accuracy curve, verdict bands, the matrix solver, labels, summary, job gating, analysis API validation, and the engine against the real sim build (skipped without it); world sampling (revealed facts kept, 4 moves, seeded, opponent only) and world overrides in the engine. 95 Python tests in total.
 
 ## Not built yet
-Sampled hidden worlds for move review, VGC (stage 7). See [[roadmap]].
+Sampling unseen opposing species in move review, VGC (stage 7). See [[roadmap]].
 
 ## Related
 - [[architecture]] · [[spec-replay-sync]] · [[roadmap]]

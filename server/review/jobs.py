@@ -62,7 +62,7 @@ class Jobs:
             return st
         return {"status": "none"}
 
-    def start(self, game_id: str, seeds: int = 16, top_k: int = 6) -> dict:
+    def start(self, game_id: str, seeds: int = 16, top_k: int = 6, mode: str = "worlds") -> dict:
         game = self.get_game(game_id)
         if game is None:
             return {"status": "error", "error": "No such game"}
@@ -75,7 +75,7 @@ class Jobs:
             if self.status.get(game_id, {}).get("status") in ("queued", "running"):
                 return self.status[game_id]
             self.status[game_id] = {"status": "queued", "progress": [0, 0]}
-        self.q.put((game_id, seeds, top_k))
+        self.q.put((game_id, seeds, top_k, mode))
         return self.status[game_id]
 
     def _set(self, game_id: str, **kw) -> None:
@@ -84,14 +84,14 @@ class Jobs:
 
     def _worker(self) -> None:
         while True:
-            game_id, seeds, top_k = self.q.get()
+            game_id, seeds, top_k, mode = self.q.get()
             self._set(game_id, status="running", started=time.time())
             try:
                 game = self.get_game(game_id)
                 replay = {"log": game["log"], "inputlog": game["inputlog"]}
                 model = model_eval.load(self.data_dir)
                 with ReviewEngine(sim_for(replay["inputlog"])) as engine:
-                    res = analyze(replay, model, engine, seeds=seeds, top_k=top_k,
+                    res = analyze(replay, model, engine, seeds=seeds, top_k=top_k, mode=mode,
                                   progress=lambda done, total: self._set(game_id, progress=[done, total]))
                 res["model"] = self.model_tag()
                 res["finished"] = int(time.time())

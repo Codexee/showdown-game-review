@@ -17,6 +17,7 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from .archive import Archive
 from .battle import parse_log, view_for
@@ -58,6 +59,7 @@ class SettingsBody(BaseModel):
 class AnalyzeBody(BaseModel):
     seeds: int = Field(default=16, ge=4, le=128)
     top_k: int = Field(default=6, ge=2, le=13)
+    mode: Literal["worlds", "perfect"] = "worlds"   # vault ADR-0015
 
 
 class ImportUrlBody(BaseModel):
@@ -306,7 +308,7 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
     @app.post("/api/games/{game_id}/analysis")
     def post_analysis(game_id: str, body: AnalyzeBody | None = None):
         body = body or AnalyzeBody()
-        res = jobs.start(game_id, seeds=body.seeds, top_k=body.top_k)
+        res = jobs.start(game_id, seeds=body.seeds, top_k=body.top_k, mode=body.mode)
         if res.get("status") == "error" and res.get("error") == "No such game":
             raise HTTPException(404, "No such game")
         return res

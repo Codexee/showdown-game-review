@@ -16,9 +16,9 @@ Items wait here until they are answered. When an item is answered, record the an
 3. **Poll interval** for the replay poller. Default 15 minutes unless the user says otherwise ([[spec-replay-sync]]).
 4. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
 5. **Install SpriteCook** when the UI stage starts ([[tooling]]).
-6. *(research)* **Hindsight in move review:** the simulator uses the real hidden sets, so a grade can use information the player didn't have. How often does sampling hidden sets from the randbats priors change a verdict? Measure before trusting close calls ([[ADR-0014-move-review-method]]).
 
 ## Resolved
+- **Hindsight in move review** → it matters: grading with the real sets changes 21% of verdicts and 6% of flags on 12 games, about 3× sampling noise; worlds mode is now the default ([[ADR-0015-move-review-sampled-worlds]], [[2026-11-22-worlds-vs-perfect-results]]), 2026-11-22.
 - **P0 before the overnight run** → yes; built and passed the paired gate vs test2 ([[2026-11-22-p0-ab-results]]), 2026-11-22.
 - **ADR-0009** → accepted: train on full-information games rebuilt from inputlogs at their exact commit ([[2026-11-22-adr-0009-decision]]), 2026-11-22.
 - **Private replays method** → the userscript lists them with your browser login and sends only ids and passwords; the server fetches `<id>-<pw>pw.json` with no login ([[spec-replay-sync]], [[2026-11-22-research-round-2]]), 2026-11-22.

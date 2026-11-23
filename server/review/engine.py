@@ -36,6 +36,14 @@ class ReviewEngine:
     def expand(self, turn: int, pairs: list[tuple[str, str]], seeds: int) -> list[dict]:
         return self._ask({"cmd": "expand", "turn": turn, "pairs": [list(p) for p in pairs], "seeds": seeds})["cells"]
 
+    def options(self, turn: int, worlds: list[dict | None]) -> list[dict]:
+        return self._ask({"cmd": "options", "turn": turn, "worlds": worlds})["worlds"]
+
+    def expand_jobs(self, turn: int, jobs: list[dict]) -> list[dict]:
+        """jobs: [{"world": {...}|None, "seed": k, "pairs": [(c1, c2), ...]}]"""
+        return self._ask({"cmd": "expand_jobs", "turn": turn,
+                          "jobs": [dict(j, pairs=[list(p) for p in j["pairs"]]) for j in jobs]})["cells"]
+
     def close(self) -> None:
         if self.proc.poll() is None:
             self.proc.kill()

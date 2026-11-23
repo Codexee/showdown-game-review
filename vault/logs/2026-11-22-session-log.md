@@ -39,10 +39,13 @@ tags: [area/vault]
 
 - **Collector crash:** the 14-day inputlog crawl stopped at 16,700 replays (2026-11-10 11:15 UTC) on one connection reset. Cause: the Mac was asleep with the lid closed on battery, waking for 2 s every 16 min. Added retries with backoff and resumed it; it needs the lid open to finish ([[environment-quirks]]).
 
+- **Sampled worlds** ([[ADR-0015-move-review-sampled-worlds]], [[2026-11-22-worlds-vs-perfect-results]]): move review now grades each player over 16 sampled versions of the opponent's hidden set parts (randbats role data), with a matrix per world; luck stays in the real game. On 12 games, 79% of verdicts match the real-set grading and 6% of flags change, about 3× the sampling noise. 95 tests.
+- **Collector finished:** 14-day crawl done, 18,975 replays with inputlogs in `data/train/inputlog`.
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
 ## Next
 - User: install the userscript and play one game ([[open-questions]] #1).
-- Next: sampled hidden worlds for move review ([[open-questions]] #6), and fix value overfitting in the next training run.
+- Next: fix value overfitting in the next training run (now with 18,975 inputlog replays); consider sampling unseen opposing species in move review.
 - Then: stage 7, VGC Reg M-C.

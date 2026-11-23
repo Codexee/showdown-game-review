@@ -14,6 +14,14 @@ For each turn start:
    (PS Dashboard); softened one tier when the side is already at 85%+; no blame on
    turns the Pokemon could not act (full paralysis, sleep, flinch...).
 6. Luck = what actually happened minus what was expected after both choices.
+
+Two modes for step 2 (vault ADR-0015):
+- "worlds" (default): each player is graded on what they could know. The opponent's
+  unrevealed moves, item, ability and Tera type are sampled from the randbats set data
+  (server/review/worlds.py); every world gets its own matrix (the opponent knows its own
+  set and answers within it), and a choice's value is its average over worlds.
+- "perfect": one shared matrix with the real hidden sets (hindsight; ADR-0014).
+Luck is always measured in the real game: the played pair replayed with the real sets.
 """
 from __future__ import annotations
 
@@ -25,12 +33,13 @@ from typing import Callable
 import numpy as np
 
 from server.battle.parser import LogParser
+from server.review.worlds import sample_worlds
 from training.features import MOVES, N_SWITCH, SIZES, encode, turn_actions, turn_events
 
 BANDS = [(20.0, "blunder"), (10.0, "mistake"), (5.0, "inaccuracy")]
 SOFTEN = {"blunder": "mistake", "mistake": "inaccuracy", "inaccuracy": "good"}
 WINNING = 0.85
-ANALYSIS_VERSION = 1
+ANALYSIS_VERSION = 2
 
 
 # ---------------------------------------------------------------- helpers
@@ -110,10 +119,124 @@ class Model:
         return (v[:n] + 1 - v[n:]) / 2
 
 
+# ---------------------------------------------------------------- pieces
+def other(side: str) -> str:
+    return "p2" if side == "p1" else "p1"
+
+
+def rank_options(pol_row: np.ndarray, opts: list[str], info: dict, own: list[str], top_k: int,
+                 played: str | None = None) -> list[str]:
+    """The top-K choices by the policy, plus the best Tera choice and the played one."""
+    scored = []
+    for o in opts:
+        parts = o.split()
+        if parts[0] == "move":
+            i = int(parts[1]) - 1
+            mid = info["moves"][i]["id"] if i < len(info["moves"]) else ""
+            idx = MOVES.get(mid)
+            s = float(pol_row[idx]) if idx is not None else -1e9
+            s -= 0.01 if "terastallize" in parts else 0.0
+        else:
+            i = int(parts[1]) - 1
+            name = info["team"][i]["name"] if i < len(info["team"]) else ""
+            slot = own.index(name) if name in own else len(own)
+            s = float(pol_row[SIZES["moves"] + slot]) if slot < N_SWITCH else -1e9
+        scored.append((s if math.isfinite(s) else -1e9, o))
+    scored.sort(reverse=True)
+    chosen = [o for _, o in scored if "terastallize" not in o][:top_k]
+    tera = [o for _, o in scored if "terastallize" in o][:1]
+    pick = list(dict.fromkeys(chosen + tera + ([played] if played in opts else [])))
+    return pick or opts[:1]
+
+
+def cell_values(cells: list[dict], base: LogParser, model: Model, p1_name: str) -> list[float | None]:
+    """p1's win chance after each simulated cell (None if the choices were invalid). When a
+    side had to replace a fainted Pokemon, it gets its best replacement."""
+    items, index, exact = [], [], {}
+    for ci, cell in enumerate(cells):
+        for bi, br in enumerate(cell["branches"]):
+            if br["ended"]:
+                exact[(ci, bi)] = 1.0 if br["winner"] == p1_name else 0.0 if br["winner"] else 0.5
+                continue
+            p = copy.deepcopy(base)
+            for ln in br["lines"]:
+                p.feed(ln)
+            items.append((p.state.snapshot(), turn_events("\n".join(br["lines"])).get(0)))
+            index.append((ci, bi))
+    vals = dict(zip(index, model.value_p1(items).tolist())) if items else {}
+    vals.update(exact)
+    out: list[float | None] = []
+    for ci, cell in enumerate(cells):
+        if cell["invalid"] or not cell["branches"]:
+            out.append(None)
+            continue
+        vs = [vals[(ci, bi)] for bi in range(len(cell["branches"]))]
+        sw = cell["branches"][0]["switch"]
+        out.append(max(vs) if sw and sw["side"] == "p1" else min(vs) if sw else vs[0])
+    return out
+
+
+def mean_matrix(entries: list[tuple[int, int, float | None]], n: int, m: int) -> np.ndarray:
+    """Mean value per (row, col); NaN where no valid sample."""
+    sums, counts = np.zeros((n, m)), np.zeros((n, m))
+    for i, j, v in entries:
+        if v is not None:
+            sums[i, j] += v
+            counts[i, j] += 1
+    return np.where(counts > 0, sums / np.maximum(counts, 1), np.nan)
+
+
+def solve_valid(M: np.ndarray):
+    """Solve on the rows and columns that have data. Returns (q per row, row mix, col mix,
+    game value), with NaN q / zero mix for rows without data; None if nothing is valid."""
+    rows = ~np.all(np.isnan(M), axis=1)
+    cols = ~np.all(np.isnan(M), axis=0)
+    if not rows.any() or not cols.any():
+        return None
+    sub = M[np.ix_(rows, cols)]
+    sub = np.where(np.isnan(sub), np.nanmean(sub), sub)
+    x, y = solve(sub)
+    q = np.full(M.shape[0], np.nan)
+    q[rows] = sub @ y
+    xm = np.zeros(M.shape[0])
+    xm[rows] = x
+    ym = np.zeros(M.shape[1])
+    ym[cols] = y
+    return q, xm, ym, float(x @ sub @ y)
+
+
+def side_record(cs: list[str], q: np.ndarray, mix: np.ndarray, played: str | None, info: dict,
+                n_options: int, mine: float, couldnt_act: bool) -> dict | None:
+    ok = [i for i in range(len(cs)) if not np.isnan(q[i])]
+    if not ok:
+        return None
+    best = max(ok, key=lambda i: q[i])
+    rec = {
+        "options": [{"choice": cs[i], "label": label(cs[i], info), "value": float(q[i]), "mix": float(mix[i])}
+                    for i in sorted(ok, key=lambda i: -q[i])],
+        "best": cs[best], "best_label": label(cs[best], info), "best_value": float(q[best]),
+        "n_options": n_options,
+    }
+    if played in cs and cs.index(played) in ok:
+        pv = float(q[cs.index(played)])
+        regret = max(0.0, float(q[best]) - pv) * 100
+        rec.update(played=played, played_label=label(played, info), played_value=pv, regret=regret,
+                   verdict=verdict(regret, mine))
+        if n_options <= 1:
+            rec["verdict"] = "forced"
+        if couldnt_act:
+            rec["verdict"] = "no blame"
+            rec["no_blame"] = "the Pokémon couldn't act this turn"
+    return rec
+
+
 # ---------------------------------------------------------------- main
-def analyze(replay: dict, model_eval, engine, seeds: int = 16, top_k: int = 6,
+def analyze(replay: dict, model_eval, engine, seeds: int = 16, top_k: int = 6, mode: str = "worlds",
             progress: Callable[[int, int], None] | None = None) -> dict:
-    """Full move review of one replay (needs replay['inputlog'])."""
+    """Full move review of one replay (needs replay['inputlog']). In "worlds" mode `seeds`
+    is the number of sampled worlds per graded side (each with its own dice)."""
+    if mode not in ("worlds", "perfect"):
+        raise ValueError(f"unknown mode {mode}")
     model = Model(model_eval)
     log = replay["log"]
     lines = log.splitlines()
@@ -149,118 +272,108 @@ def analyze(replay: dict, model_eval, engine, seeds: int = 16, top_k: int = 6,
     for n, tinfo in enumerate(turns):
         turn = tinfo["turn"]
         state = real_states[turn]
-        prev = real_events.get(turn - 1) if turn > 1 else None
-        # 1. candidates from the policy
-        _, pol = model.run([(state, "p1", prev), (state, "p2", prev)])
-        cands = {}
-        for k, side in enumerate(("p1", "p2")):
-            opts = tinfo["options"][side]
-            info = tinfo["info"][side]
-            own = [m["name"] for m in state["sides"][side]["team"] if m["seen"]][:6]
-            scored = []
-            for o in opts:
-                parts = o.split()
-                if parts[0] == "move":
-                    i = int(parts[1]) - 1
-                    mid = info["moves"][i]["id"] if i < len(info["moves"]) else ""
-                    idx = MOVES.get(mid)
-                    s = float(pol[k, idx]) if idx is not None else -1e9
-                    s -= 0.01 if "terastallize" in parts else 0.0
-                else:
-                    i = int(parts[1]) - 1
-                    name = info["team"][i]["name"] if i < len(info["team"]) else ""
-                    slot = own.index(name) if name in own else len(own)
-                    s = float(pol[k, SIZES["moves"] + slot]) if slot < N_SWITCH else -1e9
-                    s = s if math.isfinite(s) else -1e9
-                scored.append((s, o))
-            scored.sort(reverse=True)
-            chosen = [o for _, o in scored if "terastallize" not in o][:top_k]
-            tera = [o for _, o in scored if "terastallize" in o][:1]
-            played = tinfo["played"].get(side)
-            pick = list(dict.fromkeys(chosen + tera + ([played] if played in opts else [])))
-            cands[side] = pick or opts[:1]
-        c1, c2 = cands["p1"], cands["p2"]
-        pairs = [(a, b) for a in c1 for b in c2]
-
-        # 2. play every pair on the simulator
-        cells = engine.expand(turn, pairs, seeds)
         base = bases[turn]
-        leaf_items, leaf_index, exact = [], [], {}
-        for ci, cell in enumerate(cells):
-            for bi, br in enumerate(cell["branches"]):
-                key = (ci, bi)
-                if br["ended"]:
-                    exact[key] = 1.0 if br["winner"] == p1_name else 0.0 if br["winner"] else 0.5
-                    continue
-                p = copy.deepcopy(base)
-                for ln in br["lines"]:
-                    p.feed(ln)
-                ev = turn_events("\n".join(br["lines"])).get(0)
-                leaf_items.append((p.state.snapshot(), ev))
-                leaf_index.append(key)
-        leaf_vals = dict(zip(leaf_index, model.value_p1(leaf_items).tolist())) if leaf_items else {}
-        leaf_vals.update(exact)
-
-        # 3. table of expected p1 win chance per pair (mean over seeds)
-        sums = np.zeros((len(c1), len(c2)))
-        counts = np.zeros((len(c1), len(c2)))
-        for ci, cell in enumerate(cells):
-            if cell["invalid"] or not cell["branches"]:
-                continue
-            i, j = divmod(cell["pair"], len(c2))
-            vs = [leaf_vals[(ci, bi)] for bi in range(len(cell["branches"]))]
-            chooser = cell["branches"][0]["switch"]["side"] if cell["branches"][0]["switch"] else None
-            v = max(vs) if chooser == "p1" else min(vs) if chooser == "p2" else vs[0]
-            sums[i, j] += v
-            counts[i, j] += 1
-        valid_rows = counts.sum(1) > 0
-        valid_cols = counts.sum(0) > 0
-        M = np.where(counts > 0, sums / np.maximum(counts, 1), 0.5)
-        M = M[np.ix_(valid_rows, valid_cols)]
-        c1v = [c for c, ok in zip(c1, valid_rows) if ok]
-        c2v = [c for c, ok in zip(c2, valid_cols) if ok]
-        if not c1v or not c2v:
-            continue
-        x, y = solve(M)
-        q1 = M @ y               # p1's value of each choice vs p2's equilibrium mix
-        q2 = 1 - x @ M           # p2's value of each choice vs p1's equilibrium mix
-        eq = float(x @ M @ y)
-
+        prev = real_events.get(turn - 1) if turn > 1 else None
+        played = {s: tinfo["played"].get(s) for s in ("p1", "p2")}
+        _, pol = model.run([(state, "p1", prev), (state, "p2", prev)])
+        pol_of = {"p1": pol[0], "p2": pol[1]}
+        own = {s: [m["name"] for m in state["sides"][s]["team"] if m["seen"]][:6] for s in ("p1", "p2")}
+        cands = {s: rank_options(pol_of[s], tinfo["options"][s], tinfo["info"][s], own[s], top_k, played[s])
+                 for s in ("p1", "p2")}
         v_before = value_at[turn]
         nxt = [t for t in order if t > turn]
         v_after = value_at[nxt[0]] if nxt else end_value
-        entry = {"turn": turn, "value_before": v_before, "value_after": v_after, "equilibrium": eq, "sides": {}}
-        played1, played2 = tinfo["played"].get("p1"), tinfo["played"].get("p2")
-        if played1 in c1v and played2 in c2v:
-            expected = float(M[c1v.index(played1), c2v.index(played2)])
-            entry["expected_after"] = expected
-            entry["luck_p1"] = v_after - expected
-        for side, cs, q, mix, played, mine in (("p1", c1v, q1, x, played1, v_before),
-                                               ("p2", c2v, q2, y, played2, 1 - v_before)):
-            info = tinfo["info"][side]
-            best = int(np.argmax(q))
-            rec = {
-                "options": [{"choice": c, "label": label(c, info), "value": float(q[i]), "mix": float(mix[i])}
-                            for i, c in sorted(enumerate(cs), key=lambda kv: -q[kv[0]])],
-                "best": cs[best], "best_label": label(cs[best], info), "best_value": float(q[best]),
-                "n_options": len(tinfo["options"][side]),
-            }
-            if played in cs:
-                pv = float(q[cs.index(played)])
-                regret = max(0.0, float(q[best]) - pv) * 100
-                rec.update(played=played, played_label=label(played, info), played_value=pv, regret=regret,
-                           verdict=verdict(regret, mine))
-                if len(tinfo["options"][side]) <= 1:
-                    rec["verdict"] = "forced"
-                if cant.get(turn, {}).get(side, ("",))[0] == "none":
-                    rec["verdict"] = "no blame"
-                    rec["no_blame"] = "the Pokémon couldn't act this turn"
-            entry["sides"][side] = rec
+        mine = {"p1": v_before, "p2": 1 - v_before}
+        couldnt = {s: cant.get(turn, {}).get(s, ("",))[0] == "none" for s in ("p1", "p2")}
+        entry = {"turn": turn, "value_before": v_before, "value_after": v_after, "sides": {}}
+
+        if mode == "perfect":
+            c1, c2 = cands["p1"], cands["p2"]
+            cells = engine.expand(turn, [(a, b) for a in c1 for b in c2], seeds)
+            cv = cell_values(cells, base, model, p1_name)
+            M = mean_matrix([(*divmod(c["pair"], len(c2)), v) for c, v in zip(cells, cv)], len(c1), len(c2))
+            sol = solve_valid(M)
+            if sol is None:
+                continue
+            q1, x, y, eq = sol
+            sol2 = solve_valid(1 - M.T)
+            q2 = sol2[0] if sol2 else np.full(len(c2), np.nan)
+            entry["equilibrium"] = eq
+            if played["p1"] in c1 and played["p2"] in c2:
+                e = M[c1.index(played["p1"]), c2.index(played["p2"])]
+                if not np.isnan(e):
+                    entry["expected_after"] = float(e)
+                    entry["luck_p1"] = v_after - float(e)
+            for side, cs, q, mix in (("p1", c1, q1, x), ("p2", c2, q2, y)):
+                rec = side_record(cs, q, mix, played[side], tinfo["info"][side], len(tinfo["options"][side]),
+                                  mine[side], couldnt[side])
+                if rec:
+                    entry["sides"][side] = rec
+        else:
+            # One batch of simulations: each side graded over its own worlds, plus the
+            # played pair in the real game for luck.
+            plan, all_jobs = {}, []
+            for side in ("p1", "p2"):
+                opp = other(side)
+                worlds = sample_worlds(state, side, seeds, seed=turn * 2 + (side == "p2"))
+                wopts = engine.options(turn, worlds)
+                cols = []
+                for k, (w, o) in enumerate(zip(worlds, wopts)):
+                    cy = rank_options(pol_of[opp], o["options"][opp], o["info"][opp], own[opp], top_k)
+                    cols.append(cy)
+                    pairs = [(a, b) if side == "p1" else (b, a) for a in cands[side] for b in cy]
+                    all_jobs.append({"world": w, "seed": k, "pairs": pairs})
+                plan[side] = (len(all_jobs) - len(worlds), cols)
+            luck_job = None
+            if played["p1"] in tinfo["options"]["p1"] and played["p2"] in tinfo["options"]["p2"]:
+                luck_job = len(all_jobs)
+                all_jobs += [{"world": None, "seed": k, "pairs": [(played["p1"], played["p2"])]} for k in range(seeds)]
+            cells = engine.expand_jobs(turn, all_jobs)
+            cv = cell_values(cells, base, model, p1_name)
+            by_job: dict[int, list] = {}
+            for c, v in zip(cells, cv):
+                by_job.setdefault(c["job"], []).append((c["pair"], v))
+            eqs = {}
+            for side in ("p1", "p2"):
+                first, cols = plan[side]
+                cx = cands[side]
+                qs, mixes, games = [], [], []
+                for k, cy in enumerate(cols):
+                    ents = []
+                    for pi, v in by_job.get(first + k, []):
+                        i, j = divmod(pi, len(cy))
+                        ents.append((i, j, None if v is None else (v if side == "p1" else 1 - v)))
+                    sol = solve_valid(mean_matrix(ents, len(cx), len(cy)))
+                    if sol is None:
+                        continue
+                    qs.append(sol[0])
+                    mixes.append(sol[1])
+                    games.append(sol[3])
+                if not qs:
+                    continue
+                with np.errstate(all="ignore"):
+                    q = np.nanmean(np.stack(qs), axis=0)
+                mix = np.mean(np.stack(mixes), axis=0)
+                eqs[side] = float(np.mean(games))
+                rec = side_record(cx, q, mix, played[side], tinfo["info"][side], len(tinfo["options"][side]),
+                                  mine[side], couldnt[side])
+                if rec:
+                    rec["worlds"] = len(qs)
+                    entry["sides"][side] = rec
+            if "p1" in eqs:
+                entry["equilibrium"] = eqs["p1"]
+            if luck_job is not None:
+                lv = [v for j in range(luck_job, luck_job + seeds) for _, v in by_job.get(j, []) if v is not None]
+                if lv:
+                    entry["expected_after"] = float(np.mean(lv))
+                    entry["luck_p1"] = v_after - entry["expected_after"]
+        if not entry["sides"]:
+            continue
         out_turns.append(entry)
         if progress:
             progress(n + 1, len(turns))
 
-    return {"version": ANALYSIS_VERSION, "seeds": seeds, "top_k": top_k, "turns": out_turns,
+    return {"version": ANALYSIS_VERSION, "mode": mode, "seeds": seeds, "top_k": top_k, "turns": out_turns,
             "summary": summarize(out_turns, final), "seconds": round(time.time() - t0, 1),
             "players": {"p1": final.sides["p1"].name, "p2": final.sides["p2"].name}}
 

@@ -17,6 +17,16 @@
 //       Pokemon, every replacement is a separate branch (the caller lets that side pick).
 //       -> {"cells":[{"pair":i,"seed":k,"invalid":bool,"branches":[{"switch":{"side":"p1","choice":"switch 4"}|null,
 //            "lines":[...omniscient protocol lines of the step...],"ended":bool,"winner":"name"|null}]}]}
+//   {"cmd":"options","turn":t,"worlds":[world,...]}
+//       Legal choices and their meaning for both sides at turn t in each world.
+//       -> {"worlds":[{"options":{"p1":[...],"p2":[...]},"info":{...}}]}
+//   {"cmd":"expand_jobs","turn":t,"jobs":[{"world":world|null,"seed":k,"pairs":[[c1,c2],...]}]}
+//       Like expand, but each job sets its own world and its own single seed.
+//       -> {"cells":[{"job":j,"pair":i,"invalid":bool,"branches":[...]}]}
+//   A world replaces the hidden parts of some Pokemon's sets (move review over sampled
+//   hidden information, vault ADR-0015):
+//       {"p2":[{"name":"Sawsbuck","moves":["hornleech",...],"item":"lifeorb","ability":"sapsipper","teraType":"Normal"}]}
+//       Revealed moves keep their slot (and PP used); any field left out is kept.
 //   {"cmd":"quit"}
 'use strict';
 
@@ -38,6 +48,61 @@ const MAX_BRANCH_STEPS = 6; // safety: forced switches after forced switches
 
 let turns = new Map(); // turn -> {state, options, played}
 let finalWinner = null;
+
+function toID(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
+function applyWorld(battle, world) {
+  if (!world) return;
+  for (const [sid, mons] of Object.entries(world)) {
+    const side = battle.sides[sid === 'p1' ? 0 : 1];
+    for (const ov of mons) {
+      const p = side.pokemon.find(q => q.name === ov.name);
+      if (!p || p.transformed) continue;
+      if (ov.moves && ov.moves.length) {
+        const keep = new Map(p.baseMoveSlots.map(s => [s.id, s]));
+        const slots = [];
+        for (const mv of ov.moves) {
+          const m = battle.dex.moves.get(mv);
+          if (!m.exists || slots.some(s => s.id === m.id)) continue;
+          if (keep.has(m.id)) { slots.push(keep.get(m.id)); continue; }
+          const pp = battle.calculatePP(m, m.noPPBoosts ? 0 : 3);
+          slots.push({ move: m.name, id: m.id, pp, maxpp: pp, target: m.target, disabled: false, disabledSource: '', used: false });
+        }
+        if (slots.length) {
+          const sameSlots = p.moveSlots.length === p.baseMoveSlots.length && p.moveSlots.every((s, i) => s === p.baseMoveSlots[i]);
+          p.baseMoveSlots = slots;
+          if (sameSlots) p.moveSlots = slots.slice();
+          p.set.moves = slots.map(s => s.move);
+        }
+      }
+      if (ov.item !== undefined && ov.item !== null) {
+        const it = battle.dex.items.get(ov.item);
+        p.item = it.exists ? it.id : '';
+        p.itemState = battle.initEffectState({ id: p.item, target: p });
+        p.set.item = it.exists ? it.name : '';
+      }
+      if (ov.ability) {
+        const ab = battle.dex.abilities.get(ov.ability);
+        if (ab.exists) {
+          if (p.ability === p.baseAbility) {
+            p.ability = ab.id;
+            p.abilityState = battle.initEffectState({ id: ab.id, target: p });
+          }
+          p.baseAbility = ab.id;
+          p.set.ability = ab.name;
+        }
+      }
+      if (ov.teraType && !p.terastallized) { p.teraType = ov.teraType; p.set.teraType = ov.teraType; }
+    }
+  }
+  battle.makeRequest('move');
+}
+
+function restore(entry, world) {
+  const battle = State.deserializeBattle(entry.state);
+  applyWorld(battle, world);
+  return battle;
+}
 
 function seedFor(k) {
   return 'sodium,' + crypto.createHash('sha256').update('review-seed-' + k).digest('hex').slice(0, 32);
@@ -165,39 +230,66 @@ function settle(battle) {
   }
 }
 
+// Play one pair from a restored turn start with seed k: {invalid, branches}.
+function runCell(entry, world, k, c1, c2) {
+  const battle = restore(entry, world);
+  battle.prng = new PRNG(seedFor(k));
+  const start = battle.log.length;
+  let ok = false;
+  try {
+    ok = battle.choose('p1', c1) && battle.choose('p2', c2);
+  } catch (e) {
+    ok = false;
+  }
+  if (!ok) return { invalid: true, branches: [] };
+  const branches = [];
+  const side = !battle.ended && pendingSwitch(battle);
+  if (side) {
+    const mid = JSON.stringify(State.serializeBattle(battle));
+    const prngSeed = battle.prng.getSeed();
+    for (const choice of forcedOptions(side)) {
+      const b = State.deserializeBattle(mid);
+      b.prng = new PRNG(prngSeed);
+      if (!b.choose(side.id, choice)) continue;
+      settle(b);
+      branches.push({ switch: { side: side.id, choice }, lines: omniLines(b, start), ended: !!b.ended, winner: b.winner || null });
+    }
+  } else {
+    branches.push({ switch: null, lines: omniLines(battle, start), ended: !!battle.ended, winner: battle.winner || null });
+  }
+  return { invalid: false, branches };
+}
+
 function expand(turn, pairs, seeds) {
   const entry = turns.get(turn);
   if (!entry) return { error: `no turn ${turn}` };
   const cells = [];
   pairs.forEach(([c1, c2], pi) => {
-    for (let k = 0; k < seeds; k++) {
-      const battle = State.deserializeBattle(entry.state);
-      battle.prng = new PRNG(seedFor(k));
-      const start = battle.log.length;
-      let ok = false;
-      try {
-        ok = battle.choose('p1', c1) && battle.choose('p2', c2);
-      } catch (e) {
-        ok = false;
-      }
-      if (!ok) { cells.push({ pair: pi, seed: k, invalid: true, branches: [] }); continue; }
-      const branches = [];
-      const side = !battle.ended && pendingSwitch(battle);
-      if (side) {
-        const mid = JSON.stringify(State.serializeBattle(battle));
-        const prngSeed = battle.prng.getSeed();
-        for (const choice of forcedOptions(side)) {
-          const b = State.deserializeBattle(mid);
-          b.prng = new PRNG(prngSeed);
-          if (!b.choose(side.id, choice)) continue;
-          settle(b);
-          branches.push({ switch: { side: side.id, choice }, lines: omniLines(b, start), ended: !!b.ended, winner: b.winner || null });
-        }
-      } else {
-        branches.push({ switch: null, lines: omniLines(battle, start), ended: !!battle.ended, winner: battle.winner || null });
-      }
-      cells.push({ pair: pi, seed: k, invalid: false, branches });
-    }
+    for (let k = 0; k < seeds; k++) cells.push({ pair: pi, seed: k, ...runCell(entry, null, k, c1, c2) });
+  });
+  return { cells };
+}
+
+function worldOptions(turn, worlds) {
+  const entry = turns.get(turn);
+  if (!entry) return { error: `no turn ${turn}` };
+  return {
+    worlds: worlds.map(w => {
+      const battle = restore(entry, w);
+      return {
+        options: { p1: optionsFor(battle.sides[0]), p2: optionsFor(battle.sides[1]) },
+        info: { p1: choiceInfo(battle.sides[0]), p2: choiceInfo(battle.sides[1]) },
+      };
+    }),
+  };
+}
+
+function expandJobs(turn, jobs) {
+  const entry = turns.get(turn);
+  if (!entry) return { error: `no turn ${turn}` };
+  const cells = [];
+  jobs.forEach((job, j) => {
+    job.pairs.forEach(([c1, c2], pi) => cells.push({ job: j, pair: pi, ...runCell(entry, job.world, job.seed, c1, c2) }));
   });
   return { cells };
 }
@@ -210,6 +302,8 @@ rl.on('line', async (raw) => {
   try {
     if (req.cmd === 'load') res = await load(req.inputlog);
     else if (req.cmd === 'expand') res = expand(req.turn, req.pairs, req.seeds || 16);
+    else if (req.cmd === 'options') res = worldOptions(req.turn, req.worlds);
+    else if (req.cmd === 'expand_jobs') res = expandJobs(req.turn, req.jobs);
     else if (req.cmd === 'quit') { process.exit(0); }
     else res = { error: `unknown cmd ${req.cmd}` };
   } catch (e) {

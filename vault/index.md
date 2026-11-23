@@ -43,6 +43,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0012-training-data-v1]]: accepted
 - [[ADR-0013-post-game-analysis-only]]: accepted (formalizes current behavior)
 - [[ADR-0014-move-review-method]]: accepted (stage 6: regret over a simulated choice matrix)
+- [[ADR-0015-move-review-sampled-worlds]]: accepted (grade on what each player could see; amends ADR-0014)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)

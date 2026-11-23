@@ -100,3 +100,64 @@ def test_engine_replays_and_expands():
         b = eng.expand(t1["turn"], [pair], seeds=2)
         assert len(a) == 2 and not any(c["invalid"] for c in a)
         assert [c["branches"][0]["lines"] for c in a] == [c["branches"][0]["lines"] for c in b]  # seeded
+
+
+# ---------------------------------------------------------------- sampled worlds (ADR-0015)
+def _mon(**kw):
+    base = {"name": "Sawsbuck", "species": "Sawsbuck", "base_species": "Sawsbuck", "seen": True, "moves": [],
+            "item": None, "orig_item": None, "ability": None, "base_ability": None, "tera_known": None,
+            "transformed": False}
+    return {**base, **kw}
+
+
+def test_world_keeps_revealed_and_fills_four_moves():
+    from server.review.worlds import entry_for, known, sample_set
+
+    import random
+    mon = _mon(moves=["hornleech"], item="lifeorb", ability="sapsipper")
+    entry = entry_for(mon)
+    assert entry is not None
+    for seed in range(20):
+        s = sample_set(entry, known(mon), random.Random(seed))
+        assert s["moves"][0] == "hornleech" and len(s["moves"]) == 4 and len(set(s["moves"])) == 4
+        assert "item" not in s and "ability" not in s  # revealed: left to the real game
+
+
+def test_world_roles_follow_revealed_moves():
+    from server.review.worlds import entry_for, known, role_weights
+
+    entry = entry_for(_mon(species="Palafin-Hero", base_species="Palafin-Hero", name="Palafin"))
+    assert entry is not None  # forme falls back to the base species
+    w = role_weights(entry, known(_mon(moves=["bulkup"])))
+    best = max(w, key=w.get)
+    assert entry["roles"][best]["moves"].get("Bulk Up", 0) > 0
+
+
+def test_sample_worlds_only_touch_the_opponent_and_are_seeded():
+    from server.review.worlds import sample_worlds
+
+    state = {"sides": {"p1": {"team": [_mon(name="Venusaur", species="Venusaur", base_species="Venusaur")]},
+                       "p2": {"team": [_mon(), _mon(name="Ghost", species="Gengar", seen=False)]}}}
+    a = sample_worlds(state, "p1", 4, seed=3)
+    assert a == sample_worlds(state, "p1", 4, seed=3)
+    assert all(list(w) == ["p2"] and [o["name"] for o in w["p2"]] == ["Sawsbuck"] for w in a)
+
+
+@pytest.mark.skipif(not (SIM / "dist" / "sim" / "battle-stream.js").exists(),
+                    reason="needs the Showdown build for the fixture's commit (data/sim/ps/cbdc8519ef)")
+def test_engine_applies_worlds():
+    from server.review.engine import ReviewEngine
+
+    rb = load_replay(RANDBATS_ID)
+    world = {"p2": [{"name": "Sawsbuck", "moves": ["headbutt", "highhorsepower", "hornleech", "swordsdance"],
+                     "item": "lifeorb", "ability": "serenegrace", "teraType": "Normal"}]}
+    with ReviewEngine(SIM) as eng:
+        eng.load(rb["inputlog"])
+        real, fake = eng.options(18, [None, world])
+        assert [m["name"] for m in fake["info"]["p2"]["moves"]] == ["Headbutt", "High Horsepower", "Horn Leech",
+                                                                    "Swords Dance"]
+        assert real["info"]["p2"]["moves"] != fake["info"]["p2"]["moves"]
+        assert real["options"]["p1"] == fake["options"]["p1"]
+        cells = eng.expand_jobs(18, [{"world": world, "seed": 0, "pairs": [("move 1", "move 1")]}])
+        assert not cells[0]["invalid"]
+        assert any("|Headbutt|" in ln for ln in cells[0]["branches"][0]["lines"])

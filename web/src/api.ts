@@ -170,6 +170,7 @@ export interface Analysis {
     turns: TurnReview[]
     summary: { p1: PlayerSummary; p2: PlayerSummary; biggest_luck: { turn: number; luck_p1_points: number }[] }
     seeds: number
+    mode?: 'worlds' | 'perfect'
     model: string
     seconds: number
   }

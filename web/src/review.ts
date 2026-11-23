@@ -172,7 +172,8 @@ class ReviewScreen {
       const sum = a.result.summary
       parts.push(h('div', { class: 'scorecards' }, this.scorecard(sum[this.me], 'mine'), this.scorecard(sum[this.them], 'theirs')))
       parts.push(h('p', { class: 'small muted' },
-        `Each choice is graded by the win chance it gave up against the best option (inaccuracy 5, mistake 10, blunder 20 points). ` +
+        `Each choice is graded by the win chance it gave up against the best option (inaccuracy 5, mistake 10, blunder 20 points), ` +
+        (a.result.mode === 'perfect' ? `using both teams' real sets. ` : `using only what that player could see: the opponent's unrevealed moves, item, ability and Tera type are filled in from the Random Battle sets, ${a.result.seeds} different ways. `) +
         `Luck is what the dice did beyond what both choices made likely.` + (a.stale ? ' A newer model is installed: analyze again to update.' : '')))
       if (a.stale) parts.push(run)
     }
