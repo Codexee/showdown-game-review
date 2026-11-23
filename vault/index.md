@@ -117,6 +117,7 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-local-app-not-hosted]]
 - [[2026-11-23-publish-model]]
 - [[2026-11-23-v12-results]]
+- [[2026-11-23-publish-v12]]
 - [[2026-11-23-bigger-vgc-sprites-and-design-audit]]
 - [[2026-11-23-design-audit-codex-claude]]
 - [[2026-11-23-audit-fixes-go-sprite-project-official]]

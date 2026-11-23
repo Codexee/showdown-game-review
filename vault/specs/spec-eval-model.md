@@ -8,7 +8,7 @@ updated: 2026-11-22
 
 # Spec: eval model and training
 
-> **Installed (2026-11-23): `v12@36000`** — games since 2025-01-01, dropout 0.2, wd 0.1, value-weight schedule; on 3,709 future games it calls the winner **68.2%** of the time (log-loss 0.574, both views), beating `main@9000` (67.6%, 0.583) in the paired gate ([[2026-11-23-v12-results]]). The published release is still `main@9000` ([[ADR-0021-publish-model]]).
+> **Installed (2026-11-23): `v12@36000`** — games since 2025-01-01, dropout 0.2, wd 0.1, value-weight schedule; on 3,709 future games it calls the winner **68.2%** of the time (log-loss 0.574, both views), beating `main@9000` (67.6%, 0.583) in the paired gate ([[2026-11-23-v12-results]]). Published as release `model-v12-36000` (latest), which `setup.sh` downloads ([[2026-11-23-publish-v12]], [[ADR-0021-publish-model]]).
 
 > [!note] Status 2026-11-22
 > **Installed: `main` (v1.1 on all 2026 games, 672k games):** on the pinned future games it calls the winner **67.4% vs 62.9%** for the placeholder and beats `p0` in every slice (log-loss 0.5854 vs 0.6026, 90% band [−0.021, −0.013]) ([[2026-11-22-main-run-results]]). The value head overfits after ≈1.2 epochs; next run: fewer correlated turns per game or a lower value weight after epoch 1. Plan: [[plan-run-v12]] (draft).
