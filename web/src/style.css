@@ -780,3 +780,31 @@ button.pmini:focus-visible { outline: 2px solid var(--focus); outline-offset: -2
   .col-review .events-panel .events { flex: 1 1 0; min-height: 0; overflow-y: auto; }
   .col-review .inspect-panel { flex: none; }
 }
+
+/* Switch: the withdrawn Pokemon flashes red and shrinks into its ball (260 ms); the new one
+   is released with a white flash, growing from a little smaller (240 ms). Decoration only:
+   the new turn is already drawn, and fast stepping / Motion off skips it. */
+.sprite.recall-ghost { position: absolute; left: 50%; bottom: 0; margin: 0; pointer-events: none; z-index: 2;
+  transform-origin: 50% 85%; animation: recall-out 260ms var(--ease-out) both; }
+@keyframes recall-out {
+  0% { opacity: 1; transform: translateX(-50%) scale(1); filter: none; }
+  35% { opacity: 1; transform: translateX(-50%) scale(1); filter: brightness(0.6) sepia(1) saturate(6) hue-rotate(-30deg); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.3); filter: brightness(0.6) sepia(1) saturate(6) hue-rotate(-30deg); } }
+.side .sprite.after-recall, .side .sprite.after-recall.switch-in { transform-origin: 50% 85%; animation: send-out 240ms var(--ease-out) 220ms both; }
+.side .sprite.after-recall.hit, .side .sprite.after-recall.switch-in.hit { animation: send-out 240ms var(--ease-out) 220ms both, shake 240ms steps(6, end) 480ms; }
+@keyframes send-out { 0% { opacity: 0; transform: scale(0.85); filter: brightness(3); }
+  60% { opacity: 1; filter: brightness(1.6); } 100% { opacity: 1; transform: scale(1); filter: none; } }
+.still .sprite.recall-ghost { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sprite.recall-ghost { animation: fade-out 200ms ease-out both; }
+  .side .sprite.after-recall, .side .sprite.after-recall.switch-in, .side .sprite.after-recall.switch-in.hit { animation: fade 200ms ease-out 160ms both; }
+}
+@keyframes fade-out { to { opacity: 0; } }
+
+/* Icon-only buttons (the pin): name in aria-label and title. */
+button.icon-btn { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; background: var(--screen);
+  color: var(--ink-soft); border: 2px solid var(--line); }
+button.icon-btn:hover:not(:disabled) { background: var(--screen-2); color: var(--ink); }
+button.icon-btn[aria-pressed='true'] { color: var(--ink); border-color: var(--you); background: color-mix(in srgb, var(--you) 22%, var(--screen)); }
+button.icon-btn .pxicon { width: 14px; height: 14px; }
+button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }

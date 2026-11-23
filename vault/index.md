@@ -97,4 +97,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-auto-analyze]]
 - [[2026-11-23-battle-extras]]
 - [[2026-11-23-battle-extras-feedback]]
+- [[2026-11-23-icons-over-text-rule]]
 - [[2026-11-22-second-brain-guide]]

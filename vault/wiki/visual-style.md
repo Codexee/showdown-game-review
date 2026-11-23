@@ -3,7 +3,7 @@ title: Visual style
 type: wiki
 status: active
 tags: [area/ui]
-updated: 2026-11-22
+updated: 2026-11-23
 ---
 
 # Visual style: Gen 4–5 pixel art
@@ -40,6 +40,9 @@ Pixel frame: a thick border with the four corner pixels cut away (`clip-path`, `
 - Status abbreviations (BRN, PAR…) stay in capitals: game vernacular, not decoration.
 - Meta details are separate elements with gaps, not joined by middle dots.
 - Text left-aligned; line lengths short; visible focus ring (`--focus`, yellow).
+
+## Rule: icons over text labels (user, 2026-11-23)
+Use an icon or symbol instead of a text label wherever the symbol reads clearly; put the words in `aria-label` and `title` ([[2026-11-23-icons-over-text-rule]], [[2026-11-23-less-text-symbols-motion]]). Examples in the app: the pin, ⟳ Sync, the dice for luck, chess marks (?!, ?, ??) for verdicts, pixel icons for game tags (lock, disk, scroll, lens), green/red bars for wins and losses, type-coloured chips. Pixel icons live in `ICONS` (`web/src/list.ts`), drawn 1:1 on an 8×8 or 14×14 grid.
 
 ## Related
 - [[spec-review-app]] · [[ADR-0011-review-screen-battle-view]] · [[tooling]]

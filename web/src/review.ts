@@ -371,6 +371,10 @@ class ReviewScreen {
 
   private renderInspect() {
     const view = this.steps[this.step].state
+    const keyOf = (m: Mon) => {
+      for (const side of ['p1', 'p2'] as const) if (view.sides[side].team.includes(m)) return monKey(side, m)
+      return null
+    }
     const find = (key: string | null) => {
       if (!key) return null
       for (const side of ['p1', 'p2'] as const) {
@@ -382,11 +386,18 @@ class ReviewScreen {
     const pinned = find(this.pinned)
     const theirs = view.sides[this.them].team.find(m => m.active && !m.fainted)
     const mon = this.hovered?.mon ?? pinned ?? theirs ?? null
-    const note = this.hovered ? '' : pinned ? 'Pinned: click it again to unpin' : 'Hover or click a Pokémon'
+    const key = mon ? (this.hovered?.key ?? keyOf(mon)) : null
+    const isPinned = !!key && this.pinned === key
+    // Pin as an icon button (icons over text labels: vault visual-style), pressed when pinned.
+    const pin = h('button', { type: 'button', class: 'icon-btn pin-btn', 'aria-pressed': String(isPinned),
+      'aria-label': isPinned ? 'Unpin this Pokémon' : 'Pin this Pokémon', title: isPinned ? 'Unpin' : 'Pin (keeps it here as you step)' },
+    icon(isPinned ? 'pin' : 'pinoff', ''))
+    pin.disabled = !key
+    pin.addEventListener('click', () => { this.pinned = isPinned ? null : key; this.renderInspect() })
     this.inspectPanel.id = 'inspect-panel'
     this.inspectPanel.replaceChildren(
-      h('div', { class: 'inspect-head' }, h('h2', {}, 'Pokémon'), note ? h('span', { class: 'small muted' }, note) : null),
-      mon ? infoCard(mon, this.review.dex, this.isRandom) : h('p', { class: 'muted' }, 'No Pokémon on the field.'))
+      h('div', { class: 'inspect-head' }, h('h2', {}, 'Pokémon'), pin),
+      mon ? infoCard(mon, this.review.dex, this.isRandom) : h('p', { class: 'muted' }, '—'))
   }
 
   private sideArea(side: SideView, mine: boolean, doubles: boolean) {
@@ -400,10 +411,15 @@ class ReviewScreen {
       // The Pokemon that fainted in this slot during the turn: shown sinking out, before its
       // replacement slides in (the turn-start state already has the replacement, or nobody
       // at the end of the game).
-      const fell = this.prevMons ? [...this.prevMons.entries()].find(([k, p]) => p.active && p.position === pos
-        && k.startsWith(`${sid}|`) && (!mon || k !== monKey(sid, mon))
-        && side.team.some(m => monKey(sid, m) === k && m.fainted)) : undefined
+      // Whoever stood in this slot last turn and has left it: fainted (sinks out) or was
+      // withdrawn (recalled: flashes red and shrinks away). The new one then comes in.
+      const left = this.prevMons ? [...this.prevMons.entries()].find(([k, p]) => p.active && p.position === pos
+        && k.startsWith(`${sid}|`) && (!mon || k !== monKey(sid, mon))) : undefined
+      const leftNow = left ? side.team.find(m => monKey(sid, m) === left[0]) : undefined
+      const fell = left && leftNow?.fainted ? left : undefined
+      const recalled = left && leftNow && !leftNow.fainted && !leftNow.active ? left : undefined
       if (fell) sprites.append(battleSprite(fell[1].sprite, mine, '', 'sprite faint-ghost'))
+      if (recalled) sprites.append(battleSprite(recalled[1].sprite, mine, '', 'sprite recall-ghost'))
       if (mon) {
         const prev = this.prevMons?.get(monKey(mine ? this.me : this.them, mon))
         const frac = mon.fainted ? 0 : mon.hp / (mon.maxhp || 100)
@@ -415,7 +431,7 @@ class ReviewScreen {
           : mon.fainted && !(prev?.fainted) ? ' faint-now'
             : !prev || !prev.active ? ` switch-in${hurt ? ' hit' : ''}`
               : hurt ? ' hit' : ''
-        const cls = `sprite${mon.fainted ? ' fainted' : ''}${fx}${fell ? ' after-faint' : ''}`
+        const cls = `sprite${mon.fainted ? ' fainted' : ''}${fx}${fell ? ' after-faint' : recalled ? ' after-recall' : ''}`
         const spr = mon.volatiles.includes('substitute') && !mon.fainted
           ? substituteSprite(mine, cls) : battleSprite(mon.sprite, mine, mon.species, cls)
         spr.dataset.side = mine ? 'mine' : 'theirs'
