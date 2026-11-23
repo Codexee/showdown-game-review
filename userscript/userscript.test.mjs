@@ -140,7 +140,8 @@ test('private replays: logged out sends nothing', async () => {
   assert.equal(s.posts.length, 0)
 })
 
-// ---- auto-upload (2026-11-23): /savereplay silent after a game you played
+// ---- auto-upload (2026-11-23): /hidereplay at the start, /savereplay silent after the end
+// (private replays: the user's answer, vault 2026-11-23-auto-upload-private)
 const paths = s => s.posts.map(p => p.url.replace('http://127.0.0.1:8765', ''))
 
 for (const client of ['old', 'new']) {
@@ -149,9 +150,10 @@ for (const client of ['old', 'new']) {
     const roomid = `battle-${RB}`
     s.addRoom(roomid)
     feedBattle(s.win, roomid, fixture(RB).log)
-    assert.deepEqual(s.sent, [], 'nothing before the rating lines')
+    assert.deepEqual(s.sent, [[roomid, '/hidereplay']], 'hidden at the start; no upload before the rating lines')
     s.runTimers() // the 4 s wait after |win|
-    assert.deepEqual(s.sent, [[roomid, '/savereplay silent']], "the client button's command, without the popup")
+    assert.deepEqual(s.sent, [[roomid, '/hidereplay'], [roomid, '/savereplay silent']],
+      "the client button's command, without the popup")
     await s.settle()
     assert.deepEqual(paths(s), ['/api/ingest', '/api/ingest-uploaded'])
     assert.deepEqual(s.posts[1].body, { roomid })
@@ -163,7 +165,7 @@ test('auto-upload: room object missing, falls back to the client send(text, room
   const s = sandbox({ client: 'new' })
   feedBattle(s.win, `battle-${RB}`, fixture(RB).log)
   s.runTimers()
-  assert.deepEqual(s.sent, [[`battle-${RB}`, '/savereplay silent']])
+  assert.deepEqual(s.sent, [[`battle-${RB}`, '/hidereplay'], [`battle-${RB}`, '/savereplay silent']])
 })
 
 test('auto-upload: retries until the replay exists, then stops', async () => {
@@ -195,7 +197,7 @@ test('auto-upload: a hidden battle renamed at the end uploads under its new (pas
   s.win.app.receive(`>${oldId}\n|noinit|rename|${newId}|A vs. B`)
   s.win.app.receive(`>${newId}\n` + lines.slice(win).join('\n'))
   await s.settle()
-  assert.deepEqual(s.sent, [[newId, '/savereplay silent']])
+  assert.deepEqual(s.sent, [[oldId, '/hidereplay'], [newId, '/savereplay silent']])
   assert.equal(s.posts[0].body.roomid, newId, 'one game, under the new id')
   assert.ok(s.posts[0].body.log.includes('|win|'), 'lines from both ids are kept')
   assert.ok(!s.posts[0].body.log.includes('|noinit|'))
@@ -221,13 +223,36 @@ test('auto-upload: turned off in settings, the game is still saved', async () =>
   assert.deepEqual(paths(s), ['/api/ingest'])
 })
 
-test('auto-upload: unfinished games are not uploaded', async () => {
+test('auto-upload: unfinished games are hidden but not uploaded', async () => {
   const s = sandbox()
   s.addRoom('battle-gen9ou-77')
   s.win.app.receive('>battle-gen9ou-77\n|init|battle\n|player|p1|Codexe|1|\n|player|p2|B|2|\n|start\n|turn|1')
   s.win.app.receive('>battle-gen9ou-77\n|deinit')
   await s.settle()
-  assert.deepEqual(s.sent, [])
+  assert.deepEqual(s.sent, [['battle-gen9ou-77', '/hidereplay']])
+})
+
+test('auto-upload: /hidereplay is sent once, not again after a reload replays the notice', async () => {
+  const s = sandbox()
+  const head = '|player|p1|Codexe|1|\n|player|p2|B|2|\n|start\n|turn|1'
+  s.addRoom('battle-gen9ou-79')
+  s.win.app.receive(`>battle-gen9ou-79\n|init|battle\n${head}`)
+  s.win.app.receive('>battle-gen9ou-79\n|turn|2')
+  assert.deepEqual(s.sent, [['battle-gen9ou-79', '/hidereplay']])
+  // page reloaded: a fresh script sees the full log, including Showdown's notice
+  const t = sandbox()
+  t.addRoom('battle-gen9ou-79')
+  t.win.app.receive(`>battle-gen9ou-79\n|init|battle\n${head}\n|modaction|Codexe hid the replay of this battle.\n|turn|2`)
+  assert.deepEqual(t.sent, [])
+})
+
+test('auto-upload: script loaded after the end still hides before uploading', async () => {
+  const s = sandbox()
+  s.addRoom(`battle-${RB}`)
+  // the whole finished log arrives in one message (joining the room after the end)
+  s.win.app.receive(`>battle-${RB}\n|init|battle\n` + fixture(RB).log)
+  await s.settle()
+  assert.deepEqual(s.sent.map(x => x[1]), ['/hidereplay', '/savereplay silent'])
 })
 
 test('auto-upload with the app down: Showdown still uploads, both sends are queued', async () => {
@@ -235,7 +260,7 @@ test('auto-upload with the app down: Showdown still uploads, both sends are queu
   s.addRoom(`battle-${RB}`)
   feedBattle(s.win, `battle-${RB}`, fixture(RB).log)
   await s.settle()
-  assert.deepEqual(s.sent, [[`battle-${RB}`, '/savereplay silent']])
+  assert.deepEqual(s.sent.map(x => x[1]), ['/hidereplay', '/savereplay silent'])
   const q = JSON.parse(s.store.get('queue'))
   assert.deepEqual(q.map(i => i.path), ['/api/ingest', '/api/ingest-uploaded'])
   assert.deepEqual(q[1].body, { roomid: `battle-${RB}` })

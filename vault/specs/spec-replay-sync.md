@@ -12,7 +12,7 @@ updated: 2026-11-23
 > **Built (stage 2a):** profile, poller (public and password-suffixed private replays it can see), archive, game list with filters, URL import, file import (.log/.json/.html), team paste, settings. Code map: [[module-map]]. Checked live: first sync set the start time; two of Codexe's older replays were added by URL.
 > **Built (stage 2b), same day:** userscript (`userscript/showdown-game-review.user.js`, installable from the app), `/api/ingest`, `/api/ingest-private`, origin guard ([[ADR-0010-local-api-origin-guard]]). Tested with Node (fake client) and end to end against a throwaway server. **Not yet tried on the real play.pokemonshowdown.com in a real browser**: see [[open-questions]] #1.
 > Team icons are text names for now; sprites come in stage 4.
-> **Built (auto-upload), 2026-11-23:** the userscript uploads each finished game you played with `/savereplay silent`, and `/api/ingest-uploaded` fetches the replay at once, so move review starts with no input ([[ADR-0022-auto-upload-replays]], [[2026-11-23-auto-upload-replays]]). Tested with Node and pytest only; real browser: [[open-questions]] #1.
+> **Built (auto-upload), 2026-11-23:** the userscript uploads each finished game you played with `/savereplay silent`, and `/api/ingest-uploaded` fetches the replay at once, so move review starts with no input ([[ADR-0022-auto-upload-replays]], [[2026-11-23-auto-upload-replays]]). Auto-uploads are private ([[ADR-0023-auto-upload-private]]). Tested with Node and pytest only; real browser: [[open-questions]] #1.
 
 Source requests: [[2026-11-22-interview-round-1]] and [[2026-11-22-interview-round-2]]. Storage and capture decisions: [[ADR-0006-replay-archive]].
 
@@ -39,7 +39,7 @@ The app knows my Showdown username (`Codexe`). It shows my ratings and a list of
    - **Dedup:** the room id `battle-<format>-<n>` matches the replay id `<format>-<n>`. (unverified; check with one game.) A later upload of the same game upgrades the stored copy with the inputlog.
    - **Retry:** if the local server is down, keep unsent logs in the script's storage (`GM_setValue`) and resend on the next page load.
    - **Auto-upload** ([[ADR-0022-auto-upload-replays]]): after a game **you played** ends, the script waits 4 s and sends `/savereplay silent` to the room. That is the client's "Upload and share replay" command without the popup (Showdown `core.ts`; [[2026-11-23-auto-upload-replays]]). The uploaded replay carries the inputlog, which move review needs and the browser never sees.
-     - Privacy is the room's. A hidden or invite-only battle, or one after `/hidereplay`, uploads as a private replay. A hidden battle is renamed to `…-<pw>pw` at the end. The script follows `|noinit|rename|`, so it knows the password.
+     - **Private** (the user's answer, [[2026-11-23-auto-upload-private]], [[ADR-0023-auto-upload-private]]): at `|start` of a game you play, the script sends `/hidereplay` once (a player command; the room shows "Codexe hid the replay of this battle."). At the end Showdown makes the room private and renames it to `…-<pw>pw`. The script follows `|noinit|rename|`, so it knows the password, and the replay is saved private. If the script only sees the game after the end, it sends `/hidereplay` just before the upload, and the private list finds the password.
      - Pickup: `POST /api/ingest-uploaded {roomid}` at 8 s, 30 s and 120 s after the upload. Each call makes at most one replay-server request and the script stops at the first `found`. Then it lists private replays once; the poller covers the rest.
      - Switch: Tampermonkey menu → "Auto-upload replays" (default on). App down: Showdown still uploads; both local sends are queued.
      - Spectated and unfinished games are never uploaded.
@@ -47,6 +47,7 @@ The app knows my Showdown username (`Codexe`). It shows my ratings and a list of
      - **Unknown:** does Showdown accept `/savereplay` from a user who has already left the room? This happens if you close the tab within 4 s of the end. The source doesn't settle it ([[open-questions]] #17).
      - **Unknown:** does a chat throttle on the main server ever drop the command right after a game? ([[open-questions]] #17)
      - **Unknown:** the value of `Config.autosavereplays` on the main server ([[open-questions]] #17).
+     - **Unknown:** does the end-of-battle rename reach the client before the 4 s upload? If not, the upload still happens under the old id, and the private list finds it ([[open-questions]] #17).
 4. **Archive.** Raw files under `data/replays/<format>/<id>.{json,log}` plus one SQLite row each. Every format. Never delete. Re-running sync or re-sending a game must not create duplicates.
 5. **Game list (UI)** shows per game: date, format, opponent, result, rating before/after if the log has it, turn count, both teams as sprite icons, public/private/not-uploaded, and an "analyzed" badge once a model has scored it. Filter by format, result and opponent. Eval bars only for formats that have a model.
 6. **Manual input** (all chosen in round 2):

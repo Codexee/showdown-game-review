@@ -52,6 +52,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0020-distribution]]: accepted (public GitHub repo; local app with one-command setup)
 - [[ADR-0021-publish-model]]: accepted (model `main@9000` as a release; setup downloads and verifies it)
 - [[ADR-0022-auto-upload-replays]]: accepted (userscript uploads each game you play with `/savereplay silent`; app fetches it at once)
+- [[ADR-0023-auto-upload-private]]: accepted (auto-uploads are private via `/hidereplay`; amends ADR-0022)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
@@ -123,4 +124,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-drop-spritecook]]
 - [[2026-11-23-spritecook-new-sprites-auth]]
 - [[2026-11-23-auto-upload-replays]]
+- [[2026-11-23-auto-upload-private]]
 - [[2026-11-22-second-brain-guide]]

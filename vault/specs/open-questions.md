@@ -21,14 +21,14 @@ Items wait here until they are answered. When an item is answered, record the an
 
 12. *(research)* **Profile the move review** (simulator vs network vs Python) before choosing how to speed up depth 2 ([[goals-endgame]]).
 
-16. **Auto-uploads public or private?** With auto-upload on (the default), every game in a public room becomes a public replay under your name. Before, only games you chose to upload were public. Keep that? Or have the script send `/hidereplay` before `/savereplay`, so auto-uploads are private but the app can still fetch them? ([[ADR-0022-auto-upload-replays]])
-17. *(test, needs a real browser)* **Auto-upload unknowns:** (a) does Showdown accept `/savereplay` after you have left the room (tab closed within 4 s of the end)? (b) does a chat throttle ever drop it? (c) is `Config.autosavereplays` on for the main server? ([[spec-replay-sync]], [[2026-11-23-auto-upload-replays]])
+17. *(test, needs a real browser)* **Auto-upload unknowns:** (a) does Showdown accept `/savereplay` after you have left the room (tab closed within 4 s of the end)? (b) does a chat throttle ever drop it? (c) is `Config.autosavereplays` on for the main server? (d) does `/hidereplay` at `|start` work in rated ladder games, and does the end-of-battle rename to `…-<pw>pw` reach the client before the upload? The Tampermonkey console shows `replay saved by the app` on the first check if it does ([[spec-replay-sync]], [[2026-11-23-auto-upload-replays]], [[ADR-0023-auto-upload-private]])
 
 13. **Verdict bank labels:** how many choices will the user label blind (the bank also works with search-based references alone) ([[plan-grade-quality]])?
 
 
 
 ## Resolved
+- **Auto-uploads public or private?** (was #16) → private: `/hidereplay` at the start of each game you play, 2026-11-23 ([[2026-11-23-auto-upload-private]], [[ADR-0023-auto-upload-private]]).
 - **Side-server replays** (was #2) → main server only, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]); `training/collect.py` already skips them.
 - **Poll interval** (was #3) → 5 minutes; `SGR_POLL_MINUTES` default changed from 15 to 5, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]).
 - **Frontend UI framework** (was #4) → not relevant anymore (built in plain TypeScript), 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]).

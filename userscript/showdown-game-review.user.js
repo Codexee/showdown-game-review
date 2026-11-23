@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Showdown Game Review: save every battle
 // @namespace    showdown-game-review.local
-// @version      0.2.0
-// @description  Uploads each battle you finish to Showdown's replay site (as the client's own button does) and sends it, and your private replay list, to the local Showdown Game Review app.
+// @version      0.3.0
+// @description  Uploads each battle you finish to Showdown's replay site as a private replay (as the client's own buttons do) and sends it, and your private replay list, to the local Showdown Game Review app.
 // @match        https://play.pokemonshowdown.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
@@ -25,13 +25,14 @@
  *   few seconds for the rating lines, then POSTs the log to the local server.
  *   A room that closes before the end is sent with incomplete=true.
  * - Your own |request| messages hold your full team; the last one is sent too.
- * - Auto-upload (on by default; toggle it in the Tampermonkey menu): after a battle you
- *   played ends, it sends `/savereplay silent` to the room, the same command as the
- *   client's "Upload and share replay" button, minus the popup. The server keeps the
- *   room's own privacy: a hidden battle (or one after /hidereplay) uploads as a private
- *   replay. Then it tells the local server, which downloads the replay (with the
- *   inputlog that move review needs) at once instead of waiting for the poller.
- *   Spectated battles are never uploaded.
+ * - Auto-upload (on by default; toggle it in the Tampermonkey menu), always PRIVATE:
+ *   when a battle you play starts, it sends `/hidereplay` (a player command; the room
+ *   shows "<you> hid the replay of this battle."). At the end Showdown makes the room
+ *   private and renames it battle-<format>-<n>-<password>pw. After the end it sends
+ *   `/savereplay silent`, the client's "Upload and share replay" command minus the
+ *   popup, and the replay is saved private under that password. Then it tells the
+ *   local server, which downloads it (with the inputlog that move review needs) at
+ *   once instead of waiting for the poller. Spectated battles are never touched.
  * - Every 15 minutes (and on load) it asks replay.pokemonshowdown.com for your private
  *   replays, using your browser's login, and sends only ids + passwords to the local
  *   server, which downloads them itself. Your password and cookies never leave the browser.
@@ -155,7 +156,25 @@
       username: currentUser(),
       incomplete,
     });
-    if (!incomplete && autoUploadOn() && playedIn(room.lines)) uploadReplay(roomid);
+    if (!incomplete && autoUploadOn() && playedIn(room.lines)) {
+      // Normally sent at |start|; if not (script loaded after the end), hide it now, so
+      // the upload is still private. Then the room isn't renamed and the password comes
+      // from the private replay list instead.
+      hideReplay(room);
+      uploadReplay(roomid);
+    }
+  }
+
+  const HID_LINE = 'hid the replay of this battle'; // Showdown's mod-action text for /hidereplay
+
+  /** Ask Showdown to keep this battle's replay private (once per battle). */
+  function hideReplay(room) {
+    if (room.hidden || !autoUploadOn() || !playedIn(room.lines)) return;
+    room.hidden = true;
+    // Already hidden (e.g. the page reloaded mid-battle and the log replays the notice):
+    // sending again would only print an error in the room.
+    if (room.lines.some(l => l.includes(HID_LINE))) return;
+    if (!sendToRoom(room.id, '/hidereplay')) log('could not send /hidereplay to', room.id);
   }
 
   // ---------------------------------------------------------------- auto-upload
@@ -200,7 +219,16 @@
     setTimeout(check, UPLOAD_CHECKS_MS[0]);
   }
 
+  const startQueue = new Set();
+
   function onMessage(data) {
+    try { readMessage(data); } finally {
+      for (const room of startQueue) hideReplay(room);
+      startQueue.clear();
+    }
+  }
+
+  function readMessage(data) {
     if (typeof data !== 'string' || !data.startsWith('>battle-')) return;
     const nl = data.indexOf('\n');
     const roomid = data.slice(1, nl < 0 ? undefined : nl).trim();
@@ -233,6 +261,7 @@
         continue;
       }
       room.lines.push(line);
+      if (line === '|start') startQueue.add(room);
       if (!room.ended && (line.startsWith('|win|') || line === '|tie' || line.startsWith('|tie|'))) {
         room.ended = true;
         const r = room;

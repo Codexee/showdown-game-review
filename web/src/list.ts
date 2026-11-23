@@ -49,7 +49,7 @@ const scriptBox = h('details', { class: 'userscript' },
     h('li', {}, 'Install ', h('a', { href: 'https://www.tampermonkey.net/', target: '_blank', rel: 'noopener' }, 'Tampermonkey'), '.'),
     h('li', {}, h('a', { href: '/userscript/showdown-game-review.user.js' }, 'Install the userscript'), '.'),
     h('li', {}, 'Play with this app running.')),
-  h('p', { class: 'small muted' }, 'Uploads each game you play as a Showdown replay, so move review starts on its own (turn off in the Tampermonkey menu). Your login stays in your browser.'),
+  h('p', { class: 'small muted' }, 'Uploads each game you play as a private Showdown replay, so move review starts on its own (turn off in the Tampermonkey menu). Your login stays in your browser.'),
   scriptStatus)
 
 let wired = false
