@@ -49,6 +49,7 @@ Rules for this vault: [[CLAUDE]].
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
 - [[spec-replay-sync]]: pull user data, list games, auto-save replays (draft)
+- [[plan-model-gains]]: eval gains beyond more training (ensembles, calibration, search as the eval)
 - [[plan-run-v12]]: next training run, fixing value overfitting (tests running; overnight run waits on the user)
 - [[spec-eval-model]]: the network and training pipeline (v1 built; overnight run pending)
 
