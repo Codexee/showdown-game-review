@@ -46,10 +46,12 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0015-move-review-sampled-worlds]]: accepted (grade on what each player could see; amends ADR-0014)
 - [[ADR-0016-two-view-scoring-strict-gate]]: accepted (both players' views; install only if better)
 - [[ADR-0017-eval-bar-search-blend]]: accepted (eval bar = 75% search + 25% network after a move review)
+- [[ADR-0018-grade-quality-before-ui]]: accepted (close model testing after `v12`; grade quality, then the UI)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
 - [[spec-replay-sync]]: pull user data, list games, auto-save replays (draft)
+- [[plan-grade-quality]]: next stage: verdict bank, worlds fairness fix, depth-2 re-check (draft)
 - [[goals-endgame]]: long-range goals set by the user (deeper search than PS Dashboard at its speed, and more)
 - [[plan-model-gains]]: eval gains beyond more training (ensembles, calibration, search as the eval)
 - [[plan-run-v12]]: next training run, fixing value overfitting (tests running; overnight run waits on the user)
@@ -86,4 +88,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-search-bar-first]]
 - [[2026-11-23-endgame-goals-and-overnight-go]]
 - [[2026-11-23-search-blend-fresh-check]]
+- [[2026-11-23-adopt-grade-quality-next]]
 - [[2026-11-22-second-brain-guide]]
