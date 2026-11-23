@@ -231,7 +231,7 @@ function gameRow(g: Game) {
 }
 
 /** "3 h ago" today, "Nov 22" this year, else "Nov 22, 2025". The full date is the title. */
-function shortDate(t: number | null): string {
+export function shortDate(t: number | null): string {
   if (!t) return ''
   if (Date.now() / 1000 - t < 86400) return fmtAgo(t)
   const d = new Date(t * 1000)
@@ -260,9 +260,10 @@ const ICONS: Record<string, string[]> = {
   lock: ['..####..', '.#....#.', '.#....#.', '########', '###..###', '###..###', '########', '########'],
   disk: ['#######.', '#.###.##', '#.###..#', '#......#', '#.####.#', '#.#..#.#', '#.####.#', '########'],
   scroll: ['######..', '#....##.', '#.##..#.', '#.....#.', '#.###.#.', '#.....#.', '#.###.#.', '#######.'],
+  dice: ['########', '#......#', '#.#..#.#', '#......#', '#..##..#', '#......#', '#.#..#.#', '########'],
   lens: ['.###....', '#...#...', '#...#...', '#...#...', '.####...', '....##..', '.....##.', '......##'],
 }
-function icon(name: string, label: string): Element {
+export function icon(name: string, label: string): Element {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('viewBox', '0 0 8 8')
   svg.setAttribute('class', `pxicon ${name}`)

@@ -513,3 +513,49 @@ img.missing { visibility: hidden; }
   .ladders.enter .wl-w, .ladders.enter .wl-l { animation: none; }
   .sync-btn.busy .sync-icon { animation: none; }
 }
+
+/* ------------------------------------------------------------------ review screen symbols (2026-11-23) */
+.review-head .meta { align-items: center; }
+.review-head .meta .pip { width: 24px; height: 24px; font-size: 0.85rem; }
+.method { margin: 6px 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+.method summary { cursor: pointer; }
+.method p { margin: 4px 0 0; }
+.method-tag { font-family: var(--pixel); color: var(--ink); border: 2px solid var(--line); padding: 0 5px; }
+.how { margin: 0; }
+.how summary { cursor: pointer; }
+.how p { margin: 4px 0 0; }
+kbd { font-family: var(--pixel); border: 2px solid var(--line); border-bottom-width: 4px; padding: 0 6px; margin-right: 4px; color: var(--ink); }
+.vchip b, .vmark { font-family: var(--pixel); }
+.luck { display: inline-flex; align-items: center; gap: 5px; font-family: var(--pixel); }
+.luck .pxicon { width: 12px; height: 12px; }
+.rv { border-left: 4px solid transparent; padding-left: 6px; }
+.rv.mine { border-left-color: var(--you); }
+.rv.theirs { border-left-color: var(--them); }
+.rv-best { color: var(--ink-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .turn-btn { transition: background-color 120ms ease; }
+}
+
+/* Motion: only when a review finishes while the screen is open (rare). Turn stepping stays
+   instant: it is a frequent, keyboard-driven action. */
+.scorecards.enter .scorecard { animation: rise 220ms var(--ease-out) both; }
+.scorecards.enter .scorecard + .scorecard { animation-delay: 60ms; }
+.scorecards.enter .vchip { animation: rise 200ms var(--ease-out) both; animation-delay: 160ms; }
+.graph-svg .gmark.pop { transform-box: fill-box; transform-origin: center bottom;
+  animation: pop 220ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 12ms + 120ms); }
+@keyframes pop { from { opacity: 0; transform: scaleY(0.6); } }
+@media (prefers-reduced-motion: reduce) {
+  .scorecards.enter .scorecard, .scorecards.enter .vchip, .graph-svg .gmark.pop { animation-name: fade; animation-delay: 0ms; }
+}
+
+/* Doubles on a short desktop window: four HP boxes need to be compact to fit the top screen. */
+@media (min-width: 1100px) and (min-height: 620px) and (max-height: 820px) {
+  .col-battle .field.doubles .hp-boxes { gap: 3px; }
+  .col-battle .field.doubles .hp-box { padding: 2px 6px 3px; width: min(200px, 100%); }
+  .col-battle .field.doubles .hp-name { font-size: 0.85rem; }
+  .col-battle .field.doubles .hp-foot { min-height: 0; }
+  .col-battle .field.doubles .chips { margin-top: 1px; }
+  .col-battle .field.doubles .chip { font-size: 0.65rem; padding: 0 3px; }
+  .col-battle .field.doubles .sprite { width: calc(var(--sprite) * 0.62); height: calc(var(--sprite) * 0.62); }
+  .col-battle .field.doubles { padding-top: 4px; }
+}

@@ -3,6 +3,7 @@
 // Hinge: turn controls. Bottom screen: eval graph, turn list, and what happened.
 import { api, type Analysis, type Mon, type Review, type SideReview, type SideView, type Step, type TurnReview } from './api'
 import { errText, fmtDate, h, pct, s, say, sprite } from './dom'
+import { formatBadge, icon, shortDate } from './list'
 
 const STAT_SHORT: Record<string, string> = { atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe', accuracy: 'Acc', evasion: 'Eva' }
 const STATUS_LABEL: Record<string, string> = { brn: 'BRN', par: 'PAR', slp: 'SLP', frz: 'FRZ', psn: 'PSN', tox: 'TOX' }
@@ -48,8 +49,11 @@ class ReviewScreen {
   private readonly turnList = h('ol', { class: 'turn-list', 'aria-label': 'Turns' })
   private readonly eventsBox = h('div', { class: 'events', 'aria-live': 'polite' })
   private readonly analysisBar = h('section', { class: 'analysis-bar frame', 'aria-label': 'Move review' })
-  private readonly methodText = h('p', { class: 'method' })
+  private readonly methodBox = h('details', { class: 'method' })
+  private revealScores = false   // animate the scorecards once, when a review finishes while open
+  private revealGraph = false    // and pop in the graph's mistake markers
   private analysis: Analysis | null = null
+  private lastStatus: string | undefined = undefined
   private pollTimer = 0
 
   private readonly root: HTMLElement
@@ -71,7 +75,8 @@ class ReviewScreen {
     const meName = this.steps[0]?.state.sides[this.me].name || this.me
     const themName = this.steps[0]?.state.sides[this.them].name || this.them
     const result = g.user_side === this.me ? g.result : null
-    const swap = h('button', { type: 'button', class: 'link-btn' }, `View as ${themName}`)
+    const swap = h('button', { type: 'button', class: 'link-btn', title: `View as ${themName}`, 'aria-label': `View as ${themName}` },
+      h('span', { 'aria-hidden': 'true' }, '⇄ '), themName)
     swap.addEventListener('click', async () => {
       try {
         this.review = await api.review(g.id, this.them)
@@ -85,26 +90,28 @@ class ReviewScreen {
       h('a', { href: '#/', class: 'back' }, 'Games'),
       h('h1', {}, h('span', { class: 'me' }, meName), h('span', { class: 'vs' }, 'vs'), h('span', { class: 'them' }, themName)),
       h('p', { class: 'meta' },
-        h('span', {}, g.format),
-        h('span', {}, fmtDate(g.played_at ?? g.uploadtime)),
-        result ? h('span', { class: `result result-${result}` }, result === 'win' ? 'Win' : result === 'loss' ? 'Loss' : 'Tie') : null,
+        result ? h('span', { class: `pip ${result}`, role: 'img', 'aria-label': result === 'win' ? 'Win' : result === 'loss' ? 'Loss' : 'Tie' },
+          result[0].toUpperCase()) : null,
+        formatBadge(g.format_id, g.format),
+        h('span', { title: fmtDate(g.played_at ?? g.uploadtime) }, shortDate(g.played_at ?? g.uploadtime)),
         g.id.startsWith('upload-') ? null
-          : h('a', { href: `https://replay.pokemonshowdown.com/${g.id}`, target: '_blank', rel: 'noopener' }, 'Replay on Showdown'),
+          : h('a', { href: `https://replay.pokemonshowdown.com/${g.id}`, target: '_blank', rel: 'noopener', title: 'Replay on Showdown' }, 'Replay ↗'),
         swap))
 
     this.prevBtn.addEventListener('click', () => this.go(this.step - 1))
     this.nextBtn.addEventListener('click', () => this.go(this.step + 1))
     const hinge = h('div', { class: 'hinge' }, this.prevBtn, this.turnLabel, this.nextBtn)
 
-    const bottom = h('div', { class: 'screen bottom' }, this.graph, this.methodText)
+    const bottom = h('div', { class: 'screen bottom' }, this.graph, this.methodBox)
 
     const teamArea = h('textarea', { id: 'team-paste', rows: '8', spellcheck: 'false',
       placeholder: 'Paste the team you used (Showdown export format)' })
     teamArea.value = g.team_paste ?? ''
     const teamForm = h('form', { class: 'team-form' },
-      h('label', { for: 'team-paste' }, 'Your team for this game'),
-      h('p', { class: 'small muted' }, 'The model will use your exact sets instead of guessing them.'),
+      h('label', { for: 'team-paste', class: 'sr-only' }, 'Your team (Showdown export)'),
       teamArea, h('button', { type: 'submit' }, 'Save team'))
+    // Team import is for VGC only: Random Battle teams are random (vault 2026-11-22-direction-codex-review).
+    const isVgc = g.format_id.toLowerCase().includes('vgc')
     teamForm.addEventListener('submit', async e => {
       e.preventDefault()
       try { await api.saveTeam(g.id, teamArea.value); say('Team saved.') } catch (err) { say(errText(err), 'error') }
@@ -120,14 +127,15 @@ class ReviewScreen {
           bottom),
         h('section', { class: 'panel col-turns frame', 'aria-label': 'Turns' },
           h('h2', {}, 'Turns'), this.turnList,
-          h('p', { class: 'keys' }, 'Use the ← and → keys to step through turns.')),
+          h('p', { class: 'keys', 'aria-label': 'Use the left and right arrow keys to step through turns' },
+            h('kbd', {}, '←'), h('kbd', {}, '→'))),
         h('div', { class: 'col-review' },
           this.analysisBar,
           h('section', { class: 'panel events-panel frame', 'aria-label': 'What happened' },
             h('h2', {}, 'What happened'), this.eventsBox),
-          h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team for this game'), teamForm))))
+          isVgc ? h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team'), teamForm) : null)))
 
-    this.methodText.textContent = this.review.eval_method_text
+    this.renderMethod()
     this.buildGraph()
     this.buildTurnList()
     this.renderAnalysisBar()
@@ -145,16 +153,33 @@ class ReviewScreen {
       const r = await api.review(this.review.game.id, this.me)
       if (r.eval_method !== 'model+search') return
       this.review = r
-      this.methodText.textContent = r.eval_method_text
+      this.renderMethod()
       this.buildGraph()
       this.buildTurnList()
       this.go(this.step, false)
     } catch { /* keep the model's eval */ }
   }
 
+  /** Short label for how the win chance is made; the full explanation opens below it. */
+  private renderMethod() {
+    const m = this.review.eval_method
+    const label = m === 'model+search' ? 'Model + search' : m === 'model' ? 'Model' : 'HP estimate'
+    this.methodBox.replaceChildren(
+      h('summary', {}, h('span', { class: 'method-tag' }, label), ' win chance'),
+      h('p', {}, this.review.eval_method_text))
+  }
+
   private afterAnalysis() {
     clearTimeout(this.pollTimer)
+    const was = this.lastStatus
     const st = this.analysis?.status
+    this.lastStatus = st
+    if (st === 'done' && (was === 'queued' || was === 'running')) {
+      this.revealScores = true
+      // The graph may be rebuilt right after (the blended eval arrives), so keep the pop for a moment.
+      this.revealGraph = true
+      window.setTimeout(() => { this.revealGraph = false }, 1500)
+    }
     if ((st === 'queued' || st === 'running') && this.root.isConnected) {
       this.pollTimer = window.setTimeout(() => void this.loadAnalysis(), 2000)
     }
@@ -171,7 +196,7 @@ class ReviewScreen {
 
   private renderAnalysisBar() {
     const a = this.analysis
-    const run = h('button', { type: 'button' }, a?.status === 'done' ? 'Analyze again' : 'Analyze game')
+    const run = h('button', { type: 'button' }, a?.status === 'done' ? 'Analyze again' : 'Analyze')
     run.addEventListener('click', async () => {
       run.disabled = true
       try { this.analysis = await api.analyze(this.review.game.id) } catch (err) { say(errText(err), 'error') }
@@ -179,34 +204,42 @@ class ReviewScreen {
     })
     const parts: (Node | string)[] = []
     if (!a || a.status === 'none') {
-      parts.push(h('p', {}, 'Grade every choice in this game: the engine plays each option on the simulator and shows how much win chance each choice gave up.'), run)
+      parts.push(h('p', {}, 'Grade every choice, about a minute.'), run)
     } else if (a.status === 'queued' || a.status === 'running') {
       const [done, total] = a.progress ?? [0, 0]
-      parts.push(h('p', { class: 'analysis-progress' }, total ? `Analyzing: turn ${done} of ${total}` : 'Starting the analysis…'),
+      parts.push(h('p', { class: 'analysis-progress' }, total ? `Analyzing turn ${done} / ${total}` : 'Starting…'),
         h('div', { class: 'progress-track' }, h('div', { class: 'progress-fill', style: `width:${total ? (done / total) * 100 : 3}%` })))
     } else if (a.status === 'unsupported' || a.status === 'error') {
       parts.push(h('p', { class: 'muted' }, a.error ?? 'This game can’t be analyzed.'))
       if (a.status === 'error') parts.push(run)
     } else if (a.status === 'done' && a.result) {
       const sum = a.result.summary
-      parts.push(h('div', { class: 'scorecards' }, this.scorecard(sum[this.me], 'mine'), this.scorecard(sum[this.them], 'theirs')))
-      parts.push(h('p', { class: 'small muted' },
-        `Each choice is graded by the win chance it gave up against the best option (inaccuracy 5, mistake 10, blunder 20 points), ` +
-        (a.result.mode === 'perfect' ? `using both teams' real sets. ` : `using only what that player could see: the opponent's unrevealed moves, item, ability and Tera type are filled in from the Random Battle sets, ${a.result.seeds} different ways. `) +
-        `Luck is what the dice did beyond what both choices made likely.` + (a.stale ? ' A newer model is installed: analyze again to update.' : '')))
-      if (a.stale) parts.push(run)
+      const reveal = this.revealScores
+      this.revealScores = false
+      parts.push(h('div', { class: `scorecards${reveal ? ' enter' : ''}` }, this.scorecard(sum[this.me], 'mine'), this.scorecard(sum[this.them], 'theirs')))
+      parts.push(h('details', { class: 'how small muted' }, h('summary', {}, 'How grading works'),
+        h('p', {}, `Each choice is graded by the win chance it gave up against the best option: ?! inaccuracy 5, ? mistake 10, ?? blunder 20 points. ` +
+          (a.result.mode === 'perfect' ? `Uses both teams' real sets. ` : `Uses only what that player could see: the opponent's hidden moves, item, ability and Tera are filled in from the Random Battle sets, ${a.result.seeds} ways. `) +
+          `Luck (the dice icon) is what the dice did beyond what both choices made likely.`)))
+      if (a.stale) parts.push(h('p', { class: 'small' }, 'New model installed.'), run)
     }
     this.analysisBar.replaceChildren(h('h2', {}, 'Move review'), ...parts)
   }
 
   private scorecard(p: { name: string; accuracy: number | null; counts: Record<string, number>; luck_points: number }, who: string) {
-    const counts = (['blunder', 'mistake', 'inaccuracy'] as const)
-      .map(k => p.counts[k] ? h('span', { class: `vchip ${k}` }, `${p.counts[k]} ${k}${p.counts[k] > 1 ? (k === 'inaccuracy' ? '' : 's') : ''}`.replace('inaccuracys', 'inaccuracies')) : null)
+    const counts = (['blunder', 'mistake', 'inaccuracy'] as const).map(k => {
+      const n = p.counts[k]
+      return n ? h('span', { class: `vchip ${k}`, title: `${n} ${VERDICT_TEXT[k].toLowerCase()}${n > 1 ? 's' : ''}`.replace('inaccuracys', 'inaccuracies') },
+        h('b', {}, VERDICT_MARK[k]), ` ${n}`) : null
+    })
+    const luck = Math.round(p.luck_points)
     return h('div', { class: `scorecard ${who}` },
       h('p', { class: 'sc-name' }, p.name),
-      h('p', { class: 'sc-acc' }, h('span', { class: 'sc-num' }, p.accuracy == null ? '–' : p.accuracy.toFixed(1)), h('span', { class: 'small' }, ' accuracy')),
-      h('p', { class: 'sc-counts' }, ...(counts.some(Boolean) ? counts : [h('span', { class: 'small muted' }, 'No mistakes')])),
-      h('p', { class: 'small' }, `Luck ${p.luck_points >= 0 ? '+' : '−'}${Math.abs(p.luck_points).toFixed(0)} points`))
+      h('p', { class: 'sc-acc', title: 'Accuracy (100 = every choice was the best)' },
+        h('span', { class: 'sc-num' }, p.accuracy == null ? '–' : p.accuracy.toFixed(1)), h('span', { class: 'small muted' }, ' acc')),
+      h('p', { class: 'sc-counts' }, ...(counts.some(Boolean) ? counts : [h('span', { class: 'vchip good', title: 'No inaccuracies or worse' }, '✓')])),
+      h('p', { class: `luck ${luck >= 0 ? 'up' : 'down'}`, title: 'Luck: what the dice did beyond what both choices made likely (win-chance points)' },
+        icon('dice', 'Luck'), `${luck >= 0 ? '+' : '−'}${Math.abs(luck)}`))
   }
 
   /** The turn whose events (and choices) row i of the turn list describes. */
@@ -226,11 +259,11 @@ class ReviewScreen {
       if (!r || !r.played) return null
       const v = r.verdict ?? 'good'
       const showBest = r.best !== r.played && (r.regret ?? 0) >= 0.5
-      return h('li', { class: `rv ${who === this.me ? 'mine' : 'theirs'}` },
-        h('span', { class: `vchip ${v.replace(' ', '-')}` }, VERDICT_TEXT[v] ?? v),
-        h('span', {}, `${name}: ${r.played_label}`,
-          (r.regret ?? 0) >= 0.5 ? h('span', { class: 'muted' }, ` (−${(r.regret ?? 0).toFixed(1)} points)`) : null,
-          showBest ? h('span', {}, `. Best: ${r.best_label} (${Math.round(r.best_value * 100)}%)`) : null,
+      return h('li', { class: `rv ${who === this.me ? 'mine' : 'theirs'}`, 'aria-label': `${name}: ${VERDICT_TEXT[v] ?? v}` },
+        h('span', { class: `vchip ${v.replace(' ', '-')}`, title: VERDICT_TEXT[v] ?? v }, VERDICT_MARK[v] ? h('b', {}, VERDICT_MARK[v] + ' ') : null, VERDICT_TEXT[v] ?? v),
+        h('span', { class: 'rv-choice', title: name }, r.played_label,
+          (r.regret ?? 0) >= 0.5 ? h('span', { class: 'muted', title: 'Win chance given up' }, ` −${(r.regret ?? 0).toFixed(1)}`) : null,
+          showBest ? h('span', { class: 'rv-best', title: 'Best choice and its win chance' }, ` → ${r.best_label} ${Math.round(r.best_value * 100)}%`) : null,
           r.no_blame ? h('span', { class: 'muted' }, ` (${r.no_blame})`) : null))
     }
     const names = { p1: this.steps[0].state.sides.p1.name, p2: this.steps[0].state.sides.p2.name }
@@ -238,7 +271,8 @@ class ReviewScreen {
     return h('div', { class: 'review-box' },
       h('ul', {}, line(this.me, tr.sides[this.me], names[this.me]), line(this.them, tr.sides[this.them], names[this.them])),
       luck != null && Math.abs(luck) >= 0.02
-        ? h('p', { class: `luck ${luck >= 0 ? 'up' : 'down'}` }, `Luck this turn: ${pts(luck)} points for you`)
+        ? h('p', { class: `luck ${luck >= 0 ? 'up' : 'down'}`, title: 'Luck this turn, for you (win-chance points)' },
+          icon('dice', 'Luck this turn'), pts(luck))
         : null)
   }
 
@@ -406,7 +440,7 @@ class ReviewScreen {
       const v = this.reviewFor(this.eventTurn(i))?.sides[this.me]?.verdict
       if (v === 'mistake' || v === 'blunder') {
         svg.append(s('rect', { x: x(i) - 3, y: v === 'blunder' ? 2 : 4, width: 6, height: v === 'blunder' ? 10 : 6,
-          class: `gmark ${v}` }))
+          class: `gmark ${v}${this.revealGraph ? ' pop' : ''}`, style: `--i:${i}` }))
       }
     })
     svg.append(this.graphMarker, this.graphDot)
