@@ -29,7 +29,7 @@ Items wait here until they are answered. When an item is answered, record the an
 - **Side-server replays** (was #2) → main server only, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]); `training/collect.py` already skips them.
 - **Poll interval** (was #3) → 5 minutes; `SGR_POLL_MINUTES` default changed from 15 to 5, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]).
 - **Frontend UI framework** (was #4) → not relevant anymore (built in plain TypeScript), 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]).
-- **Install SpriteCook** (was #5) → yes, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]). Install is the user's step (plugin card offered); battle visuals still use official sprites only, so SpriteCook is for UI art ([[visual-style]]).
+- **Install SpriteCook** (was #5) → yes, 2026-11-23 ([[2026-11-23-open-questions-2-to-5]]). Later the same day: dropped, because it never loaded in Claude Code ([[2026-11-23-drop-spritecook]]). Install is the user's step (plugin card offered); battle visuals still use official sprites only, so SpriteCook is for UI art ([[visual-style]]).
 - **Sprites for Gen 6+ Pokémon** (was #14): resolved 2026-11-23. Smogon sprite project sprites count as official ([[2026-11-23-audit-fixes-go-sprite-project-official]]).
 - **Which design-audit fixes** (was #15): resolved 2026-11-23. The confirmed bugs and accessibility items first ([[2026-11-23-audit-fixes-go-sprite-project-official]]).
 - **Publish the trained model** → yes: release `model-main-9000`, downloaded and checked by `setup.sh` ([[2026-11-23-publish-model]], [[ADR-0021-publish-model]]), 2026-11-23.
