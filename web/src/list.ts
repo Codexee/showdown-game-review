@@ -10,6 +10,7 @@ const ICONS: Record<string, string[]> = {
   scroll: ['######..', '#....##.', '#.##..#.', '#.....#.', '#.###.#.', '#.....#.', '#.###.#.', '#######.'],
   // 14×14 so it draws 1:1 at 14 px (matches the text) and the five pips stay sharp.
   dice: ['##############', '#............#', '#.##......##.#', '#.##......##.#', '#............#', '#............#', '#.....##.....#', '#.....##.....#', '#............#', '#............#', '#.##......##.#', '#.##......##.#', '#............#', '##############'],
+  grid: ['###.###.', '###.###.', '###.###.', '........', '###.###.', '###.###.', '###.###.', '........'],
   pin: ['..####..', '..####..', '..####..', '.######.', '...##...', '...##...', '...#....', '...#....'],
   pinoff: ['..####..', '..#..#..', '..#..#..', '.######.', '...##...', '...##...', '...#....', '...#....'],
   sun: ['...##...', '.#....#.', '..####..', '#.####.#', '#.####.#', '..####..', '.#....#.', '...##...'],
@@ -141,7 +142,8 @@ export async function renderList(root: HTMLElement) {
   // One block: profile, sync and adding games beside the games list. On a desktop it fits
   // the window and the list scrolls inside it (user request 2026-11-23); phones stack it.
   root.replaceChildren(
-    h('header', { class: 'app-head' }, h('h1', {}, 'Showdown Review')),
+    h('header', { class: 'app-head' }, h('h1', {}, 'Showdown Review'),
+      h('a', { href: '#/gallery', class: 'icon-link', title: 'Examples of every battle-screen element', 'aria-label': 'Examples of every battle-screen element' }, icon('grid', ''))),
     h('section', { class: 'home frame', 'aria-label': 'Your profile and games' },
       h('div', { class: 'home-side' },
         h('div', { class: 'home-profile', 'aria-label': 'Your profile' }, userForm, syncInfo, autoRow, profileBox),

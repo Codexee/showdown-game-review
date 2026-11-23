@@ -181,6 +181,7 @@ class ReviewScreen {
 
   // ---------------------------------------------------------------- move review
   private async loadAnalysis() {
+    if (this.review.game.id === 'upload-gallery') { this.analysis = null; this.afterAnalysis(); return }
     try { this.analysis = await api.analysis(this.review.game.id) } catch { this.analysis = null }
     this.afterAnalysis()
   }
@@ -347,7 +348,7 @@ class ReviewScreen {
       btn.setAttribute('aria-current', i === this.step ? 'step' : 'false')
       if (i === this.step && focusList) this.keepInList(li as HTMLElement)
     }
-    history.replaceState(null, '', `#/game/${encodeURIComponent(this.review.game.id)}/${this.step}`)
+    if (this.review.game.id !== 'upload-gallery') history.replaceState(null, '', `#/game/${encodeURIComponent(this.review.game.id)}/${this.step}`)
   }
 
   private lastTurn() { return this.steps[this.steps.length - 1]?.turn ?? 0 }
@@ -561,7 +562,9 @@ class ReviewScreen {
     const view = st.state
     const tags: HTMLElement[] = []
     if (view.field.weather) tags.push(h('span', { class: 'tag weather' }, WEATHER_NAMES[view.field.weather] ?? titleCase(view.field.weather)))
-    if (view.field.terrain) tags.push(h('span', { class: 'tag terrain' }, titleCase(view.field.terrain.replace('terrain', ' Terrain'))))
+    const TERRAINS: Record<string, string> = { electricterrain: 'Electric Terrain', grassyterrain: 'Grassy Terrain',
+      mistyterrain: 'Misty Terrain', psychicterrain: 'Psychic Terrain' }
+    if (view.field.terrain) tags.push(h('span', { class: 'tag terrain' }, TERRAINS[view.field.terrain] ?? titleCase(view.field.terrain)))
     const ROOMS: Record<string, string> = { trickroom: 'Trick Room', magicroom: 'Magic Room', wonderroom: 'Wonder Room',
       gravity: 'Gravity', mudsport: 'Mud Sport', watersport: 'Water Sport', fairylock: 'Fairy Lock', iondeluge: 'Ion Deluge' }
     for (const p of view.field.pseudo_weather) tags.push(h('span', { class: 'tag' }, ROOMS[p] ?? titleCase(p)))
@@ -572,9 +575,12 @@ class ReviewScreen {
   /** A side's conditions (hazards, screens, Tailwind) as tags in its own colour, placed in
    *  its row by its party icons: where they sit says whose side, no "(your side)" text. */
   private sideTags(side: SideView, mine: boolean) {
+    // Short labels so several fit beside the party icons; the full name is the title.
+    const SHORT: Record<string, string> = { stealthrock: 'Rocks', toxicspikes: 'T.Spikes', stickyweb: 'Web',
+      lightscreen: 'L.Screen', auroraveil: 'Veil', safeguard: 'Safeguard' }
     return h('span', { class: 'side-tags' }, ...Object.entries(side.conditions).map(([c, layers]) =>
-      h('span', { class: `tag ${mine ? 'mine' : 'theirs'}`, title: `${CONDITION_NAMES[c] ?? titleCase(c)} on ${mine ? 'your' : 'their'} side` },
-        `${CONDITION_NAMES[c] ?? titleCase(c)}${layers > 1 ? ` ×${layers}` : ''}`)))
+      h('span', { class: `tag ${mine ? 'mine' : 'theirs'}`, title: `${CONDITION_NAMES[c] ?? titleCase(c)}${layers > 1 ? ` ×${layers}` : ''} on ${mine ? 'your' : 'their'} side` },
+        `${SHORT[c] ?? CONDITION_NAMES[c] ?? titleCase(c)}${layers > 1 ? `×${layers}` : ''}`)))
   }
 
   // ---------------------------------------------------------------- eval

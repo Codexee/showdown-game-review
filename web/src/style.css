@@ -896,3 +896,17 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
    opponent's sprite isn't pulled up into the party row above it. */
 .ani-win { aspect-ratio: var(--fw) / var(--fh); width: auto; height: min(calc(var(--fh) * 100% / 96), 91%); }
 .col-battle .side.theirs .sprite { margin-top: 0; }
+
+.app-head { display: flex; align-items: center; gap: 12px; }
+a.icon-link { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--line); color: var(--ink-soft); }
+a.icon-link:hover { color: var(--ink); background: var(--screen-2); }
+a.icon-link .pxicon { width: 14px; height: 14px; }
+
+/* Stat chips share the row with the HP number: small, and they stop before it. */
+.hp-foot { gap: 4px; }
+.hp-box .chips .chip { font-size: 0.6rem; padding: 0 3px; border-width: 1px; }
+.hp-box .chips { gap: 2px; }
+.hp-box .hp-num { flex: none; }
+/* Side tags: two short tags per line at most beside the party icons. */
+.side-tags { max-width: 52%; gap: 3px; }
+.side-tags .tag { font-size: 0.62rem; padding: 0 4px; line-height: 1.5; }

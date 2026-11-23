@@ -1,4 +1,5 @@
-// Router: #/ is the games page, #/game/<id>[/<step>] is the review screen.
+// Router: #/ is the games page, #/game/<id>[/<step>] is the review screen, #/gallery shows
+// every battle-screen element as examples.
 // DotGothic16: a Japanese dot-matrix gothic, close to the type DS games used, with
 // unambiguous digits (Pixelify Sans was tried first: its 5 reads as S, its C as O).
 import '@fontsource/dotgothic16/latin-400.css'
@@ -7,6 +8,7 @@ import '@fontsource/atkinson-hyperlegible/700.css'
 import './style.css'
 import { h, statusLine } from './dom'
 import { renderList } from './list'
+import { renderGallery } from './gallery'
 import { prefsBar } from './prefs'
 import { renderReview, reviewKeyHandler, setCurrent } from './review'
 
@@ -17,7 +19,10 @@ app.append(prefsBar(), statusLine, view)
 function route() {
   const m = location.hash.match(/^#\/game\/([^/]+)(?:\/(\d+))?$/)
   statusLine.textContent = ''
-  if (m) {
+  if (location.hash === '#/gallery') {
+    document.body.dataset.page = 'review'
+    void renderGallery(view)
+  } else if (m) {
     document.body.dataset.page = 'review'
     void renderReview(view, decodeURIComponent(m[1]), m[2] ? Number(m[2]) : null)
   } else {
