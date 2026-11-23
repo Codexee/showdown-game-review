@@ -15,7 +15,7 @@ class Config:
     poll_minutes: float
     request_delay: float  # seconds between requests to Showdown
     poller_enabled: bool
-    user_agent: str = "Mozilla/5.0 (compatible; showdown-review/0.1; local replay archive)"
+    user_agent: str = "Mozilla/5.0 (compatible; showdown-game-review/0.1; local replay archive)"
 
     @property
     def db_path(self) -> Path:
@@ -28,9 +28,9 @@ class Config:
 
 def load_config() -> Config:
     return Config(
-        data_dir=Path(os.environ.get("SR_DATA_DIR", ROOT / "data")),
-        default_username=os.environ.get("SR_USERNAME", "Codexe"),
-        poll_minutes=float(os.environ.get("SR_POLL_MINUTES", "15")),
-        request_delay=float(os.environ.get("SR_REQUEST_DELAY", "1.0")),
-        poller_enabled=os.environ.get("SR_POLLER", "1") != "0",
+        data_dir=Path(os.environ.get("SGR_DATA_DIR", ROOT / "data")),
+        default_username=os.environ.get("SGR_USERNAME", "Codexe"),
+        poll_minutes=float(os.environ.get("SGR_POLL_MINUTES", "15")),
+        request_delay=float(os.environ.get("SGR_REQUEST_DELAY", "1.0")),
+        poller_enabled=os.environ.get("SGR_POLLER", "1") != "0",
     )

@@ -124,5 +124,5 @@ def test_bad_ids_cannot_escape_data_dir(client, tmp_path):
 
 
 def test_userscript_served(client):
-    r = client.get("/userscript/showdown-review.user.js")
+    r = client.get("/userscript/showdown-game-review.user.js")
     assert r.status_code == 200 and "==UserScript==" in r.text

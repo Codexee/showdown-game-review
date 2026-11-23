@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
 
 const here = new URL('.', import.meta.url)
-const SCRIPT = readFileSync(new URL('showdown-review.user.js', here), 'utf8')
+const SCRIPT = readFileSync(new URL('showdown-game-review.user.js', here), 'utf8')
 const fixture = id => JSON.parse(readFileSync(new URL(`../server/tests/fixtures/${id}.json`, here), 'utf8'))
 const RB = 'gen9randombattle-2705718015'
 
@@ -45,7 +45,7 @@ function sandbox({ client = 'old', serverUp = true, privateResponse = ']' + '[]'
   vm.createContext(ctx)
   vm.runInContext(SCRIPT, ctx)
   const runTimers = () => { while (timers.length) timers.shift().fn() }
-  return { win, posts, gets, store, received, runTimers, api: win.__showdownReview }
+  return { win, posts, gets, store, received, runTimers, api: win.__showdownGameReview }
 }
 
 const flush = () => new Promise(r => setImmediate(r))
@@ -80,7 +80,7 @@ for (const client of ['old', 'new']) {
     assert.ok(body.log.includes("Codexe's rating: 1827"))
     assert.ok(!body.log.includes('|request|'))
     assert.equal(body.request.side.pokemon[0].ident, 'p1: Dedenne')
-    s.win.__showdownReview.flushRoom(roomid, false)
+    s.win.__showdownGameReview.flushRoom(roomid, false)
     await flush()
     assert.equal(s.posts.length, 1, 'not sent twice')
   })

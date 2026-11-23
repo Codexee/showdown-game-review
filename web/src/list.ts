@@ -47,7 +47,7 @@ const scriptBox = h('details', { class: 'userscript' },
   h('summary', {}, 'Auto-save every battle'),
   h('ol', {},
     h('li', {}, 'Install ', h('a', { href: 'https://www.tampermonkey.net/', target: '_blank', rel: 'noopener' }, 'Tampermonkey'), '.'),
-    h('li', {}, h('a', { href: '/userscript/showdown-review.user.js' }, 'Install the userscript'), '.'),
+    h('li', {}, h('a', { href: '/userscript/showdown-game-review.user.js' }, 'Install the userscript'), '.'),
     h('li', {}, 'Play with this app running.')),
   h('p', { class: 'small muted' }, 'Sends only battle logs to this app. Your login stays in your browser.'),
   scriptStatus)
@@ -142,7 +142,7 @@ export async function renderList(root: HTMLElement) {
   // One block: profile, sync and adding games beside the games list. On a desktop it fits
   // the window and the list scrolls inside it (user request 2026-11-23); phones stack it.
   root.replaceChildren(
-    h('header', { class: 'app-head' }, h('h1', {}, 'Showdown Review'),
+    h('header', { class: 'app-head' }, h('h1', {}, 'Showdown Game Review'),
       h('a', { href: '#/gallery', class: 'icon-link', title: 'Examples of every battle-screen element', 'aria-label': 'Examples of every battle-screen element' }, icon('grid', ''))),
     h('section', { class: 'home frame', 'aria-label': 'Your profile and games' },
       h('div', { class: 'home-side' },

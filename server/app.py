@@ -40,14 +40,14 @@ from .sync import refresh_profile, sync_user
 # path when GM_xmlhttpRequest isn't available). Everything else under /api only
 # accepts requests from this app's own pages on localhost.
 SHOWDOWN_ORIGINS = {"https://play.pokemonshowdown.com", "https://replay.pokemonshowdown.com"}
-USERSCRIPT_FILE = ROOT / "userscript" / "showdown-review.user.js"
+USERSCRIPT_FILE = ROOT / "userscript" / "showdown-game-review.user.js"
 
 
 def _is_local_origin(origin: str) -> bool:
     host = urlparse(origin).hostname or ""
     return host in ("127.0.0.1", "localhost", "::1")
 
-log = logging.getLogger("showdown_review")
+log = logging.getLogger("showdown_game_review")
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
@@ -145,7 +145,7 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
                 task.cancel()
             await http.aclose()
 
-    app = FastAPI(title="Showdown Review", lifespan=lifespan)
+    app = FastAPI(title="Showdown Game Review", lifespan=lifespan)
     app.state.archive = archive
 
     @app.middleware("http")
@@ -448,7 +448,7 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
         archive.set_setting("last_ingest_private", str(int(time.time())))
         return result
 
-    @app.get("/userscript/showdown-review.user.js", include_in_schema=False)
+    @app.get("/userscript/showdown-game-review.user.js", include_in_schema=False)
     def userscript():
         # Tampermonkey offers to install any URL ending in .user.js.
         return FileResponse(USERSCRIPT_FILE, media_type="text/javascript")

@@ -662,7 +662,7 @@ wheels = [
 ]
 
 [[package]]
-name = "showdown-review"
+name = "showdown-game-review"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

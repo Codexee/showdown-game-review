@@ -1,5 +1,5 @@
 [project]
-name = "showdown-review"
+name = "showdown-game-review"
 version = "0.1.0"
 description = "Local Lichess-style review tool for Pokemon Showdown games"
 requires-python = ">=3.13,<3.14"

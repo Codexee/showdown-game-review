@@ -214,7 +214,7 @@ class Archive:
         try:
             self.on_saved(game_id)
         except Exception:  # a failing hook must never lose a saved game
-            logging.getLogger("showdown_review").exception("on_saved hook failed for %s", game_id)
+            logging.getLogger("showdown_game_review").exception("on_saved hook failed for %s", game_id)
 
     def set_own_team(self, game_id: str, side_json: str | None) -> None:
         with self._db() as db:

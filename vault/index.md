@@ -5,7 +5,7 @@ tags: [area/vault]
 updated: 2026-11-22
 ---
 
-# Showdown Game Review: index
+# Showdown Game Review (`showdown-game-review`): index
 
 A local, Lichess-style review tool for Pokémon Showdown games. A trained network gives an eval bar and an eval graph for each turn. The app pulls games for `Codexe` and saves every finished game from now on. The UI uses a Gen 4–5 pixel-art style. First format: [Gen 9] Random Battle; then VGC 2026 Reg M-C.
 
@@ -47,6 +47,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0016-two-view-scoring-strict-gate]]: accepted (both players' views; install only if better)
 - [[ADR-0017-eval-bar-search-blend]]: accepted (eval bar = 75% search + 25% network after a move review)
 - [[ADR-0018-grade-quality-before-ui]]: accepted (close model testing after `v12`; grade quality, then the UI)
+- [[ADR-0019-project-name]]: accepted (one name: `showdown-game-review`)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
@@ -106,4 +107,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-official-means-pokemon-sprites]]
 - [[2026-11-23-sprite-overlaps]]
 - [[2026-11-23-remove-field-layers]]
+- [[2026-11-23-name-showdown-game-review]]
 - [[2026-11-22-second-brain-guide]]

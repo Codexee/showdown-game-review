@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Showdown Review: save every battle
-// @namespace    showdown-review.local
+// @name         Showdown Game Review: save every battle
+// @namespace    showdown-game-review.local
 // @version      0.1.0
-// @description  Sends each finished battle, and your private replay list, to the local Showdown Review app.
+// @description  Sends each finished battle, and your private replay list, to the local Showdown Game Review app.
 // @match        https://play.pokemonshowdown.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
@@ -37,7 +37,7 @@
   const PRIVATE_EVERY_MS = 15 * 60 * 1000;
   const MAX_QUEUE = 200;
   const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
-  const log = (...a) => console.debug('[showdown-review]', ...a);
+  const log = (...a) => console.debug('[showdown-game-review]', ...a);
 
   // ---------------------------------------------------------------- transport
   function post(path, body) {
@@ -175,20 +175,20 @@
     const target = W.app && typeof W.app.receive === 'function' ? W.app
       : W.PS && typeof W.PS.receive === 'function' ? W.PS : null;
     if (!target) return false;
-    if (target.receive.__showdownReview) return true;
+    if (target.receive.__showdownGameReview) return true;
     const original = target.receive;
     const wrapped = function (data) {
       try { onMessage(data); } catch (e) { log('capture error', e); }
       return original.apply(this, arguments);
     };
-    wrapped.__showdownReview = true;
+    wrapped.__showdownGameReview = true;
     target.receive = wrapped;
     log('hooked', target === W.app ? 'old client (app.receive)' : 'new client (PS.receive)');
     return true;
   }
 
   // Exposed for tests (server/tests run this file in Node with stubs).
-  W.__showdownReview = { onMessage, flushRoom, rooms, syncPrivate, flushQueue, hook };
+  W.__showdownGameReview = { onMessage, flushRoom, rooms, syncPrivate, flushQueue, hook };
 
   if (!hook()) {
     let tries = 0;

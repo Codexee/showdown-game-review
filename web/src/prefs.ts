@@ -4,7 +4,7 @@ import { h } from './dom'
 import { icon } from './list'
 import { toggle } from './switch'
 
-const KEY = { theme: 'sr-theme', motion: 'sr-motion' }
+const KEY = { theme: 'sgr-theme', motion: 'sgr-motion' }
 const root = document.documentElement
 const saved = (k: string) => { try { return localStorage.getItem(k) } catch { return null } }
 const save = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* private mode: not saved */ } }

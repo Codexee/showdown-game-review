@@ -1,4 +1,4 @@
-# Showdown Game Review
+# Showdown Game Review (`showdown-game-review`)
 
 A local, Lichess-style review tool for Pokémon Showdown games, with an eval bar from a network trained on this Mac.
 

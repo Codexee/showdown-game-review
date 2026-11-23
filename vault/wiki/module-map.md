@@ -19,7 +19,7 @@ cd web && npm run dev                                         # dev server on :5
 ```
 The Claude desktop preview config is `.claude/launch.json` (`review-server`).
 
-Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `SR_USERNAME` (default `Codexe`; the app's saved setting wins), `SR_POLL_MINUTES` (15), `SR_REQUEST_DELAY` (1.0 s between Showdown requests), `SR_POLLER=0` turns the background poller off.
+Environment variables (`server/config.py`): `SGR_DATA_DIR` (default `./data`), `SGR_USERNAME` (default `Codexe`; the app's saved setting wins), `SGR_POLL_MINUTES` (15), `SGR_REQUEST_DELAY` (1.0 s between Showdown requests), `SGR_POLLER=0` turns the background poller off.
 
 ## Backend: `server/` (Python 3.13, FastAPI; [[ADR-0007-app-stack]], [[ADR-0008-python-313]])
 | File | Job |
@@ -42,12 +42,12 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 `archive.py` also validates every game id and format id before using them as file names (an uploaded `.json` could otherwise write outside `data/`).
 
 ### API
-`GET/PUT /api/settings` (incl. `auto_analyze`) · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `GET /api/games/{id}/review?side=p1|p2` · `GET/POST /api/games/{id}/analysis` (body: `seeds`, `top_k`, `mode` worlds|perfect) · `GET /sprites/{gen5|gen5-back|gen5ani|gen5ani-back|sub|sub-back|item|gen5mini}/{id}.png` (+ `.json` frame data for gen5ani) · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
+`GET/PUT /api/settings` (incl. `auto_analyze`) · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `GET /api/games/{id}/review?side=p1|p2` · `GET/POST /api/games/{id}/analysis` (body: `seeds`, `top_k`, `mode` worlds|perfect) · `GET /sprites/{gen5|gen5-back|gen5ani|gen5ani-back|sub|sub-back|item|gen5mini}/{id}.png` (+ `.json` frame data for gen5ani) · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-game-review.user.js`
 
 ## Userscript: `userscript/`
 | File | Job |
 |---|---|
-| `showdown-review.user.js` | Tampermonkey script for play.pokemonshowdown.com. Wraps `app.receive` (old client) or `PS.receive` (new client); buffers each battle room from `\|init\|battle`; sends 4 s after `\|win\|`/`\|tie` (so rating lines are included), or as `incomplete` on `\|deinit` before the end. Every 15 min it lists private replays with your browser login and sends ids + passwords only. Queues sends in `GM_setValue` when the app is down. |
+| `showdown-game-review.user.js` | Tampermonkey script for play.pokemonshowdown.com. Wraps `app.receive` (old client) or `PS.receive` (new client); buffers each battle room from `\|init\|battle`; sends 4 s after `\|win\|`/`\|tie` (so rating lines are included), or as `incomplete` on `\|deinit` before the end. Every 15 min it lists private replays with your browser login and sends ids + passwords only. Queues sends in `GM_setValue` when the app is down. |
 | `userscript.test.mjs` | 7 Node tests running the script in a `vm` sandbox with a fake client: `node --test userscript/*.test.mjs`. |
 
 ## Frontend: `web/` (Vite + TypeScript, no framework)

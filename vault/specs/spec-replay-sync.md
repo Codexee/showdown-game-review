@@ -10,7 +10,7 @@ updated: 2026-11-22
 
 > [!note] Status 2026-11-22
 > **Built (stage 2a):** profile, poller (public and password-suffixed private replays it can see), archive, game list with filters, URL import, file import (.log/.json/.html), team paste, settings. Code map: [[module-map]]. Checked live: first sync set the start time; two of Codexe's older replays were added by URL.
-> **Built (stage 2b), same day:** userscript (`userscript/showdown-review.user.js`, installable from the app), `/api/ingest`, `/api/ingest-private`, origin guard ([[ADR-0010-local-api-origin-guard]]). Tested with Node (fake client) and end to end against a throwaway server. **Not yet tried on the real play.pokemonshowdown.com in a real browser**: see [[open-questions]] #1.
+> **Built (stage 2b), same day:** userscript (`userscript/showdown-game-review.user.js`, installable from the app), `/api/ingest`, `/api/ingest-private`, origin guard ([[ADR-0010-local-api-origin-guard]]). Tested with Node (fake client) and end to end against a throwaway server. **Not yet tried on the real play.pokemonshowdown.com in a real browser**: see [[open-questions]] #1.
 > Team icons are text names for now; sprites come in stage 4.
 
 Source requests: [[2026-11-22-interview-round-1]] and [[2026-11-22-interview-round-2]]. Storage and capture decisions: [[ADR-0006-replay-archive]].
