@@ -92,7 +92,7 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 | `export.py` | Installs a run as `data/models/current.pt` for the app. |
 | `overnight.sh` | Build or check the dataset → train (9 h ceiling) → test → gate → install only if better, with `caffeinate`. `RUN=<new name>`; variables `SINCE`/`RANGES`, `EPOCHS`, `DROPOUT`, `WD`, `VW_FLOOR`; `RESUME=1`, `DRY_RUN=1`, `INSTALL_IF_TIE=1`. Log: `data/models/<run>.log`. |
 
-`server/model_eval.py` loads `data/models/current.pt` (reloads when it changes) for the review endpoint; it averages both players' views ([[ADR-0016-two-view-scoring-strict-gate]]); doubles keep the placeholder.
+`server/model_eval.py` loads `data/models/current.pt` (reloads when it changes) for the review endpoint; it averages both players' views ([[ADR-0016-two-view-scoring-strict-gate]]); after a current worlds-mode move review, the review endpoint blends in its search, 75/25 ([[ADR-0017-eval-bar-search-blend]]); doubles keep the placeholder.
 
 `tests_v12.sh` runs the four v1.2 tests and gates ([[plan-run-v12]]). `train.py` also takes `--dropout` and `--value-weight-floor`; `build_dataset.py` takes `--ranges` for several date ranges.
 

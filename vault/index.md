@@ -45,6 +45,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0014-move-review-method]]: accepted (stage 6: regret over a simulated choice matrix)
 - [[ADR-0015-move-review-sampled-worlds]]: accepted (grade on what each player could see; amends ADR-0014)
 - [[ADR-0016-two-view-scoring-strict-gate]]: accepted (both players' views; install only if better)
+- [[ADR-0017-eval-bar-search-blend]]: accepted (eval bar = 75% search + 25% network after a move review)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
@@ -81,4 +82,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-codex-review]]
 - [[2026-11-23-codex-fixes-go]]
 - [[2026-11-23-v12-tests-and-eval-gains-results]]
+- [[2026-11-23-search-bar-first]]
 - [[2026-11-22-second-brain-guide]]

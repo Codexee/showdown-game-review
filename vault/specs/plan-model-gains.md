@@ -40,7 +40,7 @@ Raw numbers: [[2026-11-23-v12-tests-and-eval-gains-results]]. Against `main@9000
 - Also tried: the players' rating gap. **No signal** (ladder gaps are tiny; the higher-rated player wins 50.3%).
 
 ## Next steps, ranked (2026-11-23)
-1. **Eval bar from search after "Analyze":** once a game's move review exists, show the 75/25 blend instead of the raw network. No training; −0.008 measured. Blend weight chosen on the test games; confirm on a fresh sample. Small server + UI change.
+1. *Built 2026-11-23 ([[ADR-0017-eval-bar-search-blend]]); fresh-sample check running.* **Eval bar from search after "Analyze":** once a game's move review exists, show the 75/25 blend instead of the raw network. No training; −0.008 measured. Blend weight chosen on the test games; confirm on a fresh sample. Small server + UI change.
 2. **Overnight run** on 2025 + 2026 with C's settings ([[plan-run-v12]]): the data lever, −0.008 between B and D at small scale.
 3. **Distil search into the network:** train the value head on search values (or the blend) as soft targets. Each position gets its own target, not one win/loss per game, which also attacks the overfitting cause. Needs search values for many games: measured 141 s per game per worker in worlds mode with 5 workers (sharing the CPU with training), so about 1,150 games in 9 h; perfect mode (55 s) about 2,900. Fewer than the 672k training games, so distillation would add soft targets to part of the data.
 4. Data hygiene: drop custom-rule games ([[2026-11-23-bug-custom-rules-randbats]]).

@@ -48,6 +48,7 @@ class ReviewScreen {
   private readonly turnList = h('ol', { class: 'turn-list', 'aria-label': 'Turns' })
   private readonly eventsBox = h('div', { class: 'events', 'aria-live': 'polite' })
   private readonly analysisBar = h('section', { class: 'analysis-bar frame', 'aria-label': 'Move review' })
+  private readonly methodText = h('p', { class: 'method' })
   private analysis: Analysis | null = null
   private pollTimer = 0
 
@@ -97,7 +98,7 @@ class ReviewScreen {
 
     const bottom = h('div', { class: 'screen bottom' },
       this.graph,
-      h('p', { class: 'method' }, this.review.eval_method_text),
+      this.methodText,
       h('div', { class: 'bottom-grid' },
         h('section', { 'aria-label': 'Turns' }, h('h2', {}, 'Turns'), this.turnList),
         h('section', { 'aria-label': 'What happened' }, h('h2', {}, 'What happened'), this.eventsBox)))
@@ -124,6 +125,7 @@ class ReviewScreen {
       h('p', { class: 'keys' }, 'Use the ← and → keys to step through turns.'),
       h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team for this game'), teamForm))
 
+    this.methodText.textContent = this.review.eval_method_text
     this.buildGraph()
     this.buildTurnList()
     this.renderAnalysisBar()
@@ -136,6 +138,18 @@ class ReviewScreen {
     this.afterAnalysis()
   }
 
+  private async refreshEval() {
+    try {
+      const r = await api.review(this.review.game.id, this.me)
+      if (r.eval_method !== 'model+search') return
+      this.review = r
+      this.methodText.textContent = r.eval_method_text
+      this.buildGraph()
+      this.buildTurnList()
+      this.go(this.step, false)
+    } catch { /* keep the model's eval */ }
+  }
+
   private afterAnalysis() {
     clearTimeout(this.pollTimer)
     const st = this.analysis?.status
@@ -143,6 +157,9 @@ class ReviewScreen {
       this.pollTimer = window.setTimeout(() => void this.loadAnalysis(), 2000)
     }
     this.renderAnalysisBar()
+    // A current move review lets the server blend its one-turn search into the eval bar.
+    if (st === 'done' && !this.analysis?.stale && this.analysis?.result?.mode !== 'perfect'
+        && this.review.eval_method === 'model') void this.refreshEval()
     if (st === 'done') {
       this.buildTurnList()
       this.buildGraph()

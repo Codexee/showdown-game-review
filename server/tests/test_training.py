@@ -135,3 +135,31 @@ def test_compare_runs_refuses_different_samples():
         check_same(a, {"key": a["key"][::-1], "label": a["label"][::-1]})
     with pytest.raises(SystemExit):
         check_same(a, {"key": a["key"], "label": 1 - a["label"]})
+
+
+# ---- eval bar blends the move review's search (vault plan-model-gains, next step 1)
+def test_review_blends_search_after_a_current_worlds_review(client_with_model, fake, tmp_path):
+    import json
+    from server.review.analyze import ANALYSIS_VERSION, SEARCH_BLEND
+    fake.add(load_replay(RANDBATS_ID), uploadtime=1)
+    client_with_model.post("/api/import/url", json={"url": RANDBATS_ID})
+    before = client_with_model.get(f"/api/games/{RANDBATS_ID}/review").json()
+    net2 = next(s["eval"] for s in before["steps"] if s["turn"] == 2)
+    res = {"version": ANALYSIS_VERSION, "mode": "worlds", "model": "unit-test@None",
+           "turns": [{"turn": 2, "sides": {"p1": {"best_value": 0.8}, "p2": {"best_value": 0.3}}}]}
+    (tmp_path / "analysis").mkdir(exist_ok=True)
+    path = tmp_path / "analysis" / f"{RANDBATS_ID}.json"
+    path.write_text(json.dumps(res))
+    r = client_with_model.get(f"/api/games/{RANDBATS_ID}/review?side=p1").json()
+    assert r["eval_method"] == "model+search" and "search" in r["eval_method_text"]
+    s2 = next(s for s in r["steps"] if s["turn"] == 2)
+    assert s2["eval_search"] == 0.75 and s2["eval_model"] == net2
+    assert abs(s2["eval"] - (SEARCH_BLEND * 0.75 + (1 - SEARCH_BLEND) * net2)) < 1e-3
+    assert "eval_search" not in next(s for s in r["steps"] if s["turn"] == 3)   # no search: model only
+    p2 = next(s for s in client_with_model.get(f"/api/games/{RANDBATS_ID}/review?side=p2").json()["steps"] if s["turn"] == 2)
+    assert p2["eval_search"] == 0.25
+    # perfect mode (real hidden sets) and stale reviews are not used for the bar
+    path.write_text(json.dumps({**res, "mode": "perfect"}))
+    assert client_with_model.get(f"/api/games/{RANDBATS_ID}/review").json()["eval_method"] == "model"
+    path.write_text(json.dumps({**res, "model": "other@1"}))
+    assert client_with_model.get(f"/api/games/{RANDBATS_ID}/review").json()["eval_method"] == "model"

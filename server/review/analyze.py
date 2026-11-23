@@ -120,6 +120,23 @@ class Model:
 
 
 # ---------------------------------------------------------------- pieces
+# Eval bar after a move review (vault plan-model-gains): blend the one-turn search with the
+# network. On 199 future games (worlds mode) 75% search + 25% network beat the network by
+# 0.0083 log-loss [-0.0118, -0.0048] (vault 2026-11-23-v12-tests-and-eval-gains-results).
+SEARCH_BLEND = 0.75
+
+
+def search_value_p1(entry: dict) -> float | None:
+    """p1's chance from a turn's solved matrix: p1's best value and 1 - p2's best value
+    (each against the other side's equilibrium answer), averaged."""
+    vals = []
+    for side in ("p1", "p2"):
+        rec = (entry.get("sides") or {}).get(side)
+        if rec and rec.get("best_value") is not None:
+            vals.append(rec["best_value"] if side == "p1" else 1 - rec["best_value"])
+    return float(np.mean(vals)) if vals else None
+
+
 def other(side: str) -> str:
     return "p2" if side == "p1" else "p1"
 

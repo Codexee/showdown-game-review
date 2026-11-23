@@ -17,7 +17,7 @@ Lichess-style game review for Showdown games ([[project-overview]]). Runs locall
 1. **Games** (`#/`): trainer card (username, sync, top ladder ratings), add a game (URL, file, userscript help), your games with filters. Each row links to its review.
 2. **Review** (`#/game/<id>/<step>`), a DS:
    - **Top screen:** the battle at the start of the selected turn: sprites (front for the opponent, back for you), HP boxes (name, level, HP bar, exact HP for you, % for them, status, boosts, Tera, Substitute/confusion/seeding), party balls (fainted, statused, unseen), field and side conditions. Hover an HP box for its revealed item, ability and moves.
-   - **Eval bar** beside it: estimated win chance for you, blue from the bottom.
+   - **Eval bar** beside it: estimated win chance for you, blue from the bottom. After a current move review, 75% search + 25% network ([[ADR-0017-eval-bar-search-blend]]).
    - **Hinge:** previous / next, "Turn N of M".
    - **Bottom screen:** stepped eval graph (click to jump), turn list (moves of that turn, change in win chance), "What happened" (that turn's events, coloured by side).
    - Header: players, format, date, result, link to the Showdown replay, **View as the opponent**.
@@ -29,7 +29,7 @@ Lichess-style game review for Showdown games ([[project-overview]]). Runs locall
 Step *k* = the state at the start of a turn plus the events that led to it: step 0 shows the leads; the last step is the end of the game. This matches a Lichess move list (position after the move, with the move shown).
 
 ## API
-`GET /api/games/{id}/review?side=p1|p2` (default: your side) returns the game, the perspective, `eval_method` (`placeholder`), and `steps[]` with `state` (that player's view, with sprite ids), `events`, `eval`. Sprites: `GET /sprites/gen5[-back]/<id>.png`. Move review: `GET /api/games/{id}/analysis` (status `none|queued|running|done|error|unsupported`, progress, result, `stale`) and `POST` to start (`seeds` 4–128, `top_k` 2–13, `mode` `worlds` (default) or `perfect`).
+`GET /api/games/{id}/review?side=p1|p2` (default: your side) returns the game, the perspective, `eval_method` (`placeholder`, `model`, or `model+search`), and `steps[]` with `state` (that player's view, with sprite ids), `events`, `eval` (plus `eval_model` and `eval_search` when blended). Sprites: `GET /sprites/gen5[-back]/<id>.png`. Move review: `GET /api/games/{id}/analysis` (status `none|queued|running|done|error|unsupported`, progress, result, `stale`) and `POST` to start (`seeds` 4–128, `top_k` 2–13, `mode` `worlds` (default) or `perfect`).
 
 ## Done when (stage 4)
 - [x] A saved game opens, steps turn by turn, and the bar and graph move with the values.

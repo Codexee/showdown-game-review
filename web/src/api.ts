@@ -114,6 +114,8 @@ export interface Step {
   state: BattleView
   events: BattleEvent[]
   eval: number
+  eval_model?: number   // when eval blends in the move review's search (eval_method 'model+search')
+  eval_search?: number
 }
 
 export interface Review {

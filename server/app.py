@@ -27,6 +27,7 @@ from .evaluate import METHOD as EVAL_METHOD
 from .evaluate import METHOD_TEXT as EVAL_METHOD_TEXT
 from .evaluate import win_chance
 from .model_eval import load as load_model
+from .review.analyze import SEARCH_BLEND, search_value_p1
 from .review.jobs import Jobs
 from .ids import parse_replay_ref, to_id
 from .imports import record_from_file
@@ -68,6 +69,22 @@ class ImportUrlBody(BaseModel):
 
 class TeamBody(BaseModel):
     paste: str = Field(default="", max_length=10_000)
+
+
+def search_by_turn(analysis: dict) -> dict[int, float]:
+    """p1's searched win chance per turn from a finished, current, worlds-mode move review;
+    empty otherwise (perfect mode uses the real hidden sets, so it isn't used for the bar)."""
+    if analysis.get("status") != "done" or analysis.get("stale"):
+        return {}
+    res = analysis.get("result") or {}
+    if res.get("mode", "worlds") != "worlds":
+        return {}
+    out = {}
+    for t in res.get("turns", []):
+        v = search_value_p1(t)
+        if v is not None:
+            out[int(t["turn"])] = v
+    return out
 
 
 def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
@@ -269,11 +286,19 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
                 result.warnings.append(f"model failed: {e}")
                 model = None
         method, method_text = EVAL_METHOD, EVAL_METHOD_TEXT
+        # After a move review (worlds mode, current model), blend its one-turn search in.
+        search = search_by_turn(jobs.get(game_id)) if model is not None else {}
         if model is not None:
             info = model.info
             method = "model"
             method_text = (f"Trained model ({info.get('run', 'unnamed run')}): predicted win chance from what both "
                            f"players could see. It calls the winner {info.get('val_acc_text', 'n/a')}.")
+            if search:
+                method = "model+search"
+                method_text = (f"Trained model ({info.get('run', 'unnamed run')}) plus the move review's one-turn search: "
+                               f"each turn's chance is {SEARCH_BLEND:.0%} the searched value (both players' best choices, "
+                               f"on what each could see) and {1 - SEARCH_BLEND:.0%} the model. On new games this predicted "
+                               f"the winner better than the model alone.")
         values = iter(model_values)
         steps = []
         for i, state in enumerate(result.states):
@@ -283,15 +308,20 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
                     mon["sprite"] = sprite_id(mon["species"])
             turn = state["turn"]
             led_by = 0 if i == 0 else (result.states[i - 1]["turn"])
-            steps.append({
+            ev = next(values) if model is not None and not state["ended"] else win_chance(state, perspective)
+            step = {
                 "turn": turn,
                 "ended": state["ended"],
                 "state": view,
                 # first step: the leads; end step: the last turn; otherwise the previous turn
                 "events": events.get(led_by, []),
-                "eval": round(next(values) if model is not None and not state["ended"]
-                              else win_chance(state, perspective), 4),
-            })
+                "eval": round(ev, 4),
+            }
+            if not state["ended"] and turn in search:
+                s_val = search[turn] if perspective == "p1" else 1 - search[turn]
+                step.update(eval=round(SEARCH_BLEND * s_val + (1 - SEARCH_BLEND) * ev, 4),
+                            eval_model=round(ev, 4), eval_search=round(s_val, 4))
+            steps.append(step)
         game.pop("log", None)
         game.pop("inputlog", None)
         return {"game": game, "perspective": perspective, "format_id": result.format_id,

@@ -7,6 +7,7 @@ and keeps, for each turn, the network's two-view win chance at the turn start
 side's equilibrium answer (`best_value`), averaged over the two sides as p1's chance.
 
     uv run python -m training.search_eval --games 120 --workers 4 --mode perfect
+    uv run python -m training.search_eval --games 100 --offset 200 --mode worlds --tag=-fresh
     uv run python -m training.search_eval --report
 
 Results: data/models/search_eval/<mode>.jsonl (one game per line; resumable).
@@ -37,16 +38,6 @@ def winner_p1(log: str) -> float | None:
     return 1.0 if m.group(1).strip() == names["p1"] else 0.0
 
 
-def search_p1(entry: dict) -> float | None:
-    """p1's chance from the solved matrix: p1's best value and 1 - p2's best value, averaged."""
-    vals = []
-    for side in ("p1", "p2"):
-        rec = (entry.get("sides") or {}).get(side)
-        if rec and rec.get("best_value") is not None:
-            vals.append(rec["best_value"] if side == "p1" else 1 - rec["best_value"])
-    return float(np.mean(vals)) if vals else None
-
-
 def one_game(args: tuple[str, str, int, int]) -> dict:
     try:
         return _one_game(args)
@@ -57,7 +48,7 @@ def one_game(args: tuple[str, str, int, int]) -> dict:
 def _one_game(args: tuple[str, str, int, int]) -> dict:
     path, mode, seeds, top_k = args
     from server import model_eval
-    from server.review.analyze import analyze
+    from server.review.analyze import analyze, search_value_p1
     from server.review.engine import ReviewEngine, sim_for
 
     d = json.loads(Path(path).read_text())
@@ -66,18 +57,18 @@ def _one_game(args: tuple[str, str, int, int]) -> dict:
     t0 = time.time()
     with ReviewEngine(sim_for(d["inputlog"])) as engine:
         res = analyze({"log": d["log"], "inputlog": d["inputlog"]}, model, engine, seeds=seeds, top_k=top_k, mode=mode)
-    turns = [{"turn": e["turn"], "net": e.get("value_before"), "search": search_p1(e)} for e in res.get("turns", [])]
+    turns = [{"turn": e["turn"], "net": e.get("value_before"), "search": search_value_p1(e)} for e in res.get("turns", [])]
     return {"game": Path(path).stem, "label_p1": label, "mode": mode, "seconds": round(time.time() - t0, 1),
             "model": model.info.get("run"), "step": model.info.get("step"), "turns": turns}
 
 
 def run(args) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    out = OUT / f"{args.mode}.jsonl"
+    out = OUT / f"{args.mode}{args.tag}.jsonl"
     done = {json.loads(l)["game"] for l in out.read_text().splitlines()} if out.exists() else set()
     files = sorted(BANK.glob("*.json"))
     random.Random(args.seed).shuffle(files)
-    todo = [str(f) for f in files[:args.games] if f.stem not in done]
+    todo = [str(f) for f in files[args.offset:args.offset + args.games] if f.stem not in done]
     print(f"{args.mode}: {len(done)} done, {len(todo)} to go", flush=True)
     with mp.get_context("spawn").Pool(args.workers) as pool, out.open("a") as fh:
         for i, r in enumerate(pool.imap_unordered(one_game, [(f, args.mode, args.seeds, args.top_k) for f in todo])):
@@ -127,6 +118,8 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, default=16)
     ap.add_argument("--top-k", type=int, default=6)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--offset", type=int, default=0, help="skip this many games of the shuffled bank (fresh sample)")
+    ap.add_argument("--tag", default="", help="suffix for the output file, e.g. -fresh")
     ap.add_argument("--report", action="store_true")
     args = ap.parse_args()
     report() if args.report else run(args)
