@@ -30,6 +30,8 @@
   --v-blunder: #e34040;
   --v-good: #3cc468;
   --px: 4px; /* one "pixel" of the frame art */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* strong ease-out for entrances */
+  --px-steps: steps(8, end);                  /* stepped, DS-style motion (HP bars, eval bar) */
   --pixel: 'DotGothic16', ui-sans-serif, system-ui, sans-serif;
   --btn: var(--frame);
   --btn-hover: var(--frame-hi);
@@ -159,11 +161,14 @@ input[type='file'] { border-style: dashed; max-width: 100%; }
 a.game {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto 64px;
-  grid-template-areas: 'pip who when delta' 'pip mine theirs theirs' 'pip tags tags tags';
+  grid-template-areas: 'pip who when delta' 'pip mine theirs theirs' 'pip marks marks marks';
   gap: 4px 12px; align-items: center;
   padding: 10px 6px; color: var(--ink); text-decoration: none;
 }
-a.game:hover { background: var(--screen-2); }
+@media (hover: hover) and (pointer: fine) {
+  a.game { transition: background-color 120ms ease; }
+  a.game:hover { background: var(--screen-2); }
+}
 .pip { grid-area: pip; align-self: start; width: 32px; height: 32px; display: grid; place-items: center;
   font-family: var(--pixel); font-weight: 700; color: #fff; background: var(--ink-soft); }
 .pip.win { background: var(--hp-green); color: #10301c; }
@@ -184,7 +189,7 @@ img.mini { width: 40px; height: 40px; image-rendering: pixelated; margin: -4px -
 .tag { font-size: 0.75rem; padding: 0 6px; border: 2px solid var(--line); color: var(--ink-soft); }
 @media (max-width: 560px) {
   a.game { grid-template-columns: 36px minmax(0, 1fr) 56px;
-    grid-template-areas: 'pip who delta' 'pip when when' 'pip mine mine' 'pip theirs theirs' 'pip tags tags'; }
+    grid-template-areas: 'pip who delta' 'pip when when' 'pip mine mine' 'pip theirs theirs' 'pip marks marks'; }
   .when { text-align: left; }
   .mini-team.theirs { justify-content: flex-start; }
 }
@@ -447,4 +452,64 @@ img.missing { visibility: hidden; }
   .home-games { display: flex; flex-direction: column; min-height: 0; margin-top: 0; padding-top: 0; border-top: 0;
     border-left: 2px dashed var(--line); padding-left: 24px; }
   .home-games .games { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+}
+
+/* ------------------------------------------------------------------ games page symbols (2026-11-23)
+   Format badges, ladder win/loss bars, pixel icons, and their motion. */
+.fmt-badge { display: inline-flex; align-items: stretch; width: fit-content; font-family: var(--pixel); font-size: 0.75rem;
+  line-height: 1.5; border: 2px solid var(--fam); --fam: var(--ink-soft); }
+.fmt-badge.rand { --fam: #3cc468; }
+.fmt-badge.vgc { --fam: #b06ee8; }
+.fmt-badge.other { --fam: #e2ad1c; }
+.fmt-gen { background: var(--fam); color: #10202e; padding: 0 5px; font-weight: 700; }
+.fmt-name { padding: 0 6px; color: var(--ink); white-space: nowrap; }
+
+.ladders-head { font-size: 1rem; margin: 4px 0 6px; }
+.ladders { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ladder { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: 'fmt elo gxe' 'bar bar nums';
+  align-items: center; gap: 3px 10px; }
+.ladder .fmt-badge { grid-area: fmt; }
+.ladder .elo { grid-area: elo; line-height: 1; }
+.ladder .gxe { grid-area: gxe; }
+.wl { grid-area: bar; display: flex; height: 10px; background: var(--hp-track); border: 2px solid var(--hp-track); overflow: hidden; }
+.wl-w { background: var(--hp-green); flex-basis: 0; }
+.wl-l { background: var(--them); flex-basis: 0; }
+.wl-nums { grid-area: nums; font-family: var(--pixel); display: flex; gap: 3px; }
+.wl-nums .w { color: color-mix(in srgb, var(--hp-green) 55%, var(--ink)); }
+.wl-nums .l { color: color-mix(in srgb, var(--them) 80%, var(--ink)); }
+@media (prefers-color-scheme: dark) {
+  .wl-nums .w { color: var(--hp-green); }
+  .wl-nums .l { color: color-mix(in srgb, var(--them) 70%, #fff); }
+}
+
+.marks { grid-area: marks; display: flex; gap: 8px; color: var(--ink-soft); }
+.pxicon { width: 14px; height: 14px; fill: currentColor; shape-rendering: crispEdges; display: block; }
+.pxicon.lens { color: var(--you); }
+.when .turns { font-family: var(--pixel); }
+
+.sync-btn { display: inline-flex; align-items: center; gap: 6px; }
+.sync-icon { display: inline-block; line-height: 1; }
+.sync-btn.busy .sync-icon { animation: spin 640ms var(--px-steps) infinite; }
+.file-btn { display: inline-block; cursor: pointer; font-family: var(--pixel); font-weight: 400; border: 3px dashed var(--frame);
+  padding: 4px 12px; background: var(--screen); }
+@media (hover: hover) and (pointer: fine) {
+  .file-btn { transition: background-color 120ms ease; }
+  .file-btn:hover { background: var(--screen-2); }
+}
+#replay-file:focus-visible + .file-btn { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Motion. Rows rise in on the first load and when a new game arrives (not on every refresh);
+   ladder bars fill once, stepped like the HP bars; the sync icon turns while syncing. */
+.games li.enter { animation: rise 220ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.ladders.enter .wl-w { transform-origin: left; animation: fill-w 240ms var(--px-steps) both; animation-delay: calc(var(--i, 0) * 60ms + 80ms); }
+.ladders.enter .wl-l { transform-origin: right; animation: fill-w 240ms var(--px-steps) both; animation-delay: calc(var(--i, 0) * 60ms + 80ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes fill-w { from { transform: scaleX(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fade { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .games li.enter { animation-name: fade; animation-delay: 0ms; }
+  .ladders.enter .wl-w, .ladders.enter .wl-l { animation: none; }
+  .sync-btn.busy .sync-icon { animation: none; }
 }

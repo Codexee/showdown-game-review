@@ -2,6 +2,9 @@
 import { api, type Game, type Profile, type Settings } from './api'
 import { errText, fmtAgo, fmtDate, h, say, sprite } from './dom'
 
+let profileShown = false            // animate the ladder bars once per page load
+const seenGames = new Set<string>()  // rows already shown: only new games animate in
+
 const state = {
   settings: null as Settings | null,
   filters: { format: '', result: '', opponent: '' },
@@ -9,7 +12,9 @@ const state = {
 
 const userInput = h('input', { id: 'username', autocomplete: 'off', spellcheck: 'false', maxlength: '18' })
 const syncInfo = h('p', { class: 'sync-info' })
-const syncBtn = h('button', { type: 'button' }, 'Sync now')
+const syncIcon = h('span', { class: 'sync-icon', 'aria-hidden': 'true' }, '⟳')
+const syncLabel = h('span', {}, 'Sync')
+const syncBtn = h('button', { type: 'button', class: 'sync-btn' }, syncIcon, syncLabel)
 const profileBox = h('div', { class: 'ratings-box' })
 const list = h('ol', { class: 'games', 'aria-label': 'Your games' })
 const formatSel = h('select', { id: 'f-format' }, h('option', { value: '' }, 'All formats'))
@@ -18,15 +23,15 @@ const resultSel = h('select', { id: 'f-result' },
   h('option', { value: 'loss' }, 'Losses'), h('option', { value: 'tie' }, 'Ties'))
 const oppInput = h('input', { id: 'f-opp', type: 'search', placeholder: 'Opponent' })
 const urlInput = h('input', { id: 'replay-url', type: 'url', placeholder: 'https://replay.pokemonshowdown.com/…', required: '' })
-const fileInput = h('input', { id: 'replay-file', type: 'file', accept: '.log,.html,.htm,.json,.txt' })
+const fileInput = h('input', { id: 'replay-file', type: 'file', class: 'sr-only', accept: '.log,.html,.htm,.json,.txt' })
 const scriptStatus = h('p', { class: 'small muted' })
 const scriptBox = h('details', { class: 'userscript' },
-  h('summary', {}, 'Save every game, even ones you don\'t upload'),
+  h('summary', {}, 'Auto-save every battle'),
   h('ol', {},
-    h('li', {}, 'Install the ', h('a', { href: 'https://www.tampermonkey.net/', target: '_blank', rel: 'noopener' }, 'Tampermonkey'), ' browser extension.'),
-    h('li', {}, h('a', { href: '/userscript/showdown-review.user.js' }, 'Install the Showdown Review userscript'), '. Tampermonkey opens an install page.'),
-    h('li', {}, 'Play on play.pokemonshowdown.com with this app running. Each battle is saved here a few seconds after it ends. Private replays you upload are picked up every 15 minutes.')),
-  h('p', { class: 'small muted' }, 'The script only sends battle logs and private replay ids to this app on your computer. Your Showdown password and login stay in your browser.'),
+    h('li', {}, 'Install ', h('a', { href: 'https://www.tampermonkey.net/', target: '_blank', rel: 'noopener' }, 'Tampermonkey'), '.'),
+    h('li', {}, h('a', { href: '/userscript/showdown-review.user.js' }, 'Install the userscript'), '.'),
+    h('li', {}, 'Play with this app running.')),
+  h('p', { class: 'small muted' }, 'Sends only battle logs to this app. Your login stays in your browser.'),
   scriptStatus)
 
 let wired = false
@@ -37,13 +42,14 @@ function wire() {
     e.preventDefault()
     try {
       state.settings = await api.saveSettings({ username: userInput.value })
-      say(`Username set to ${state.settings.username}.`)
+      say(`Saved: ${state.settings.username}`)
       await Promise.all([loadSettings(), loadProfile(true), loadGames()])
     } catch (err) { say(errText(err), 'error') }
   })
   syncBtn.addEventListener('click', async () => {
     syncBtn.disabled = true
-    syncBtn.textContent = 'Syncing…'
+    syncBtn.classList.add('busy')
+    syncLabel.textContent = 'Syncing'
     try {
       const r = await api.sync()
       let msg = r.added.length ? `Saved ${r.added.length} new game${r.added.length === 1 ? '' : 's'}.` : 'No new games.'
@@ -52,7 +58,7 @@ function wire() {
       say(msg, r.errors.length ? 'error' : 'ok')
       await Promise.all([loadSettings(), loadProfile(), loadGames()])
     } catch (err) { say(errText(err), 'error') }
-    finally { syncBtn.disabled = false; syncBtn.textContent = 'Sync now' }
+    finally { syncBtn.disabled = false; syncBtn.classList.remove('busy'); syncLabel.textContent = 'Sync' }
   })
   urlForm.addEventListener('submit', async e => {
     e.preventDefault()
@@ -88,10 +94,10 @@ function wire() {
 }
 
 const userForm = h('form', { class: 'user-form' },
-  h('label', { for: 'username' }, 'Showdown username'),
+  h('label', { for: 'username' }, 'Username'),
   h('div', { class: 'row' }, userInput, h('button', { type: 'submit', class: 'quiet' }, 'Save'), syncBtn))
 const urlForm = h('form', { class: 'row' },
-  h('label', { for: 'replay-url', class: 'sr-only' }, 'Replay URL'), urlInput, h('button', { type: 'submit' }, 'Add game'))
+  h('label', { for: 'replay-url', class: 'sr-only' }, 'Replay URL'), urlInput, h('button', { type: 'submit' }, 'Add'))
 
 export async function renderList(root: HTMLElement) {
   wire()
@@ -105,11 +111,12 @@ export async function renderList(root: HTMLElement) {
         h('div', { class: 'add', 'aria-label': 'Add games' },
           h('h2', {}, 'Add a game'),
           urlForm,
-          h('div', { class: 'row' }, h('label', { for: 'replay-file' }, 'Or upload a saved log or replay file'), fileInput),
+          h('div', { class: 'row' }, fileInput,
+            h('label', { for: 'replay-file', class: 'file-btn', title: 'A saved .log, .html or .json replay' }, 'Upload a file')),
           scriptBox)),
       h('div', { class: 'home-games game-list', 'aria-label': 'Your games' },
         h('div', { class: 'list-head' },
-          h('h2', {}, 'Your games'),
+          h('h2', {}, 'Games'),
           h('div', { class: 'row filters' },
             h('label', { for: 'f-format', class: 'sr-only' }, 'Format'), formatSel,
             h('label', { for: 'f-result', class: 'sr-only' }, 'Result'), resultSel,
@@ -123,10 +130,11 @@ async function loadSettings() {
   state.settings = await api.settings()
   const s = state.settings
   if (document.activeElement !== userInput) userInput.value = s.username
-  syncInfo.textContent = `Last synced ${fmtAgo(s.last_sync)}.` + (s.poller_enabled ? ` Checks again every ${s.poll_minutes} minutes.` : '')
+  syncInfo.textContent = `Synced ${fmtAgo(s.last_sync)}`
+  syncInfo.title = s.poller_enabled ? `Checks for new games every ${s.poll_minutes} minutes` : ''
   scriptStatus.textContent = s.last_ingest || s.last_ingest_private
-    ? `Last game from the script: ${fmtAgo(s.last_ingest)}. Last private replay check: ${fmtAgo(s.last_ingest_private)}.`
-    : 'The script hasn\'t sent anything yet.'
+    ? `Last battle ${fmtAgo(s.last_ingest)}. Private replays checked ${fmtAgo(s.last_ingest_private)}.`
+    : 'Nothing received yet.'
 }
 
 async function loadProfile(refresh = false) {
@@ -136,14 +144,28 @@ async function loadProfile(refresh = false) {
     return
   }
   const rows = Object.entries(p.ratings ?? {}).sort((a, b) => b[1].w + b[1].l - (a[1].w + a[1].l)).slice(0, 4)
+  const animate = !profileShown
+  profileShown = true
   profileBox.replaceChildren(
-    h('p', { class: 'small muted' }, 'Your most-played ladders'),
+    h('h2', { class: 'ladders-head' }, 'Ladders'),
     rows.length
-      ? h('dl', { class: 'ratings' }, ...rows.flatMap(([fmt, r]) => [
-        h('dt', {}, fmt),
-        h('dd', {}, h('span', { class: 'elo' }, Math.round(r.elo)), h('span', { class: 'small muted' }, `GXE ${r.gxe}, ${r.w} wins, ${r.l} losses`)),
-      ]))
-      : h('p', { class: 'muted' }, 'No ladder ratings yet.'))
+      ? h('ul', { class: `ladders${animate ? ' enter' : ''}` }, ...rows.map(([fmt, r], i) => ladderRow(fmt, r, i)))
+      : h('p', { class: 'muted' }, 'No ladder games yet.'))
+}
+
+/** One ladder: format badge, Elo, and a wins-vs-losses bar (green vs red, like HP). */
+function ladderRow(fmt: string, r: { elo: number; gxe: number; w: number; l: number }, i: number) {
+  const n = r.w + r.l
+  const winPct = n ? Math.round((r.w / n) * 100) : 50
+  return h('li', { class: 'ladder', style: `--i:${i}` },
+    formatBadge(fmt, ''),
+    h('span', { class: 'elo', title: 'Elo' }, Math.round(r.elo)),
+    h('span', { class: 'gxe small muted', title: 'GXE: chance to beat an average player' }, `GXE ${Math.round(r.gxe)}`),
+    h('span', { class: 'wl', role: 'img', 'aria-label': `${r.w} wins, ${r.l} losses (${winPct}% won)`, title: `${r.w} wins, ${r.l} losses` },
+      h('span', { class: 'wl-w', style: `flex-grow:${r.w || (n ? 0 : 1)}` }),
+      h('span', { class: 'wl-l', style: `flex-grow:${r.l || (n ? 0 : 1)}` })),
+    h('span', { class: 'wl-nums small', 'aria-hidden': 'true' },
+      h('span', { class: 'w' }, r.w), h('span', { class: 'muted' }, '–'), h('span', { class: 'l' }, r.l)))
 }
 
 async function loadFormats() {
@@ -157,14 +179,24 @@ async function loadFormats() {
 async function loadGames() {
   try {
     const [games] = await Promise.all([api.games(state.filters), loadFormats()])
-    list.replaceChildren(...games.map(gameRow))
+    const first = seenGames.size === 0
+    let k = 0
+    list.replaceChildren(...games.map(g => {
+      const row = gameRow(g)
+      if (!seenGames.has(g.id)) {
+        row.classList.add('enter')
+        row.style.setProperty('--i', String(first ? Math.min(k++, 10) : 0))
+        seenGames.add(g.id)
+      }
+      return row
+    }))
     if (!games.length) {
       const s = state.settings
       const filtered = state.filters.format || state.filters.result || state.filters.opponent
       list.append(h('li', { class: 'empty' },
         filtered ? 'No games match these filters.'
-          : s?.sync_start ? `No games yet. Games you upload after ${fmtDate(s.sync_start)} appear here. To review an older game, add it by URL above.`
-            : 'No games yet. Press "Sync now" to start saving your games, or add one by URL above.'))
+          : s?.sync_start ? `No games since ${fmtDate(s.sync_start)}. Add an older one by URL.`
+            : 'No games yet. Press Sync, or add one by URL.'))
     }
   } catch (err) { say(errText(err), 'error') }
 }
@@ -174,25 +206,78 @@ function gameRow(g: Game) {
   const theirs = mine === 'p1' ? 'p2' : 'p1'
   const r = g.result
   const ratingDelta = g.rating_before != null && g.rating_after != null ? g.rating_after - g.rating_before : null
+  const when = g.played_at ?? g.uploadtime
+  const marks = [
+    g.private ? icon('lock', 'Private replay') : null,
+    g.source === 'userscript' ? icon('disk', 'Saved by the userscript, not uploaded') : null,
+    g.has_inputlog ? icon('scroll', 'Full battle data: move review available') : null,
+    g.analyzed ? icon('lens', 'Reviewed') : null,
+  ].filter(Boolean) as Element[]
   const link = h('a', { href: `#/game/${encodeURIComponent(g.id)}`, class: 'game' },
-    h('span', { class: `pip ${r ?? 'none'}`, 'aria-label': r ? r[0].toUpperCase() + r.slice(1) : 'No result' }, r ? r[0].toUpperCase() : '·'),
+    h('span', { class: `pip ${r ?? 'none'}`, role: 'img', 'aria-label': r ? r[0].toUpperCase() + r.slice(1) : 'No result' }, r ? r[0].toUpperCase() : '·'),
     h('span', { class: 'who' },
       h('span', { class: 'opp' }, g.user_side ? (g.opponent ?? 'Unknown') : `${g.p1} vs ${g.p2}`),
-      h('span', { class: 'fmt small' }, g.format)),
-    h('span', { class: 'when small muted' }, fmtDate(g.played_at ?? g.uploadtime), h('br', {}), `${g.turns} turns`),
-    h('span', { class: `delta ${ratingDelta == null ? '' : ratingDelta >= 0 ? 'up' : 'down'}` },
+      formatBadge(g.format_id, g.format)),
+    h('span', { class: 'when small muted', title: fmtDate(when) },
+      shortDate(when), ' ', h('span', { class: 'turns', title: `${g.turns} turns` }, `T${g.turns}`)),
+    h('span', { class: `delta ${ratingDelta == null ? '' : ratingDelta >= 0 ? 'up' : 'down'}`, title: ratingDelta == null ? '' : 'Rating change' },
       ratingDelta == null ? '' : `${ratingDelta >= 0 ? '+' : '−'}${Math.abs(ratingDelta)}`),
     h('span', { class: 'mini-team mine', 'aria-label': `Your team: ${g.teams[mine].join(', ')}` },
       ...g.teams[mine].slice(0, 6).map(sp => sprite(spriteIdFromSpecies(sp), false, '', 'mini'))),
     h('span', { class: 'mini-team theirs', 'aria-label': `Their team: ${g.teams[theirs].join(', ')}` },
       ...g.teams[theirs].slice(0, 6).map(sp => sprite(spriteIdFromSpecies(sp), false, '', 'mini'))),
-    g.private || g.source === 'userscript' || g.has_inputlog
-      ? h('span', { class: 'tags' },
-        g.private ? h('span', { class: 'tag' }, 'Private') : null,
-        g.source === 'userscript' ? h('span', { class: 'tag' }, 'Not uploaded') : null,
-        g.has_inputlog ? h('span', { class: 'tag', title: 'Full battle data saved' }, 'Full data') : null)
-      : null)
+    marks.length ? h('span', { class: 'marks' }, ...marks) : null)
   return h('li', {}, link)
+}
+
+/** "3 h ago" today, "Nov 22" this year, else "Nov 22, 2025". The full date is the title. */
+function shortDate(t: number | null): string {
+  if (!t) return ''
+  if (Date.now() / 1000 - t < 86400) return fmtAgo(t)
+  const d = new Date(t * 1000)
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return new Intl.DateTimeFormat(undefined, sameYear ? { month: 'short', day: 'numeric' } : { dateStyle: 'medium' }).format(d)
+}
+
+/** Short format badge: a generation tile plus a short name, coloured by format family. */
+export function formatBadge(formatId: string, formatName: string) {
+  const id = formatId.toLowerCase()
+  const gen = id.match(/^gen(\d+)/)?.[1] ?? ''
+  const rest = id.replace(/^gen\d+/, '')
+  const family = rest.includes('vgc') ? 'vgc' : rest.includes('random') ? 'rand' : 'other'
+  const reg = rest.match(/reg([a-z])([a-z])?$/)
+  const NAMES: Record<string, string> = { randombattle: 'Random', ou: 'OU', ubers: 'Ubers', uu: 'UU', championsou: 'Champions OU',
+    randomdoublesbattle: 'Random Doubles', firstbloodrandombattle: 'First Blood' }
+  const name = family === 'vgc'
+    ? `VGC${reg ? ` ${reg[1].toUpperCase()}${reg[2] ? `-${reg[2].toUpperCase()}` : ''}` : ''}`
+    : NAMES[rest] ?? (formatName.replace(/^\[[^\]]*\]\s*/, '') || rest)
+  return h('span', { class: `fmt-badge ${family}`, title: formatName || formatId },
+    gen ? h('span', { class: 'fmt-gen' }, gen) : null, h('span', { class: 'fmt-name' }, name))
+}
+
+// 8×8 pixel icons ('#' = filled). Each has a title for its meaning.
+const ICONS: Record<string, string[]> = {
+  lock: ['..####..', '.#....#.', '.#....#.', '########', '###..###', '###..###', '########', '########'],
+  disk: ['#######.', '#.###.##', '#.###..#', '#......#', '#.####.#', '#.#..#.#', '#.####.#', '########'],
+  scroll: ['######..', '#....##.', '#.##..#.', '#.....#.', '#.###.#.', '#.....#.', '#.###.#.', '#######.'],
+  lens: ['.###....', '#...#...', '#...#...', '#...#...', '.####...', '....##..', '.....##.', '......##'],
+}
+function icon(name: string, label: string): Element {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 8 8')
+  svg.setAttribute('class', `pxicon ${name}`)
+  svg.setAttribute('role', 'img')
+  svg.setAttribute('aria-label', label)
+  const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
+  title.textContent = label
+  svg.append(title)
+  ICONS[name].forEach((row, y) => [...row].forEach((c, x) => {
+    if (c !== '#') return
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    r.setAttribute('x', String(x)); r.setAttribute('y', String(y)); r.setAttribute('width', '1'); r.setAttribute('height', '1')
+    svg.append(r)
+  }))
+  return svg
 }
 
 // Same rule as server/sprites.py sprite_id (kept short: the list only needs a guess;
