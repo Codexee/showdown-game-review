@@ -91,3 +91,35 @@ def test_review_endpoint(client, fake):
     assert other["perspective"] == "p2" and other["steps"][-1]["eval"] == 1.0
     assert client.get(f"/api/games/{VGC_ID}/review?side=all").status_code == 400
     assert client.get("/api/games/nope-1/review").status_code == 404
+
+
+# ---- battle extras (2026-11-23)
+def test_move_events_carry_move_and_target():
+    ev = events_by_turn(load_replay(RANDBATS_ID)["log"])
+    m = [e for e in ev[2] if e["kind"] == "move"][0]
+    assert m["move"] == "knockoff" and m["pos"] == 0 and m["target"] == "p2" and m["target_pos"] == 0
+    assert "move" not in ev[0][0]                       # other events stay small
+
+
+def test_dex_info_and_forme_fallback():
+    from server.battle import parse_log
+    from server.battle.dexinfo import _species, dex_for_game
+    assert _species("Gastrodon-East", "Gastrodon")["types"] == ["Water", "Ground"]   # cosmetic forme
+    log = load_replay(RANDBATS_ID)["log"]
+    r = parse_log(log)
+    d = dex_for_game(r.states, events_by_turn(log), r.format_id)
+    assert d["species"]["Dedenne"]["types"] == ["Electric", "Fairy"]
+    assert d["moves"]["knockoff"]["type"] == "Dark" and d["moves"]["knockoff"]["name"] == "Knock Off"
+    assert d["sets"]["Dedenne"]["level"] == 88 and d["sets"]["Dedenne"]["roles"]
+
+
+def test_gif_becomes_a_frame_strip():
+    import io
+    from PIL import Image
+    from server.sprites import gif_to_strip
+    frames = [Image.new("RGBA", (10, 8), c) for c in ((255, 0, 0, 255), (0, 255, 0, 255), (0, 0, 255, 255))]
+    buf = io.BytesIO()
+    frames[0].save(buf, format="GIF", save_all=True, append_images=frames[1:], duration=[50, 100, 150], loop=0)
+    strip, meta = gif_to_strip(buf.getvalue())
+    assert strip.size == (30, 8) and meta == {"w": 10, "h": 8, "frames": 3, "ms": [50, 100, 150]}
+    assert strip.getpixel((15, 4))[1] > 200                                          # second frame is green

@@ -2,8 +2,9 @@
 // Top screen: the battle at the start of the selected turn, with the eval bar beside it.
 // Hinge: turn controls. Bottom screen: eval graph, turn list, and what happened.
 import { api, type Analysis, type Mon, type Review, type SideReview, type SideView, type Step, type TurnReview } from './api'
-import { errText, fmtDate, h, pct, s, say, sprite } from './dom'
+import { errText, fmtDate, h, pct, s, say } from './dom'
 import { formatBadge, icon, shortDate } from './list'
+import { attachTip, battleSprite, fieldOverlays, hideTip, infoCard, moveStrip, playMoves, sideOverlays, substituteSprite } from './battlefx'
 
 const STAT_SHORT: Record<string, string> = { atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe', accuracy: 'Acc', evasion: 'Eva' }
 const STATUS_LABEL: Record<string, string> = { brn: 'BRN', par: 'PAR', slp: 'SLP', frz: 'FRZ', psn: 'PSN', tox: 'TOX' }
@@ -72,6 +73,7 @@ class ReviewScreen {
   }
 
   private get steps(): Step[] { return this.review.steps }
+  private get isRandom(): boolean { return teamIsRandom(this.review.format_id) }
   private get me(): 'p1' | 'p2' { return this.review.perspective }
   private get them(): 'p1' | 'p2' { return this.me === 'p1' ? 'p2' : 'p1' }
 
@@ -344,7 +346,10 @@ class ReviewScreen {
     const field = h('div', { class: `field${doubles ? ' doubles' : ''}` })
     field.append(this.sideArea(view.sides[this.them], false, doubles), this.sideArea(view.sides[this.me], true, doubles))
     const tags = this.fieldTags(st)
-    this.topScreen.replaceChildren(field, tags)
+    hideTip()
+    this.topScreen.replaceChildren(...fieldOverlays(view.field), field, tags)
+    // Move effects for the turn just played, once the new sprites are in place.
+    if (this.prevMons) requestAnimationFrame(() => playMoves(this.topScreen, st.events, this.review.dex, this.me))
   }
 
   private sideArea(side: SideView, mine: boolean, doubles: boolean) {
@@ -357,16 +362,27 @@ class ReviewScreen {
       if (mon) {
         const prev = this.prevMons?.get(monKey(mine ? this.me : this.them, mon))
         const frac = mon.fainted ? 0 : mon.hp / (mon.maxhp || 100)
+        // A Pokemon seen for the first time came in at full HP; a switch-in that lost HP on
+        // the way in (hazards, a pivot hit) slides in and then shudders.
+        const before = prev ? prev.frac : 1
+        const hurt = frac < before - 0.004
         const fx = !this.prevMons ? ''
-          : !prev || !prev.active ? ' switch-in'
-            : mon.fainted && !prev.fainted ? ' faint-now'
-              : frac < prev.frac - 0.004 ? ' hit' : ''
-        sprites.append(sprite(mon.sprite, mine, mon.species, `sprite${mon.fainted ? ' fainted' : ''}${fx}`))
+          : mon.fainted && !(prev?.fainted) ? ' faint-now'
+            : !prev || !prev.active ? ` switch-in${hurt ? ' hit' : ''}`
+              : hurt ? ' hit' : ''
+        const cls = `sprite${mon.fainted ? ' fainted' : ''}${fx}`
+        const spr = mon.volatiles.includes('substitute') && !mon.fainted
+          ? substituteSprite(mine, cls) : battleSprite(mon.sprite, mine, mon.species, cls)
+        spr.dataset.side = mine ? 'mine' : 'theirs'
+        spr.dataset.pos = String(pos)
+        attachTip(spr, () => infoCard(mon, this.review.dex, this.isRandom))
+        sprites.append(spr)
         boxes.append(this.hpBox(mon, mine, prev))
       } else {
         sprites.append(h('span', { class: 'sprite empty', 'aria-hidden': 'true' }))
       }
     }
+    sprites.append(...sideOverlays(side))
     area.append(h('div', { class: 'party-row' }, h('span', { class: 'trainer' }, side.name), this.party(side)), boxes, sprites)
     return area
   }
@@ -375,7 +391,8 @@ class ReviewScreen {
     const frac = mon.fainted ? 0 : mon.hp / (mon.maxhp || 100)
     // What changed since the previous turn: a "ghost" shows HP just lost (drains away) or
     // gained (flashes); new status and stat chips pop. The bar itself is already final.
-    const lost = prev && prev.active && prev.frac - frac > 0.004 ? prev.frac - frac : 0
+    const before = !this.prevMons ? frac : prev ? prev.frac : 1   // first time seen: came in at full HP
+    const lost = before - frac > 0.004 ? before - frac : 0
     const gained = prev && prev.active && frac - prev.frac > 0.004 ? frac - prev.frac : 0
     const ghost = lost ? h('div', { class: 'hp-ghost lost', style: `left:${(frac * 100).toFixed(1)}%;width:${(lost * 100).toFixed(1)}%` })
       : gained ? h('div', { class: 'hp-ghost gained', style: `left:${(prev!.frac * 100).toFixed(1)}%;width:${(gained * 100).toFixed(1)}%` })
@@ -392,12 +409,7 @@ class ReviewScreen {
       ...mon.volatiles.filter(v => v === 'substitute' || v === 'confusion' || v === 'leechseed')
         .map(v => h('span', { class: 'chip' }, v === 'substitute' ? 'Substitute' : v === 'confusion' ? 'Confused' : 'Seeded')),
     ]
-    const details = [
-      mon.item !== null ? `Item: ${mon.item ? titleCase(mon.item) : 'none'}` : null,
-      mon.ability ? `Ability: ${titleCase(mon.ability)}` : null,
-      mon.moves.length ? `Moves: ${mon.moves.map(titleCase).join(', ')}` : null,
-    ].filter(Boolean).join('\n')
-    return h('div', { class: `hp-box ${mine ? 'mine' : 'theirs'}`, title: details || undefined },
+    const box = h('div', { class: `hp-box ${mine ? 'mine' : 'theirs'}`, tabindex: '0' },
       h('div', { class: 'hp-name' },
         h('span', { class: 'mon-name' }, mon.name !== mon.species && !mon.species.startsWith(mon.name) ? `${mon.name} (${mon.species})` : mon.species),
         h('span', { class: 'lv' }, `Lv${mon.level}`)),
@@ -409,7 +421,10 @@ class ReviewScreen {
       h('div', { class: 'hp-foot' },
         mon.status ? h('span', { class: `status-tag ${mon.status}${newStatus ? ' pop' : ''}` }, STATUS_LABEL[mon.status] ?? mon.status) : null,
         h('span', { class: 'hp-num' }, hpText)),
-      boosts.length || extra.some(Boolean) ? h('div', { class: 'chips' }, ...boosts, ...extra) : null)
+      boosts.length || extra.some(Boolean) ? h('div', { class: 'chips' }, ...boosts, ...extra) : null,
+      moveStrip(mon, this.review.dex))
+    attachTip(box, () => infoCard(mon, this.review.dex, this.isRandom))
+    return box
   }
 
   private party(side: SideView) {
@@ -420,7 +435,13 @@ class ReviewScreen {
       const m = seen[i]
       const state = !m ? 'unknown' : m.fainted ? 'fainted' : m.status ? 'status' : 'ok'
       const label = !m ? 'Not seen yet' : `${m.species}${m.fainted ? ', fainted' : m.status ? `, ${STATUS_LABEL[m.status] ?? m.status}` : ''}`
-      balls.append(h('span', { class: `ball ${state}`, title: label, role: 'img', 'aria-label': label }))
+      if (m) {
+        const b = h('button', { type: 'button', class: `ball ${state}`, 'aria-label': label })
+        attachTip(b, () => infoCard(m, this.review.dex, this.isRandom))
+        balls.append(b)
+      } else {
+        balls.append(h('span', { class: `ball ${state}`, title: label, role: 'img', 'aria-label': label }))
+      }
     }
     return balls
   }

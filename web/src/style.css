@@ -531,6 +531,7 @@ kbd { font-family: var(--pixel); border: 2px solid var(--line); border-bottom-wi
 .vchip b, .vmark { font-family: var(--pixel); }
 .luck { display: inline-flex; align-items: center; gap: 5px; font-family: var(--pixel); }
 .luck .pxicon { width: 12px; height: 12px; }
+.luck .pxicon.dice { width: 14px; height: 14px; }
 .rv { border-left: 4px solid transparent; padding-left: 6px; }
 .rv.mine { border-left-color: var(--you); }
 .rv.theirs { border-left-color: var(--them); }
@@ -635,3 +636,117 @@ button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-of
 /* Auto-analyze switch in the profile block */
 .auto-row { grid-column: 1; }
 .switch-text { font-family: var(--pixel); font-size: 0.85rem; }
+
+/* ------------------------------------------------------------------ battle extras (2026-11-23) */
+/* Animated sprites: a strip of frames stepped slowly inside a window the size of one frame,
+   scaled like the still sprites (96 px canvas) and standing on the platform. */
+.sprite.spr { display: inline-block; position: relative; }
+.spr > img.still { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.sprite.spr.missing > img.still { visibility: hidden; }
+.ani-win { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); overflow: hidden;
+  width: calc(var(--fw) * 100% / 96); height: calc(var(--fh) * 100% / 96); }
+.ani-strip { display: block; height: 100%; width: calc(var(--n) * 100%); max-width: none; image-rendering: pixelated;
+  animation: ani-play var(--dur) steps(var(--n)) infinite; }
+@keyframes ani-play { to { transform: translateX(-100%); } }
+:root[data-motion='off'] .ani-strip { animation: none; }   /* Motion off: first frame only */
+
+/* Fainting: the sprite sinks a little and greys out (and stays there). */
+.sprite.fainted { transform: translateY(10%); }
+@keyframes faint { 0% { opacity: 1; filter: none; transform: translateY(0); }
+  35% { opacity: 1; filter: none; transform: translateY(-4%); } 100% { opacity: 0.25; filter: grayscale(1); transform: translateY(10%); } }
+.sprite.faint-now { animation: faint 420ms var(--ease-out) both; }
+/* A switch-in that was hurt on the way in slides in, then shudders. */
+.side.theirs .sprite.switch-in.hit { animation: slide-l 240ms var(--ease-out) both, shake 240ms steps(6, end) 260ms; }
+.side.mine .sprite.switch-in.hit { animation: slide-r 240ms var(--ease-out) both, shake 240ms steps(6, end) 260ms; }
+
+/* Field: quiet full-screen layers behind the Pokemon. */
+.screen.top .field { position: relative; z-index: 1; }
+.fx-layer { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.wx.rain { background: repeating-linear-gradient(115deg, transparent 0 14px, rgba(160, 200, 255, 0.35) 14px 15px);
+  background-size: 120px 120px; animation: drift 700ms linear infinite; opacity: 0.6; }
+.wx.sun { background: radial-gradient(circle at 85% 0%, rgba(255, 210, 90, 0.45), transparent 55%); }
+.wx.sand { background: repeating-linear-gradient(170deg, rgba(210, 170, 100, 0.22) 0 2px, transparent 2px 9px);
+  background-size: 160px 160px; animation: drift 1600ms linear infinite; }
+.wx.snow { background-image: radial-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1.5px),
+  radial-gradient(rgba(255, 255, 255, 0.55) 1px, transparent 1.5px);
+  background-size: 40px 40px, 64px 64px; background-position: 0 0, 20px 30px; animation: fall 2400ms linear infinite; opacity: 0.7; }
+.wx.wind { background: repeating-linear-gradient(0deg, transparent 0 22px, rgba(255, 255, 255, 0.18) 22px 23px);
+  animation: drift 900ms linear infinite; }
+@keyframes drift { to { background-position: 120px 0; } }
+@keyframes fall { to { background-position: 0 40px, 20px 94px; } }
+.terrain { top: auto; height: 42%; }
+.terrain.electric { background: linear-gradient(transparent, rgba(247, 208, 44, 0.28)); }
+.terrain.grassy { background: linear-gradient(transparent, rgba(122, 199, 76, 0.32)); }
+.terrain.misty { background: linear-gradient(transparent, rgba(244, 166, 215, 0.32)); }
+.terrain.psychic { background: linear-gradient(transparent, rgba(176, 110, 232, 0.3)); }
+.room.trickroom { background: repeating-linear-gradient(45deg, rgba(249, 85, 135, 0.08) 0 12px, transparent 12px 24px),
+  repeating-linear-gradient(-45deg, rgba(176, 110, 232, 0.08) 0 12px, transparent 12px 24px);
+  box-shadow: inset 0 0 0 3px rgba(249, 85, 135, 0.35); }
+.room.gravity { background: repeating-linear-gradient(180deg, rgba(115, 87, 151, 0.12) 0 2px, transparent 2px 14px); }
+.room.magicroom, .room.wonderroom { box-shadow: inset 0 0 0 3px rgba(114, 160, 255, 0.35); }
+
+/* Side conditions on the platform: screens stand in front, hazards lie on it. */
+.platform .cond { position: absolute; pointer-events: none; z-index: 2; }
+.cond.reflect, .cond.lightscreen, .cond.auroraveil, .cond.safeguard, .cond.mist { left: 12%; right: 12%; bottom: 8px; height: 70%;
+  border: 2px solid; opacity: 0.5; }
+.cond.reflect { border-color: #6390f0; background: rgba(99, 144, 240, 0.14); }
+.cond.lightscreen { border-color: #f95587; background: rgba(249, 85, 135, 0.12); left: 16%; right: 16%; }
+.cond.auroraveil { border-color: #96d9d6; background: linear-gradient(rgba(150, 217, 214, 0.18), rgba(214, 133, 173, 0.14)); }
+.cond.safeguard { border-color: #a98ff3; border-style: dashed; background: transparent; }
+.cond.mist { border-color: #e6eef8; border-style: dotted; background: rgba(230, 238, 248, 0.1); }
+.cond.stealthrock { left: 14%; bottom: 0; width: 46%; height: 16px;
+  background: radial-gradient(circle at 12% 62%, #d8c487 0 4px, #6e5e36 4px 5.5px, transparent 6px),
+    radial-gradient(circle at 46% 45%, #e6d394 0 5px, #6e5e36 5px 6.5px, transparent 7px),
+    radial-gradient(circle at 84% 66%, #cdb97c 0 4px, #6e5e36 4px 5.5px, transparent 6px); }
+.cond.spikes, .cond.toxicspikes { right: 14%; bottom: 2px; height: 8px; width: calc(var(--layers, 1) * 14px);
+  background: linear-gradient(135deg, transparent 50%, var(--spike) 50%) 0 0 / 7px 8px repeat-x,
+    linear-gradient(225deg, transparent 50%, var(--spike) 50%) 0 0 / 7px 8px repeat-x; --spike: #c8ccd8; }
+.cond.toxicspikes { right: auto; left: 60%; --spike: #a33ea1; }
+.cond.stickyweb { left: 30%; width: 40%; bottom: 0; height: 18px; opacity: 0.5;
+  background: repeating-radial-gradient(circle at 50% 100%, transparent 0 5px, #e6eef8 5px 6px); }
+.cond.tailwind { left: 0; right: 0; bottom: 30%; height: 40%;
+  background: repeating-linear-gradient(0deg, transparent 0 9px, rgba(255, 255, 255, 0.28) 9px 10px); animation: drift 600ms linear infinite; }
+
+/* Move effects: small and type-coloured. */
+.move-fx { position: absolute; z-index: 4; pointer-events: none; transform: translate(-50%, -50%); }
+.move-fx.orb { width: 14px; height: 14px; background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 40%, transparent); }
+.move-fx.burst { width: 56px; height: 56px; background: radial-gradient(circle, var(--c) 0 30%, transparent 32%),
+  conic-gradient(from 0deg, var(--c) 0 6%, transparent 6% 12.5%, var(--c) 12.5% 18.5%, transparent 18.5% 25%, var(--c) 25% 31%, transparent 31% 37.5%,
+    var(--c) 37.5% 43.5%, transparent 43.5% 50%, var(--c) 50% 56%, transparent 56% 62.5%, var(--c) 62.5% 68.5%, transparent 68.5% 75%,
+    var(--c) 75% 81%, transparent 81% 87.5%, var(--c) 87.5% 93.5%, transparent 93.5%);
+  -webkit-mask: radial-gradient(circle, #000 0 70%, transparent 71%); mask: radial-gradient(circle, #000 0 70%, transparent 71%); }
+.move-fx.ring { width: 64px; height: 64px; border: 3px dashed var(--c); border-radius: 50%; }
+
+/* Move strip under each HP box: revealed moves in their type colour, "?" for unrevealed. */
+.mstrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; margin-top: 3px; }
+.mchip { font-size: 0.62rem; line-height: 1.5; padding: 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border-left: 4px solid var(--c, var(--line)); background: color-mix(in srgb, var(--c, var(--line)) 18%, var(--screen)); color: var(--ink); }
+.mchip.unknown { border-left-color: var(--line); color: var(--ink-soft); text-align: center; background: transparent; outline: 1px dotted var(--line); }
+.mcat { display: none; }
+.col-battle .field.doubles .mstrip { display: none; }   /* four boxes: the info card has the moves */
+
+/* Party balls with a seen Pokemon are buttons that open its info card. */
+button.ball { padding: 0; min-width: 0; min-height: 0; cursor: help; }
+button.ball:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.hp-box:focus-visible, .sprite:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Info card */
+.mon-tip { position: fixed; z-index: 50; max-width: 340px; padding: 8px 10px; margin: 0; font-size: 0.8rem; pointer-events: none;
+  display: none; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25); }
+.mon-tip.show { display: block; }
+.tip-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 4px; font-size: 0.9rem; }
+.tchip { font-family: var(--pixel); font-size: 0.68rem; padding: 0 5px; background: var(--c); color: #10202e; }
+.tchip.tera { outline: 2px solid var(--c); background: transparent; color: var(--ink); }
+.tip-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 6px; padding: 1px 0; }
+.tip-k { color: var(--ink-soft); font-weight: 700; }
+.tip-moves { display: flex; flex-wrap: wrap; gap: 2px; }
+.tip-moves .mchip { font-size: 0.72rem; }
+.tip-stats { display: flex; flex-wrap: wrap; gap: 2px 8px; font-family: var(--pixel); font-size: 0.72rem; }
+.tip-stats .up { color: var(--hp-green); }
+.tip-stats .down { color: var(--them); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wx.rain, .wx.sand, .wx.snow, .wx.wind, .cond.tailwind { animation: none; }
+  .sprite.switch-in.hit { animation: none; }
+}
+.tip-guess { font-style: italic; color: var(--ink-soft); }

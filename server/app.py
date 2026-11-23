@@ -345,9 +345,15 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             steps.append(step)
         game.pop("log", None)
         game.pop("inputlog", None)
+        from .battle.dexinfo import dex_for_game
+        try:
+            dex = dex_for_game(result.states, events, result.format_id)
+        except Exception as e:  # the info cards are extra: never break the review for them
+            result.warnings.append(f"dex info failed: {e}")
+            dex = {"species": {}, "moves": {}, "sets": {}}
         return {"game": game, "perspective": perspective, "format_id": result.format_id,
                 "eval_method": method, "eval_method_text": method_text,
-                "steps": steps, "warnings": result.warnings}
+                "steps": steps, "warnings": result.warnings, "dex": dex}
 
     # ---- move review (stage 6) ------------------------------------------------
     @app.get("/api/games/{game_id}/analysis")
@@ -363,6 +369,19 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
         if res.get("status") == "error" and res.get("error") == "No such game":
             raise HTTPException(404, "No such game")
         return res
+
+    @app.get("/sprites/{folder}/{name}.json", include_in_schema=False)
+    async def sprite_meta(folder: str, name: str):
+        """Frame size, count and durations of an animated sprite strip (see server/sprites.py)."""
+        try:
+            path = await sprites.get(state["client"].http, folder, name)
+        except httpx.HTTPError:
+            path = None
+        meta = sprites.meta_path(folder, name)
+        if path is None or meta is None or not meta.exists():
+            raise HTTPException(404, "No animated sprite")
+        return FileResponse(meta, media_type="application/json",
+                            headers={"Cache-Control": "public, max-age=604800"})
 
     @app.get("/sprites/{folder}/{name}.png", include_in_schema=False)
     async def sprite(folder: str, name: str):

@@ -25,9 +25,23 @@ class Event:
     text: str
     side: str | None = None   # p1 / p2: whose Pokemon or side it is about
     kind: str = ""            # move, switch, damage, heal, faint, status, boost, field, info, end
+    # For move events (used by the review screen's move effects):
+    move: str | None = None   # move id, e.g. "knockoff"
+    pos: int | None = None    # user's slot (0 = a, 1 = b)
+    target: str | None = None  # target's side, p1 / p2 (None: no target, or itself)
+    target_pos: int | None = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        d = asdict(self)
+        for k in ("move", "pos", "target", "target_pos"):   # only on move events
+            if d[k] is None:
+                del d[k]
+        return d
+
+
+def _slot(ident: str) -> int | None:
+    """'p1a: Pikachu' -> 0, 'p2b: X' -> 1."""
+    return {"a": 0, "b": 1, "c": 2}.get(ident[2:3]) if len(ident) > 2 and ident[:2] in ("p1", "p2") else None
 
 
 def _name(ident: str) -> str:
@@ -50,8 +64,8 @@ def events_by_turn(log: str) -> dict[int, list[dict]]:
     turn = 0
     out: dict[int, list[dict]] = {0: []}
 
-    def add(text: str, side: str | None = None, kind: str = "") -> None:
-        out.setdefault(turn, []).append(Event(text, side, kind).to_dict())
+    def add(text: str, side: str | None = None, kind: str = "", **extra) -> None:
+        out.setdefault(turn, []).append(Event(text, side, kind, **extra).to_dict())
 
     for line in log.splitlines():
         if not line.startswith("|"):
@@ -75,7 +89,9 @@ def events_by_turn(log: str) -> dict[int, list[dict]]:
             elif kind == "move":
                 target = f" on {_name(args[2])}" if len(args) > 2 and args[2] and args[2] != args[0] else ""
                 miss = " It missed." if "miss" in tags else ""
-                add(f"{_name(args[0])} used {args[1]}{target}.{miss}", side, "move")
+                tgt = args[2] if len(args) > 2 and args[2] and args[2] != args[0] and args[2][:2] in ("p1", "p2") else ""
+                add(f"{_name(args[0])} used {args[1]}{target}.{miss}", side, "move", move=to_id(args[1]),
+                    pos=_slot(args[0]), target=tgt[:2] or None, target_pos=_slot(tgt) if tgt else None)
             elif kind == "cant":
                 add(f"{_name(args[0])} couldn't move ({_effect_name(args[1])}).", side, "move")
             elif kind == "-damage":

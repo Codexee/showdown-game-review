@@ -107,6 +107,19 @@ export interface BattleEvent {
   text: string
   side: 'p1' | 'p2' | null
   kind: string
+  move?: string                 // move events: move id, the user's slot, the target
+  pos?: number
+  target?: 'p1' | 'p2'
+  target_pos?: number
+}
+
+export interface DexMove { name: string; type: string; cat: 'Physical' | 'Special' | 'Status'; bp: number; acc: number; pri: number }
+export interface DexRole { name: string; weight: number; moves: Record<string, number>; abilities: Record<string, number>;
+  items: Record<string, number>; tera: Record<string, number> }
+export interface Dex {
+  species: Record<string, { types: string[]; bs: Record<string, number> }>
+  moves: Record<string, DexMove>
+  sets: Record<string, { level: number | null; roles: DexRole[] }>
 }
 
 export interface Step {
@@ -127,6 +140,7 @@ export interface Review {
   eval_method_text: string
   steps: Step[]
   warnings: string[]
+  dex?: Dex
 }
 
 export type Verdict = 'best' | 'good' | 'inaccuracy' | 'mistake' | 'blunder' | 'forced' | 'no blame'
