@@ -559,3 +559,42 @@ kbd { font-family: var(--pixel); border: 2px solid var(--line); border-bottom-wi
   .col-battle .field.doubles .sprite { width: calc(var(--sprite) * 0.62); height: calc(var(--sprite) * 0.62); }
   .col-battle .field.doubles { padding-top: 4px; }
 }
+
+/* ------------------------------------------------------------------ review screen motion (2026-11-23)
+   Load: the columns and turn rows rise in once, like the games page.
+   Turn change (one step forward, not a held key): HP lost drains as a pale "ghost", HP gained
+   flashes, the hit sprite shakes, a switch-in slides in from its side, a faint drops and fades,
+   new status / stat chips pop, the eval bar steps, and the turn's lines appear in order.
+   The new state is drawn at once; motion only decorates it, so stepping is never slower. */
+.review-layout > .enter { animation: rise 240ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.turn-list li.enter { animation: rise 200ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 25ms + 120ms); }
+
+.hp-track { position: relative; overflow: hidden; }
+.hp-ghost { position: absolute; top: 0; bottom: 0; pointer-events: none; }
+.hp-ghost.lost { background: #fff6d0; transform-origin: left; animation: drain 360ms var(--px-steps) 80ms both; }
+.hp-ghost.gained { background: #e8ffe8; animation: flash 360ms ease-out both; }
+@keyframes drain { to { transform: scaleX(0); } }
+@keyframes flash { from { opacity: 0.9; } to { opacity: 0; } }
+
+.sprite.hit { animation: shake 240ms steps(6, end); }
+.side.theirs .sprite.switch-in { animation: slide-l 240ms var(--ease-out) both; }
+.side.mine .sprite.switch-in { animation: slide-r 240ms var(--ease-out) both; }
+.sprite.faint-now { animation: faint 320ms var(--ease-out) both; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes slide-l { from { opacity: 0; transform: translateX(18px); } }
+@keyframes slide-r { from { opacity: 0; transform: translateX(-18px); } }
+@keyframes faint { from { opacity: 1; filter: none; transform: translateY(-8px); } }
+.status-tag.pop, .chip.pop { animation: chip-pop 200ms var(--ease-out) both; }
+@keyframes chip-pop { from { opacity: 0; transform: scale(0.85); } }
+
+.events ul.play .ev { animation: rise 180ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 30ms); }
+
+/* Fast stepping or jumping: no motion at all, including the eval bar's transition. */
+.still .eval-them, .still .eval-me { transition: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .review-layout > .enter, .turn-list li.enter, .events ul.play .ev { animation-name: fade; animation-delay: 0ms; }
+  .sprite.hit, .sprite.switch-in, .sprite.faint-now, .status-tag.pop, .chip.pop { animation: none; }
+  .hp-ghost.lost { animation: flash 360ms ease-out both; transform: none; }
+}

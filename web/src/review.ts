@@ -53,6 +53,11 @@ class ReviewScreen {
   private revealScores = false   // animate the scorecards once, when a review finishes while open
   private revealGraph = false    // and pop in the graph's mistake markers
   private analysis: Analysis | null = null
+  private opened = false
+  private openedAt = 0
+  // Turn-change motion: only when stepping forward one turn, not when holding a key or jumping.
+  private lastStepAt = 0
+  private prevMons: Map<string, MonSnap> | null = null
   private lastStatus: string | undefined = undefined
   private pollTimer = 0
 
@@ -110,8 +115,9 @@ class ReviewScreen {
     const teamForm = h('form', { class: 'team-form' },
       h('label', { for: 'team-paste', class: 'sr-only' }, 'Your team (Showdown export)'),
       teamArea, h('button', { type: 'submit' }, 'Save team'))
-    // Team import is for VGC only: Random Battle teams are random (vault 2026-11-22-direction-codex-review).
-    const isVgc = g.format_id.toLowerCase().includes('vgc')
+    // Team paste for every format where players build their own team (VGC, OU, and any added
+    // later); not where the game hands out teams (vault 2026-11-22-direction-codex-review).
+    const ownTeam = !teamIsRandom(g.format_id)
     teamForm.addEventListener('submit', async e => {
       e.preventDefault()
       try { await api.saveTeam(g.id, teamArea.value); say('Team saved.') } catch (err) { say(errText(err), 'error') }
@@ -133,12 +139,20 @@ class ReviewScreen {
           this.analysisBar,
           h('section', { class: 'panel events-panel frame', 'aria-label': 'What happened' },
             h('h2', {}, 'What happened'), this.eventsBox),
-          isVgc ? h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team'), teamForm) : null)))
+          ownTeam ? h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team'), teamForm) : null)))
 
     this.renderMethod()
     this.buildGraph()
     this.buildTurnList()
     this.renderAnalysisBar()
+    if (!this.opened) {   // match the games page: the screen rises in once when it opens
+      this.opened = true
+      this.root.querySelectorAll<HTMLElement>('.review-layout > *').forEach((el, i) => {
+        el.classList.add('enter'); el.style.setProperty('--i', String(i))
+      })
+      this.openedAt = performance.now()
+      this.markRowsEntering()
+    }
     void this.loadAnalysis()
   }
 
@@ -278,7 +292,15 @@ class ReviewScreen {
 
   // ---------------------------------------------------------------- navigation
   go(step: number, focusList = true) {
+    const from = this.step
     this.step = clampStep(step, this.steps.length)
+    const now = performance.now()
+    // Animate a single step forward unless steps come fast (a held key): then render instantly,
+    // so motion never slows down scrubbing.
+    const motion = this.opened && this.step === from + 1 && now - this.lastStepAt > 180
+    this.lastStepAt = now
+    this.prevMons = motion ? snapMons(this.steps[from]) : null
+    this.root.classList.toggle('still', !motion)
     const st = this.steps[this.step]
     this.turnLabel.textContent = st.ended ? `End of turn ${st.turn}` : `Turn ${st.turn} of ${this.lastTurn()}`
     this.prevBtn.disabled = this.step === 0
@@ -333,8 +355,14 @@ class ReviewScreen {
     for (const pos of slots) {
       const mon = side.team.find(m => m.active && m.position === pos)
       if (mon) {
-        sprites.append(sprite(mon.sprite, mine, mon.species, `sprite${mon.fainted ? ' fainted' : ''}`))
-        boxes.append(this.hpBox(mon, mine))
+        const prev = this.prevMons?.get(monKey(mine ? this.me : this.them, mon))
+        const frac = mon.fainted ? 0 : mon.hp / (mon.maxhp || 100)
+        const fx = !this.prevMons ? ''
+          : !prev || !prev.active ? ' switch-in'
+            : mon.fainted && !prev.fainted ? ' faint-now'
+              : frac < prev.frac - 0.004 ? ' hit' : ''
+        sprites.append(sprite(mon.sprite, mine, mon.species, `sprite${mon.fainted ? ' fainted' : ''}${fx}`))
+        boxes.append(this.hpBox(mon, mine, prev))
       } else {
         sprites.append(h('span', { class: 'sprite empty', 'aria-hidden': 'true' }))
       }
@@ -343,12 +371,22 @@ class ReviewScreen {
     return area
   }
 
-  private hpBox(mon: Mon, mine: boolean) {
+  private hpBox(mon: Mon, mine: boolean, prev?: MonSnap) {
     const frac = mon.fainted ? 0 : mon.hp / (mon.maxhp || 100)
+    // What changed since the previous turn: a "ghost" shows HP just lost (drains away) or
+    // gained (flashes); new status and stat chips pop. The bar itself is already final.
+    const lost = prev && prev.active && prev.frac - frac > 0.004 ? prev.frac - frac : 0
+    const gained = prev && prev.active && frac - prev.frac > 0.004 ? frac - prev.frac : 0
+    const ghost = lost ? h('div', { class: 'hp-ghost lost', style: `left:${(frac * 100).toFixed(1)}%;width:${(lost * 100).toFixed(1)}%` })
+      : gained ? h('div', { class: 'hp-ghost gained', style: `left:${(prev!.frac * 100).toFixed(1)}%;width:${(gained * 100).toFixed(1)}%` })
+        : null
+    const newStatus = !!prev && prev.active && mon.status !== prev.status && !!mon.status
+    const prevBoosts = prev?.active ? prev.boosts : null
     const tone = frac > 0.5 ? 'green' : frac > 0.2 ? 'yellow' : 'red'
     const hpText = mon.fainted ? 'Fainted' : mon.hp_exact ? `${mon.hp}/${mon.maxhp}` : `${Math.round(frac * 100)}%`
     const boosts = Object.entries(mon.boosts).map(([k, v]) =>
-      h('span', { class: `chip ${v > 0 ? 'up' : 'down'}` }, `${v > 0 ? '+' : '−'}${Math.abs(v)} ${STAT_SHORT[k] ?? k}`))
+      h('span', { class: `chip ${v > 0 ? 'up' : 'down'}${prevBoosts && prevBoosts[k] !== v ? ' pop' : ''}` },
+        `${v > 0 ? '+' : '−'}${Math.abs(v)} ${STAT_SHORT[k] ?? k}`))
     const extra = [
       mon.tera_type ? h('span', { class: 'chip tera' }, `Tera ${mon.tera_type}`) : null,
       ...mon.volatiles.filter(v => v === 'substitute' || v === 'confusion' || v === 'leechseed')
@@ -367,9 +405,9 @@ class ReviewScreen {
         h('span', { class: 'hp-tag', 'aria-hidden': 'true' }, 'HP'),
         h('div', { class: 'hp-track', role: 'meter', 'aria-label': `${mon.species} HP`, 'aria-valuemin': '0',
           'aria-valuemax': '100', 'aria-valuenow': String(Math.round(frac * 100)) },
-          h('div', { class: `hp-fill ${tone}`, style: `width:${(frac * 100).toFixed(1)}%` }))),
+          h('div', { class: `hp-fill ${tone}`, style: `width:${(frac * 100).toFixed(1)}%` }), ghost)),
       h('div', { class: 'hp-foot' },
-        mon.status ? h('span', { class: `status-tag ${mon.status}` }, STATUS_LABEL[mon.status] ?? mon.status) : null,
+        mon.status ? h('span', { class: `status-tag ${mon.status}${newStatus ? ' pop' : ''}` }, STATUS_LABEL[mon.status] ?? mon.status) : null,
         h('span', { class: 'hp-num' }, hpText)),
       boosts.length || extra.some(Boolean) ? h('div', { class: 'chips' }, ...boosts, ...extra) : null)
   }
@@ -406,10 +444,13 @@ class ReviewScreen {
   // ---------------------------------------------------------------- eval
   private renderEval(st: Step) {
     const v = st.eval
-    this.evalBar.replaceChildren(
-      h('div', { class: 'eval-them', style: `height:${((1 - v) * 100).toFixed(1)}%` }),
-      h('div', { class: 'eval-me', style: `height:${(v * 100).toFixed(1)}%` }),
-      h('span', { class: 'eval-num' }, pct(v)))
+    if (!this.evalBar.firstChild) {
+      this.evalBar.append(h('div', { class: 'eval-them' }), h('div', { class: 'eval-me' }), h('span', { class: 'eval-num' }))
+    }
+    const [them, me, num] = [...this.evalBar.children] as HTMLElement[]
+    them.style.height = `${((1 - v) * 100).toFixed(1)}%`   // kept in place: the HP-bar transition runs
+    me.style.height = `${(v * 100).toFixed(1)}%`
+    num.textContent = pct(v)
     this.evalBar.setAttribute('aria-valuenow', String(Math.round(v * 100)))
     this.evalBar.setAttribute('aria-label', `Estimated chance that ${st.state.sides[this.me].name} wins`)
     this.evalBar.title = `${st.state.sides[this.me].name}: ${pct(v)} to win (rough estimate)`
@@ -464,6 +505,18 @@ class ReviewScreen {
   }
 
   // ---------------------------------------------------------------- bottom screen
+  // The turn rows rise in when the screen opens. The list is often rebuilt a moment later (the
+  // saved review arrives), so a rebuild in the first half second keeps the entrance going.
+  private markRowsEntering() {
+    const t = performance.now() - this.openedAt
+    if (!this.openedAt || t > 500) return
+    ;[...this.turnList.children].forEach((li, i) => {
+      const el = li as HTMLElement
+      el.classList.add('enter'); el.style.setProperty('--i', String(Math.min(i, 12)))
+      el.style.animationDelay = `${Math.max(0, Math.min(i, 12) * 25 + 120 - t)}ms`
+    })
+  }
+
   private buildTurnList() {
     this.turnList.replaceChildren(...this.steps.map((st, i) => {
       const prev = i > 0 ? this.steps[i - 1].eval : st.eval
@@ -483,6 +536,7 @@ class ReviewScreen {
       btn.addEventListener('click', () => this.go(i, false))
       return h('li', {}, btn)
     }))
+    this.markRowsEntering()
   }
 
   private renderEvents(st: Step) {
@@ -492,10 +546,30 @@ class ReviewScreen {
       h('p', { class: 'events-when' }, heading),
       ...(tr ? [this.reviewBox(tr)] : []),
       st.events.length
-        ? h('ul', {}, ...st.events.map(e =>
-          h('li', { class: `ev ${e.kind} ${e.side === this.me ? 'mine' : e.side === this.them ? 'theirs' : ''}` }, e.text)))
+        ? h('ul', { class: this.prevMons ? 'play' : '' }, ...st.events.map((e, i) =>
+          h('li', { class: `ev ${e.kind} ${e.side === this.me ? 'mine' : e.side === this.them ? 'theirs' : ''}`, style: `--i:${Math.min(i, 8)}` }, e.text)))
         : h('p', { class: 'muted' }, 'Nothing happened.'))
   }
+}
+
+interface MonSnap { frac: number; active: boolean; fainted: boolean; status: string | null; boosts: Record<string, number> }
+const monKey = (side: string, m: Mon) => `${side}|${m.name}|${m.species.split('-')[0]}`
+function snapMons(st: Step | undefined): Map<string, MonSnap> {
+  const out = new Map<string, MonSnap>()
+  if (!st) return out
+  for (const side of ['p1', 'p2'] as const) {
+    for (const m of st.state.sides[side].team) {
+      out.set(monKey(side, m), { frac: m.fainted ? 0 : m.hp / (m.maxhp || 100), active: m.active, fainted: m.fainted,
+        status: m.status ?? null, boosts: { ...m.boosts } })
+    }
+  }
+  return out
+}
+
+/** Formats that hand out teams (no team to paste). Everything else, VGC, OU and formats added
+ *  later, gets the team paste. */
+export function teamIsRandom(formatId: string): boolean {
+  return /random|hackmonscup|challengecup|factory/.test(formatId.toLowerCase())
 }
 
 function clampStep(i: number, n: number) { return Math.max(0, Math.min(n - 1, Number.isFinite(i) ? i : 0)) }
