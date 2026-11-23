@@ -27,9 +27,9 @@ Items wait here until they are answered. When an item is answered, record the an
 
 13. **Verdict bank labels:** how many choices will the user label blind (the bank also works with search-based references alone) ([[plan-grade-quality]])?
 
-14. **Publish the trained model?** For example `current.pt` as a GitHub release asset, so `./setup.sh` can fetch it and new users get the eval bar and move review without training ([[ADR-0020-distribution]]).
 
 ## Resolved
+- **Publish the trained model** → yes: release `model-main-9000`, downloaded and checked by `setup.sh` ([[2026-11-23-publish-model]], [[ADR-0021-publish-model]]), 2026-11-23.
 - **Change of emphasis** → adopted: after `v12` is read, close model testing; then grade quality, then the UI ([[2026-11-23-adopt-grade-quality-next]], [[ADR-0018-grade-quality-before-ui]]), 2026-11-23.
 - **Search weight 0.75 on fresh games** → holds: −0.0063 [−0.0109, −0.0022] on 100 new games; 0.7–0.8 flat ([[2026-11-23-search-blend-fresh-check]]), 2026-11-23.
 - **Overnight run** → started 2026-11-23 03:56 EST: `RUN=v12`, games since 2025-01-01, C's settings, 3 epochs, 9 h ceiling ([[2026-11-23-endgame-goals-and-overnight-go]]).
