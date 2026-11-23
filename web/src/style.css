@@ -685,15 +685,6 @@ button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-of
 .room.gravity { background: repeating-linear-gradient(180deg, rgba(115, 87, 151, 0.12) 0 2px, transparent 2px 14px); }
 .room.magicroom, .room.wonderroom { box-shadow: inset 0 0 0 3px rgba(114, 160, 255, 0.35); }
 
-/* Entry hazards: Showdown's effect sprites lying on the platform, scaled with the sprites. */
-.platform .hazard { position: absolute; z-index: 2; pointer-events: none; image-rendering: pixelated; --u: calc(var(--sprite, 192px) / 96); }
-.hazard.rock { height: calc(var(--u) * 13px); bottom: calc(var(--u) * 2px); }
-.hazard.r1 { left: 18%; } .hazard.r2 { left: 30%; bottom: calc(var(--u) * 5px); }
-.hazard.spike, .hazard.tspike { height: calc(var(--u) * 12px); bottom: calc(var(--u) * 1px); }
-.hazard.s0 { right: 16%; } .hazard.s1 { right: 26%; } .hazard.s2 { right: 36%; }
-.hazard.t0 { left: 54%; } .hazard.t1 { left: 64%; }
-.hazard.web { width: 58%; left: 21%; bottom: 0; opacity: 0.85; }
-
 /* Move strip under each HP box: 2 × 2, full names (up to two lines, so even "Soul-Stealing
    7-Star Strike" fits) at a fixed height; revealed moves in their type colour, "?" otherwise. */
 .mstrip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 2.3em; gap: 2px; margin-top: 3px; font-size: 0.62rem; }

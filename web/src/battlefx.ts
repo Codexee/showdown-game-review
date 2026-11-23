@@ -1,7 +1,7 @@
 // Battle-screen extras (2026-11-23): animated sprites that step slowly, the substitute doll,
 // field and side-condition overlays, move strips, and Pokemon details laid out like
 // Showdown's tooltip (with the Random Battle set odds, as in Showdown's randbats tooltip).
-import type { Dex, DexRole, Mon, SideView } from './api'
+import type { Dex, DexRole, Mon } from './api'
 import { h } from './dom'
 
 export const TYPE_COLORS: Record<string, string> = {
@@ -79,20 +79,6 @@ export function fieldOverlays(field: { weather: string; terrain: string; pseudo_
   for (const p of field.pseudo_weather) {
     if (['trickroom', 'gravity', 'magicroom', 'wonderroom'].includes(p)) out.push(h('div', { class: `fx-layer room ${p}`, 'aria-hidden': 'true' }))
   }
-  return out
-}
-
-/** Entry hazards on that side's platform, drawn with Showdown's own effect sprites (the
- *  images its client uses). Conditions without an official sprite (screens, Tailwind) are
- *  only listed in the tags below the field. */
-export function sideOverlays(side: SideView): HTMLElement[] {
-  const fx = (name: string, cls: string) => h('img', { class: `hazard ${cls}`, src: `/sprites/fx/${name}.png`, alt: '', 'aria-hidden': 'true' })
-  const out: HTMLElement[] = []
-  const c = side.conditions
-  if (c.stealthrock) out.push(fx('rock1', 'rock r1'), fx('rock2', 'rock r2'))
-  for (let i = 0; i < Math.min(c.spikes ?? 0, 3); i++) out.push(fx('caltrop', `spike s${i}`))
-  for (let i = 0; i < Math.min(c.toxicspikes ?? 0, 2); i++) out.push(fx('poisoncaltrop', `tspike t${i}`))
-  if (c.stickyweb) out.push(fx('web', 'web'))
   return out
 }
 

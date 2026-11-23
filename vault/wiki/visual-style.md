@@ -41,8 +41,11 @@ Pixel frame: a thick border with the four corner pixels cut away (`clip-path`, `
 - Meta details are separate elements with gaps, not joined by middle dots.
 - Text left-aligned; line lengths short; visible focus ring (`--focus`, yellow).
 
-## Rule: official sprites, not drawn art (user, 2026-11-23)
-Battle elements are shown with official Showdown sprites where they exist (Pokemon, substitute doll, item icons, `/fx/` hazard images) and not hand-drawn in CSS; anything without an official sprite stays a tag or an icon ([[2026-11-23-official-sprites-and-space]]).
+## Rule: official Pokémon sprites only (user, 2026-11-23)
+Battle elements get a picture only when the Pokémon games have an official sprite for it: Pokémon (gen5 still and animated), item icons, the substitute doll. Not Showdown's own effect art (`/fx/` rocks, caltrops, web) and not hand-drawn CSS art; anything else (hazards, screens, Tailwind) is a tag or an icon ([[2026-11-23-official-sprites-and-space]], corrected by [[2026-11-23-official-means-pokemon-sprites]]).
+
+> [!warning] Corrected
+> The first reading of "official sprites" (Showdown's `/fx/` images) was wrong; the user meant official Pokémon sprites ([[2026-11-23-official-means-pokemon-sprites]]).
 
 ## Rule: icons over text labels (user, 2026-11-23)
 Use an icon or symbol instead of a text label wherever the symbol reads clearly; put the words in `aria-label` and `title` ([[2026-11-23-icons-over-text-rule]], [[2026-11-23-less-text-symbols-motion]]). Examples in the app: the pin, ⟳ Sync, the dice for luck, chess marks (?!, ?, ??) for verdicts, pixel icons for game tags (lock, disk, scroll, lens), green/red bars for wins and losses, type-coloured chips. Pixel icons live in `ICONS` (`web/src/list.ts`), drawn 1:1 on an 8×8 or 14×14 grid.

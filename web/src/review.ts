@@ -4,7 +4,7 @@
 import { api, type Analysis, type Mon, type Review, type SideReview, type SideView, type Step, type TurnReview } from './api'
 import { errText, fmtDate, h, pct, s, say, sprite } from './dom'
 import { formatBadge, icon, shortDate } from './list'
-import { battleSprite, fieldOverlays, infoCard, moveStrip, sideOverlays, substituteSprite } from './battlefx'
+import { battleSprite, fieldOverlays, infoCard, moveStrip, substituteSprite } from './battlefx'
 
 const STAT_SHORT: Record<string, string> = { atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe', accuracy: 'Acc', evasion: 'Eva' }
 const STATUS_LABEL: Record<string, string> = { brn: 'BRN', par: 'PAR', slp: 'SLP', frz: 'FRZ', psn: 'PSN', tox: 'TOX' }
@@ -476,7 +476,6 @@ class ReviewScreen {
         if (fell && leftNow) boxes.append(this.faintBox(leftNow, mine, fell[1], true))   // last one: stays at 0
       }
     }
-    sprites.append(...sideOverlays(side))
     // No trainer name here (it's in the page header): more room for the Pokemon.
     area.append(h('div', { class: 'party-row' }, this.sideTags(side, mine), this.party(side)), boxes, sprites)
     return area

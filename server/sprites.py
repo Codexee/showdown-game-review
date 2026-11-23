@@ -8,7 +8,6 @@ turned into a horizontal strip of frames, with /sprites/gen5ani[-back]/<id>.json
 frame size, count and durations, so the page can step through them at its own pace.
 The substitute doll: /sprites/sub/substitute.png and /sprites/sub-back/substitute.png.
 Item icons: /sprites/item/<id>.png (e.g. poke-ball, for party slots not seen yet).
-Battle effects: /sprites/fx/<name>.png (rock1, rock2, caltrop, poisoncaltrop, web), from Showdown's /fx/.
 """
 from __future__ import annotations
 
@@ -22,11 +21,11 @@ import httpx
 from .ids import to_id
 
 SPRITE_BASE = "https://play.pokemonshowdown.com/sprites"
-FOLDERS = {"gen5", "gen5-back", "gen5ani", "gen5ani-back", "sub", "sub-back", "item", "fx"}
+FOLDERS = {"gen5", "gen5-back", "gen5ani", "gen5ani-back", "sub", "sub-back", "item"}
 ANIMATED = {"gen5ani", "gen5ani-back"}
 REMOTE = {"sub": "substitutes/gen5", "sub-back": "substitutes/gen5-back", "item": "itemicons"}  # ours -> Showdown's
-# Folders outside /sprites: Showdown's battle-effect images (hazards), as its client draws them.
-FULL_REMOTE = {"fx": "https://play.pokemonshowdown.com/fx"}
+# Folders outside /sprites (none now: hazards are tags, as they have no official game sprite).
+FULL_REMOTE: dict[str, str] = {}
 _SAFE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 # Species whose own name has a hyphen: Showdown writes these without one.
 HYPHENATED = {"hooh", "porygonz", "jangmoo", "hakamoo", "kommoo", "chiyu", "tinglu", "wochien",
