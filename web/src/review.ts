@@ -2,9 +2,9 @@
 // Top screen: the battle at the start of the selected turn, with the eval bar beside it.
 // Hinge: turn controls. Bottom screen: eval graph, turn list, and what happened.
 import { api, type Analysis, type Mon, type Review, type SideReview, type SideView, type Step, type TurnReview } from './api'
-import { errText, fmtDate, h, pct, s, say } from './dom'
+import { errText, fmtDate, h, pct, s, say, sprite } from './dom'
 import { formatBadge, icon, shortDate } from './list'
-import { attachTip, battleSprite, fieldOverlays, hideTip, infoCard, moveStrip, playMoves, sideOverlays, substituteSprite } from './battlefx'
+import { battleSprite, fieldOverlays, infoCard, moveStrip, sideOverlays, substituteSprite } from './battlefx'
 
 const STAT_SHORT: Record<string, string> = { atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe', accuracy: 'Acc', evasion: 'Eva' }
 const STATUS_LABEL: Record<string, string> = { brn: 'BRN', par: 'PAR', slp: 'SLP', frz: 'FRZ', psn: 'PSN', tox: 'TOX' }
@@ -51,6 +51,11 @@ class ReviewScreen {
   private readonly eventsBox = h('div', { class: 'events', 'aria-live': 'polite' })
   private readonly analysisBar = h('section', { class: 'analysis-bar frame', 'aria-label': 'Move review' })
   private readonly methodBox = h('details', { class: 'method' })
+  // Pokemon details, docked in the review column (no floating tooltip): shows the Pokemon
+  // under the pointer or keyboard focus; a click pins it; otherwise the opponent's active one.
+  private readonly inspectPanel = h('section', { class: 'panel inspect-panel frame', 'aria-label': 'Pokémon details', 'aria-live': 'polite' })
+  private pinned: string | null = null
+  private hovered: { key: string; mon: Mon } | null = null
   private revealScores = false   // animate the scorecards once, when a review finishes while open
   private revealGraph = false    // and pop in the graph's mistake markers
   private analysis: Analysis | null = null
@@ -139,6 +144,7 @@ class ReviewScreen {
             h('kbd', {}, '←'), h('kbd', {}, '→'))),
         h('div', { class: 'col-review' },
           this.analysisBar,
+          this.inspectPanel,
           h('section', { class: 'panel events-panel frame', 'aria-label': 'What happened' },
             h('h2', {}, 'What happened'), this.eventsBox),
           ownTeam ? h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team'), teamForm) : null)))
@@ -346,10 +352,41 @@ class ReviewScreen {
     const field = h('div', { class: `field${doubles ? ' doubles' : ''}` })
     field.append(this.sideArea(view.sides[this.them], false, doubles), this.sideArea(view.sides[this.me], true, doubles))
     const tags = this.fieldTags(st)
-    hideTip()
+    this.hovered = null
     this.topScreen.replaceChildren(...fieldOverlays(view.field), field, tags)
-    // Move effects for the turn just played, once the new sprites are in place.
-    if (this.prevMons) requestAnimationFrame(() => playMoves(this.topScreen, st.events, this.review.dex, this.me))
+    this.renderInspect()
+  }
+
+  /** Hover, focus or click a Pokemon to see its details in the docked panel. */
+  private inspectOn(el: HTMLElement, side: 'p1' | 'p2', mon: Mon) {
+    const key = monKey(side, mon)
+    el.addEventListener('pointerenter', () => { this.hovered = { key, mon }; this.renderInspect() })
+    el.addEventListener('focus', () => { this.hovered = { key, mon }; this.renderInspect() })
+    const leave = () => { if (this.hovered?.key === key) { this.hovered = null; this.renderInspect() } }
+    el.addEventListener('pointerleave', leave)
+    el.addEventListener('blur', leave)
+    el.addEventListener('click', () => { this.pinned = this.pinned === key ? null : key; this.renderInspect() })
+    el.setAttribute('aria-controls', 'inspect-panel')
+  }
+
+  private renderInspect() {
+    const view = this.steps[this.step].state
+    const find = (key: string | null) => {
+      if (!key) return null
+      for (const side of ['p1', 'p2'] as const) {
+        const m = view.sides[side].team.find(x => monKey(side, x) === key)
+        if (m) return m
+      }
+      return null
+    }
+    const pinned = find(this.pinned)
+    const theirs = view.sides[this.them].team.find(m => m.active && !m.fainted)
+    const mon = this.hovered?.mon ?? pinned ?? theirs ?? null
+    const note = this.hovered ? '' : pinned ? 'Pinned: click it again to unpin' : 'Hover or click a Pokémon'
+    this.inspectPanel.id = 'inspect-panel'
+    this.inspectPanel.replaceChildren(
+      h('div', { class: 'inspect-head' }, h('h2', {}, 'Pokémon'), note ? h('span', { class: 'small muted' }, note) : null),
+      mon ? infoCard(mon, this.review.dex, this.isRandom) : h('p', { class: 'muted' }, 'No Pokémon on the field.'))
   }
 
   private sideArea(side: SideView, mine: boolean, doubles: boolean) {
@@ -357,8 +394,16 @@ class ReviewScreen {
     const area = h('div', { class: `side ${mine ? 'mine' : 'theirs'}` })
     const sprites = h('div', { class: 'platform' })
     const boxes = h('div', { class: 'hp-boxes' })
+    const sid = mine ? this.me : this.them
     for (const pos of slots) {
       const mon = side.team.find(m => m.active && m.position === pos)
+      // The Pokemon that fainted in this slot during the turn: shown sinking out, before its
+      // replacement slides in (the turn-start state already has the replacement, or nobody
+      // at the end of the game).
+      const fell = this.prevMons ? [...this.prevMons.entries()].find(([k, p]) => p.active && p.position === pos
+        && k.startsWith(`${sid}|`) && (!mon || k !== monKey(sid, mon))
+        && side.team.some(m => monKey(sid, m) === k && m.fainted)) : undefined
+      if (fell) sprites.append(battleSprite(fell[1].sprite, mine, '', 'sprite faint-ghost'))
       if (mon) {
         const prev = this.prevMons?.get(monKey(mine ? this.me : this.them, mon))
         const frac = mon.fainted ? 0 : mon.hp / (mon.maxhp || 100)
@@ -370,12 +415,12 @@ class ReviewScreen {
           : mon.fainted && !(prev?.fainted) ? ' faint-now'
             : !prev || !prev.active ? ` switch-in${hurt ? ' hit' : ''}`
               : hurt ? ' hit' : ''
-        const cls = `sprite${mon.fainted ? ' fainted' : ''}${fx}`
+        const cls = `sprite${mon.fainted ? ' fainted' : ''}${fx}${fell ? ' after-faint' : ''}`
         const spr = mon.volatiles.includes('substitute') && !mon.fainted
           ? substituteSprite(mine, cls) : battleSprite(mon.sprite, mine, mon.species, cls)
         spr.dataset.side = mine ? 'mine' : 'theirs'
         spr.dataset.pos = String(pos)
-        attachTip(spr, () => infoCard(mon, this.review.dex, this.isRandom))
+        this.inspectOn(spr, sid, mon)
         sprites.append(spr)
         boxes.append(this.hpBox(mon, mine, prev))
       } else {
@@ -421,29 +466,33 @@ class ReviewScreen {
       h('div', { class: 'hp-foot' },
         mon.status ? h('span', { class: `status-tag ${mon.status}${newStatus ? ' pop' : ''}` }, STATUS_LABEL[mon.status] ?? mon.status) : null,
         h('span', { class: 'hp-num' }, hpText)),
-      boosts.length || extra.some(Boolean) ? h('div', { class: 'chips' }, ...boosts, ...extra) : null,
+      h('div', { class: 'chips' }, ...boosts, ...extra),   // always there, so stat changes never resize the box
       moveStrip(mon, this.review.dex))
-    attachTip(box, () => infoCard(mon, this.review.dex, this.isRandom))
+    this.inspectOn(box, mine ? this.me : this.them, mon)
     return box
   }
 
+  /** The team as mini sprites (like Showdown's party icons); a Pokeball outline for one not
+   *  seen yet. Each seen one opens its details in the docked panel. */
   private party(side: SideView) {
     const size = side.team_size ?? Math.max(6, side.team.length)
-    const balls = h('span', { class: 'party', 'aria-label': `${side.name}'s team` })
+    const row = h('span', { class: 'party', 'aria-label': `${side.name}'s team` })
     const seen = side.team.filter(m => m.seen)
     for (let i = 0; i < size; i++) {
       const m = seen[i]
-      const state = !m ? 'unknown' : m.fainted ? 'fainted' : m.status ? 'status' : 'ok'
-      const label = !m ? 'Not seen yet' : `${m.species}${m.fainted ? ', fainted' : m.status ? `, ${STATUS_LABEL[m.status] ?? m.status}` : ''}`
-      if (m) {
-        const b = h('button', { type: 'button', class: `ball ${state}`, 'aria-label': label })
-        attachTip(b, () => infoCard(m, this.review.dex, this.isRandom))
-        balls.append(b)
-      } else {
-        balls.append(h('span', { class: `ball ${state}`, title: label, role: 'img', 'aria-label': label }))
+      if (!m) {
+        row.append(h('span', { class: 'pmini unknown', title: 'Not seen yet', role: 'img', 'aria-label': 'Not seen yet' }))
+        continue
       }
+      const state = m.fainted ? 'fainted' : m.status ? 'status' : m.active ? 'active' : ''
+      const label = `${m.species}${m.fainted ? ', fainted' : m.status ? `, ${STATUS_LABEL[m.status] ?? m.status}` : ''}`
+      const b = h('button', { type: 'button', class: `pmini ${state}`, 'aria-label': label },
+        sprite(m.sprite, false, '', 'pmini-img'),
+        m.status && !m.fainted ? h('span', { class: `pmini-status ${m.status}`, 'aria-hidden': 'true' }) : null)
+      this.inspectOn(b, side.id, m)
+      row.append(b)
     }
-    return balls
+    return row
   }
 
   private fieldTags(st: Step) {
@@ -573,7 +622,8 @@ class ReviewScreen {
   }
 }
 
-interface MonSnap { frac: number; active: boolean; fainted: boolean; status: string | null; boosts: Record<string, number> }
+interface MonSnap { frac: number; active: boolean; fainted: boolean; status: string | null; boosts: Record<string, number>
+  sprite: string; position: number | null }
 const monKey = (side: string, m: Mon) => `${side}|${m.name}|${m.species.split('-')[0]}`
 function snapMons(st: Step | undefined): Map<string, MonSnap> {
   const out = new Map<string, MonSnap>()
@@ -581,7 +631,7 @@ function snapMons(st: Step | undefined): Map<string, MonSnap> {
   for (const side of ['p1', 'p2'] as const) {
     for (const m of st.state.sides[side].team) {
       out.set(monKey(side, m), { frac: m.fainted ? 0 : m.hp / (m.maxhp || 100), active: m.active, fainted: m.fainted,
-        status: m.status ?? null, boosts: { ...m.boosts } })
+        status: m.status ?? null, boosts: { ...m.boosts }, sprite: m.sprite, position: m.position })
     }
   }
   return out

@@ -1,7 +1,7 @@
 // Battle-screen extras (2026-11-23): animated sprites that step slowly, the substitute doll,
-// field and side-condition overlays, move effects by type and category, move strips and
-// info cards with everything Showdown's own tooltips show.
-import type { BattleEvent, Dex, DexRole, Mon, SideView } from './api'
+// field and side-condition overlays, move strips, and Pokemon details laid out like
+// Showdown's tooltip (with the Random Battle set odds, as in Showdown's randbats tooltip).
+import type { Dex, DexRole, Mon, SideView } from './api'
 import { h } from './dom'
 
 export const TYPE_COLORS: Record<string, string> = {
@@ -11,7 +11,6 @@ export const TYPE_COLORS: Record<string, string> = {
   Stellar: '#40b5a5',
 }
 const typeColor = (t: string | undefined) => TYPE_COLORS[t ?? ''] ?? '#9aa4b2'
-const motionOff = () => document.documentElement.dataset.motion === 'off'
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const titleCase = (id: string) => id.replace(/(^|[^a-z])([a-z])/g, (_, a, b) => a + b.toUpperCase())
 
@@ -94,54 +93,6 @@ export function sideOverlays(side: SideView): HTMLElement[] {
   return out
 }
 
-// ---------------------------------------------------------------- move effects
-/** Small effects for the moves just used: physical = impact on the target, special = an orb
- *  from user to target, status = a ring on the target (or the user). Coloured by type. Pure
- *  decoration over the final state: it never delays stepping. */
-export function playMoves(screen: HTMLElement, events: BattleEvent[], dex: Dex | undefined, me: string) {
-  if (!dex || motionOff()) return
-  const moves = events.filter(e => e.kind === 'move' && e.move && dex.moves[e.move]).slice(0, 3)
-  const box = screen.getBoundingClientRect()
-  const spriteAt = (side: string | null | undefined, pos: number | undefined) =>
-    screen.querySelector<HTMLElement>(`[data-side="${side === me ? 'mine' : 'theirs'}"][data-pos="${pos ?? 0}"]`)
-  const centre = (el: HTMLElement) => {
-    const r = el.getBoundingClientRect()
-    return { x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height * 0.55 }
-  }
-  moves.forEach((e, i) => {
-    const mv = dex.moves[e.move!]
-    const user = spriteAt(e.side, e.pos)
-    const target = e.target ? spriteAt(e.target, e.target_pos) : user
-    if (!user || !target) return
-    const color = typeColor(mv.type)
-    const delay = i * 300
-    const a = centre(user), b = centre(target)
-    const spark = (x: number, y: number, cls: string) => {
-      const el = h('span', { class: `move-fx ${cls}`, style: `left:${x}px;top:${y}px;--c:${color}`, 'aria-hidden': 'true' })
-      screen.append(el)
-      return el
-    }
-    if (reducedMotion()) {                       // gentle: one soft flash on the target, no travel
-      const f = spark(b.x, b.y, 'burst')
-      f.animate([{ opacity: 0.7 }, { opacity: 0 }], { duration: 320, delay, fill: 'both' }).finished.then(() => f.remove())
-      return
-    }
-    if (mv.cat === 'Special' && user !== target) {
-      const orb = spark(a.x, a.y, 'orb')
-      orb.animate([{ transform: 'translate(-50%, -50%) scale(0.6)', opacity: 0 },
-        { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.2 },
-        { transform: `translate(calc(-50% + ${b.x - a.x}px), calc(-50% + ${b.y - a.y}px)) scale(1)`, opacity: 1 }],
-      { duration: 260, delay, easing: 'cubic-bezier(0.77, 0, 0.175, 1)', fill: 'both' }).finished.then(() => orb.remove())
-    }
-    const hitDelay = delay + (mv.cat === 'Special' && user !== target ? 220 : mv.cat === 'Physical' ? 60 : 0)
-    const f = spark(b.x, b.y, mv.cat === 'Status' ? 'ring' : 'burst')
-    f.animate([{ transform: 'translate(-50%, -50%) scale(0.6)', opacity: 0.9 },
-      { transform: 'translate(-50%, -50%) scale(1.25)', opacity: 0 }],
-    { duration: mv.cat === 'Status' ? 420 : 300, delay: hitDelay, easing: 'cubic-bezier(0.23, 1, 0.32, 1)', fill: 'both' })
-      .finished.then(() => f.remove())
-  })
-}
-
 // ---------------------------------------------------------------- moves and info cards
 /** Role weights given what has been revealed: roles that can't have a revealed move drop out. */
 function rolesFor(roles: DexRole[], mon: Mon): DexRole[] {
@@ -154,7 +105,6 @@ function odds(roles: DexRole[], pick: (r: DexRole) => Record<string, number>): [
   for (const r of roles) for (const [k, p] of Object.entries(pick(r))) acc[k] = (acc[k] ?? 0) + (p * r.weight) / total
   return Object.entries(acc).sort((a, b) => b[1] - a[1])
 }
-const pctTxt = (p: number) => (p >= 0.995 ? '' : ` ${Math.round(p * 100)}%`)
 
 function moveChip(id: string | null, dex: Dex | undefined, cls = '') {
   if (!id) return h('span', { class: `mchip unknown ${cls}`, title: 'Not revealed yet' }, '?')
@@ -175,37 +125,41 @@ export function moveStrip(mon: Mon, dex: Dex | undefined) {
 const STAT_ORDER = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const
 const STAT_SHORT: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' }
 const boostMul = (b: number) => (b >= 0 ? (2 + b) / 2 : 2 / (2 - b))
+const pctP = (p: number) => ` (${Math.round(p * 100)}%)`
 
-/** Everything Showdown's tooltip shows, from what this replay revealed plus (Random Battle)
- *  the set odds: types, HP, status, ability, item, Tera, revealed and possible moves, stats. */
+export function typeChip(t: string, cls = '') {
+  return h('span', { class: `tchip ${cls}`, style: `--c:${typeColor(t)}` }, t)
+}
+
+/** A Pokemon's details in the order and wording of Showdown's tooltip: name, level and
+ *  types; HP and status; ability; item; Tera; stats; moves. Revealed facts are bold;
+ *  anything from the Random Battle set data says "Possible" and gives its odds. */
 export function infoCard(mon: Mon, dex: Dex | undefined, random: boolean): HTMLElement {
   const sp = dex?.species[mon.species]
   const set = dex?.sets[mon.species]
   const roles = set ? rolesFor(set.roles, mon) : []
   const frac = mon.fainted ? 0 : mon.hp / (mon.maxhp || 100)
-  const row = (label: string, ...value: (Node | string | null)[]) => h('div', { class: 'tip-row' }, h('span', { class: 'tip-k' }, label), h('span', {}, ...value))
-  // Guesses from the set data are italic and say so; revealed facts are plain.
-  const possible = (pairs: [string, number][], fmt: (k: string) => string) =>
-    pairs.length ? h('span', { class: 'tip-guess', title: 'Not revealed: from the Random Battle set data' },
-      pairs.length === 1 && pairs[0][1] >= 0.995 ? `${fmt(pairs[0][0])} (always)` : pairs.slice(0, 5).map(([k, p]) => fmt(k) + pctTxt(p)).join(', ')) : null
+  const line = (...kids: (Node | string | null)[]) => h('p', { class: 'tip-line' }, ...kids)
+  const label = (t: string) => h('span', { class: 'tip-k' }, t)
+  const shown = (t: string) => h('b', {}, t)
+  const guesses = (pairs: [string, number][], fmt: (k: string) => string) =>
+    h('span', { class: 'tip-guess' }, pairs.slice(0, 6).map(([k, p]) => fmt(k) + (pairs.length === 1 && p >= 0.995 ? '' : pctP(p))).join(', '))
+  const fact = (one: string, many: string, value: string | null, pairs: [string, number][], fmt = (k: string) => k) =>
+    value ? line(label(`${one}: `), shown(value))
+      : pairs.length ? line(label(`${pairs.length > 1 ? many : `Possible ${one === 'Tera Type' ? one : one.toLowerCase()}`}: `), guesses(pairs, fmt)) : null
+
   const parts: (Node | null)[] = [
-    h('div', { class: 'tip-head' }, h('b', {}, mon.species), h('span', { class: 'muted' }, ` Lv${mon.level}`),
-      ...(sp?.types ?? []).map(t => h('span', { class: 'tchip', style: `--c:${typeColor(t)}` }, t)),
-      mon.tera_type ? h('span', { class: 'tchip tera', style: `--c:${typeColor(mon.tera_type)}` }, `Tera ${mon.tera_type}`) : null),
-    row('HP', mon.fainted ? 'Fainted' : mon.hp_exact ? `${mon.hp}/${mon.maxhp} (${Math.round(frac * 100)}%)` : `${Math.round(frac * 100)}%`,
+    h('p', { class: 'tip-head' }, h('b', {}, mon.species), h('span', { class: 'tip-lv' }, ` L${mon.level}`),
+      ...(sp?.types ?? []).map(t => typeChip(t)),
+      mon.tera_type ? typeChip(`Tera ${mon.tera_type}`, 'tera') : null),
+    line(label('HP: '), shown(mon.fainted ? 'fainted' : mon.hp_exact ? `${mon.hp}/${mon.maxhp} (${Math.round(frac * 100)}%)` : `${Math.round(frac * 100)}%`),
       mon.status ? h('span', { class: `status-tag ${mon.status}` }, mon.status.toUpperCase()) : null),
-    row('Ability', mon.ability ? titleCase(mon.ability) : possible(odds(roles, r => r.abilities), k => k) ?? h('span', { class: 'muted' }, 'unknown')),
-    row('Item', mon.item !== null ? (mon.item ? titleCase(mon.item) : 'none') : possible(odds(roles, r => r.items), k => k) ?? h('span', { class: 'muted' }, 'unknown')),
-    random && !mon.tera_type && roles.length ? row('Tera', possible(odds(roles, r => r.tera), k => k)) : null,
-    mon.moves.length ? row('Moves', h('span', { class: 'tip-moves' }, ...mon.moves.map(id => moveChip(id, dex)))) : null,
+    fact('Ability', 'Possible abilities', mon.ability ? titleCase(mon.ability) : null, odds(roles, r => r.abilities)),
+    fact('Item', 'Possible items', mon.item !== null ? (mon.item ? titleCase(mon.item) : '(none)') : null, odds(roles, r => r.items)),
+    random || mon.tera_type ? fact('Tera Type', 'Possible Tera Types', mon.tera_type || null, odds(roles, r => r.tera)) : null,
+    roles.length ? line(label(roles.length > 1 ? 'Possible roles: ' : 'Role: '),
+      h('span', { class: 'tip-guess' }, roles.map(r => r.name + (roles.length > 1 ? pctP(r.weight / roles.reduce((a, x) => a + x.weight, 0)) : '')).join(', '))) : null,
   ]
-  if (roles.length) {
-    const left = odds(roles, r => r.moves).filter(([id]) => !mon.moves.includes(id))
-    if (left.length && mon.moves.length < 4) {
-      parts.push(row(mon.moves.length ? 'Could have' : 'Possible', h('span', { class: 'tip-guess' },
-        left.slice(0, 8).map(([id, p]) => (dex?.moves[id]?.name ?? titleCase(id)) + pctTxt(p)).join(', '))))
-    }
-  }
   if (sp?.bs && Object.keys(sp.bs).length) {
     // Random Battle sets use 31 IVs and 84 EVs with a neutral nature, so stats are exact.
     const lv = mon.level || 100
@@ -214,40 +168,24 @@ export function infoCard(mon: Mon, dex: Dex | undefined, random: boolean): HTMLE
       if (!random) return b
       return k === 'hp' ? Math.floor(((2 * b + 31 + 21) * lv) / 100) + lv + 10 : Math.floor(((2 * b + 31 + 21) * lv) / 100) + 5
     }
-    parts.push(row(random ? 'Stats' : 'Base', h('span', { class: 'tip-stats' }, ...STAT_ORDER.map(k => {
+    const cells: (Node | string)[] = []
+    STAT_ORDER.forEach((k, i) => {
       const v = stat(k), b = k === 'hp' ? 0 : (mon.boosts[k] ?? 0)
-      const shown = b ? Math.floor(v * boostMul(b)) : v
-      return h('span', { class: b > 0 ? 'up' : b < 0 ? 'down' : '' }, `${STAT_SHORT[k]} ${shown}`)
-    }))))
+      if (i) cells.push(h('span', { class: 'tip-sep' }, ' / '))
+      cells.push(h('span', { class: b > 0 ? 'up' : b < 0 ? 'down' : '' }, `${STAT_SHORT[k]} ${b ? Math.floor(v * boostMul(b)) : v}`))
+    })
+    parts.push(line(random ? null : label('Base: '), h('span', { class: 'tip-stats' }, ...cells)))
   }
+  const moves = h('ul', { class: 'tip-moves' }, ...mon.moves.map(id => {
+    const m = dex?.moves[id]
+    return h('li', { style: `--c:${typeColor(m?.type)}` }, h('b', {}, m?.name ?? titleCase(id)))
+  }))
+  if (roles.length && mon.moves.length < 4) {
+    for (const [id, p] of odds(roles, r => r.moves).filter(([id]) => !mon.moves.includes(id)).slice(0, 8)) {
+      const m = dex?.moves[id]
+      moves.append(h('li', { class: 'tip-guess', style: `--c:${typeColor(m?.type)}` }, (m?.name ?? titleCase(id)) + pctP(p)))
+    }
+  }
+  if (moves.children.length) parts.push(moves)
   return h('div', { class: 'tip-body' }, ...parts)
-}
-
-// One floating card for the whole screen, shown on hover or keyboard focus.
-let tipEl: HTMLElement | null = null
-function tip(): HTMLElement {
-  if (!tipEl) {
-    tipEl = h('div', { class: 'mon-tip frame', role: 'tooltip', id: 'mon-tip' })
-    document.body.append(tipEl)
-  }
-  return tipEl
-}
-export function hideTip() { tipEl?.classList.remove('show') }
-export function attachTip(el: HTMLElement, content: () => HTMLElement) {
-  const show = () => {
-    const t = tip()
-    t.replaceChildren(content())
-    t.classList.add('show')
-    const r = el.getBoundingClientRect(), tr = t.getBoundingClientRect()
-    let x = r.right + 8, y = r.top
-    if (x + tr.width > innerWidth - 8) x = Math.max(8, r.left - tr.width - 8)
-    if (y + tr.height > innerHeight - 8) y = Math.max(8, innerHeight - tr.height - 8)
-    t.style.left = `${x}px`
-    t.style.top = `${y}px`
-  }
-  el.addEventListener('pointerenter', show)
-  el.addEventListener('pointerleave', hideTip)
-  el.addEventListener('focus', show)
-  el.addEventListener('blur', hideTip)
-  el.setAttribute('aria-describedby', 'mon-tip')
 }

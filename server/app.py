@@ -379,7 +379,9 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             path = None
         meta = sprites.meta_path(folder, name)
         if path is None or meta is None or not meta.exists():
-            raise HTTPException(404, "No animated sprite")
+            # Many formes have no animated sprite: "null" (not a 404) keeps the console clean;
+            # the page shows the still sprite.
+            return Response("null", media_type="application/json", headers={"Cache-Control": "public, max-age=86400"})
         return FileResponse(meta, media_type="application/json",
                             headers={"Cache-Control": "public, max-age=604800"})
 
