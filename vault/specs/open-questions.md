@@ -22,10 +22,13 @@ Items wait here until they are answered. When an item is answered, record the an
 
 8. **What "public" means for the encoder** (Codex finding 2, second part): uploaded randbats logs carry exact HP for both sides, and the encoder leaves out the player's own unseen bench. Decide one mask for training, testing and the move review's leaf. Impact unmeasured ([[2026-11-23-codex-review]]).
 
-9. **Overnight run go-ahead** with the recommended settings in [[plan-run-v12]] (2025 + 2026, C's settings, 3 epochs, install only if better)?
-10. **Does the 0.75 search weight hold on fresh games?** Check running (100 games, worlds mode); chosen on the first 199 ([[ADR-0017-eval-bar-search-blend]]).
+
+11. **Change of emphasis after the overnight run?** The user pasted advice (author not stated): stop further training tests after tonight; next, grade quality measured directly (verdict bank + Codex's fairness fix), a depth-2 re-check of flagged turns, then the UI stage with VGC team import ([[2026-11-23-endgame-goals-and-overnight-go]]). Adopt it?
+12. *(research)* **Profile the move review** (simulator vs network vs Python) before choosing how to speed up depth 2 ([[goals-endgame]]).
 
 ## Resolved
+- **Search weight 0.75 on fresh games** → holds: −0.0063 [−0.0109, −0.0022] on 100 new games; 0.7–0.8 flat ([[2026-11-23-search-blend-fresh-check]]), 2026-11-23.
+- **Overnight run** → started 2026-11-23 03:56 EST: `RUN=v12`, games since 2025-01-01, C's settings, 3 epochs, 9 h ceiling ([[2026-11-23-endgame-goals-and-overnight-go]]).
 - **Eval bar from search** → yes, built first, before the overnight run ([[2026-11-23-search-bar-first]], [[ADR-0017-eval-bar-search-blend]]), 2026-11-23.
 - **Hindsight in move review** → it matters: grading with the real sets changes 21% of verdicts and 6% of flags on 12 games, about 3× sampling noise; worlds mode is now the default ([[ADR-0015-move-review-sampled-worlds]], [[2026-11-22-worlds-vs-perfect-results]]), 2026-11-22.
 - **P0 before the overnight run** → yes; built and passed the paired gate vs test2 ([[2026-11-22-p0-ab-results]]), 2026-11-22.

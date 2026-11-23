@@ -50,6 +50,7 @@ Rules for this vault: [[CLAUDE]].
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
 - [[spec-replay-sync]]: pull user data, list games, auto-save replays (draft)
+- [[goals-endgame]]: long-range goals set by the user (deeper search than PS Dashboard at its speed, and more)
 - [[plan-model-gains]]: eval gains beyond more training (ensembles, calibration, search as the eval)
 - [[plan-run-v12]]: next training run, fixing value overfitting (tests running; overnight run waits on the user)
 - [[spec-eval-model]]: the network and training pipeline (v1 built; overnight run pending)
@@ -83,4 +84,6 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-codex-fixes-go]]
 - [[2026-11-23-v12-tests-and-eval-gains-results]]
 - [[2026-11-23-search-bar-first]]
+- [[2026-11-23-endgame-goals-and-overnight-go]]
+- [[2026-11-23-search-blend-fresh-check]]
 - [[2026-11-22-second-brain-guide]]

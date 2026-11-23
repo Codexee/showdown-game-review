@@ -62,6 +62,9 @@ Sources: [[2026-11-22-prior-art-research]], [[2026-11-22-prior-art-jaxcalibur-mi
 - Playwright end-to-end checks of the review screen (we check by hand in the browser today).
 - Keep the parser's simulator-graded test as the guard for every parser change (already in place).
 
+> [!warning] Conflict
+> [[ADR-0014-move-review-method]] Context describes PS Dashboard as grading with "a depth-1 matrix". Our own raw note lists depth 1, depth 2 and MCTS (DUCT), plus re-searching every flagged mistake one depth deeper ([[2026-11-22-prior-art-research]]). The user raised this as the project's main gap on 2026-11-23 ([[2026-11-23-endgame-goals-and-overnight-go]], [[goals-endgame]]). The ADR body is read-only.
+
 ## Second opinion: Codex review (2026-11-23)
 Source: [[2026-11-23-codex-review]] (verbatim, with Claude's checks). Web claims there are unverified until read.
 - **Confirmed:** the overnight script can install a model with no passing gate (`RUN` defaults to the installed run's name, and an unclear gate exports). Must be fixed before the overnight run.

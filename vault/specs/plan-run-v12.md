@@ -68,7 +68,7 @@ Source: [[2026-11-23-codex-review]]. Items 1–3 are checked; 4–5 are test-des
 - **D (twice the games, half from 2025-07..09) beats B** by 0.0079 [−0.0114, −0.0044] and C by 0.0061. More games is the largest training lever, and older games help. D had twice the updates too, but B did not gain from its extra updates on the same games (A and B plateau or rise after epoch 2–3), so the gain is the data (Codex's caveat noted, not fully separated).
 - All four trail `main` (D by +0.0066), which trained on 672k games.
 
-### Overnight run, recommended (waits for the user's go-ahead)
+### Overnight run (started 2026-11-23 03:56 EST, [[2026-11-23-endgame-goals-and-overnight-go]]; log `data/models/v12.log`)
 `RUN=v12 SINCE=2025-01-01 DROPOUT=0.2 WD=0.1 VW_FLOOR=0.2 EPOCHS=3 HOURS=9 ./training/overnight.sh`
 - Data: 2025 + 2026, about 1.24M games, ≈29M samples (estimated from `full`: 23.5 samples per game), ≈30 GB on disk (448 GB free). Larger than RAM (24 GB); step time is the open risk (0.47–0.65 s measured), so 3 epochs ≈ 5.5–7.7 h, and the 9 h ceiling stops it if slower.
 - Settings: C's (the schedule needs dropout 0.2 / wd 0.1 too; both were in C).
