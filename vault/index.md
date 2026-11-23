@@ -74,4 +74,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-stage6-results]]
 - [[2026-11-22-worlds-vs-perfect-results]]
 - [[2026-11-22-v12-tests-go]]
+- [[2026-11-22-direction-codex-review]]
 - [[2026-11-22-second-brain-guide]]
