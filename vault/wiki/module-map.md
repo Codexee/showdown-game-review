@@ -94,6 +94,8 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 
 `server/model_eval.py` loads `data/models/current.pt` (reloads when it changes) for the review endpoint; doubles keep the placeholder.
 
+`tests_v12.sh` runs the four v1.2 tests and gates ([[plan-run-v12]]). `train.py` also takes `--dropout` and `--value-weight-floor`; `build_dataset.py` takes `--ranges` for several date ranges.
+
 ## Prototypes: `prototypes/`
 | Folder | Job |
 |---|---|

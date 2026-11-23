@@ -73,7 +73,7 @@ def _work(task):
     return gid_index, game_id, out
 
 
-def iter_hf(pattern: str, since: int, max_games: int):
+def iter_hf(pattern: str, ranges: list[tuple[int, int]], max_games: int):
     import pyarrow.parquet as pq
     n = 0
     for f in sorted(glob.glob(pattern)):
@@ -82,7 +82,7 @@ def iter_hf(pattern: str, since: int, max_games: int):
             t = pf.read_row_group(rg, columns=["id", "log", "uploadtime", "rating"])
             for gid, log, ut, rating in zip(t.column("id").to_pylist(), t.column("log").to_pylist(),
                                             t.column("uploadtime").to_pylist(), t.column("rating").to_pylist()):
-                if not MAIN_ID.match(gid or "") or int(ut or 0) < since or not log:
+                if not MAIN_ID.match(gid or "") or not log or not any(a <= int(ut or 0) < b for a, b in ranges):
                     continue
                 yield gid, log, _rating(rating)
                 n += 1
@@ -112,17 +112,25 @@ def main() -> None:
     ap.add_argument("--hf", help="glob of HF parquet files")
     ap.add_argument("--inputlog", type=Path, help="folder of collected replay .json files")
     ap.add_argument("--since", default="2000-01-01", help="only games uploaded on/after this date (UTC)")
+    ap.add_argument("--ranges", default="", help="several UTC date ranges instead of --since, "
+                    "e.g. '2025-07-01:2025-10-01,2026-08-01:' (end exclusive; empty end = no end)")
     ap.add_argument("--max-games", type=int, default=0)
     ap.add_argument("--both-sides", action="store_true", help="one sample per side per turn (default: one random side)")
     ap.add_argument("--val-frac", type=float, default=0.02)
     ap.add_argument("--workers", type=int, default=max(1, mp.cpu_count() - 2))
     args = ap.parse_args()
 
-    since = int(dt.datetime.fromisoformat(args.since).replace(tzinfo=dt.UTC).timestamp())
+    def ts(day: str, default: int) -> int:
+        return int(dt.datetime.fromisoformat(day).replace(tzinfo=dt.UTC).timestamp()) if day else default
+
+    if args.ranges:
+        ranges = [(ts(a, 0), ts(b, 2**62)) for a, b in (r.split(":") for r in args.ranges.split(","))]
+    else:
+        ranges = [(ts(args.since, 0), 2**62)]
     out_dir = ROOT / "data" / "train" / "ds" / args.name
     out_dir.mkdir(parents=True, exist_ok=True)
     files = {k: open(out_dir / f"{k}.bin", "wb") for k in FIELDS}
-    source = iter_hf(args.hf, since, args.max_games) if args.hf else iter_inputlog(args.inputlog, args.max_games)
+    source = iter_hf(args.hf, ranges, args.max_games) if args.hf else iter_inputlog(args.inputlog, args.max_games)
     tasks = ((i, gid, log, rating, args.both_sides, args.val_frac) for i, (gid, log, rating) in enumerate(source))
 
     n = games = skipped = 0
@@ -145,7 +153,7 @@ def main() -> None:
     for f in files.values():
         f.close()
     meta = {"n": n, "games": games, "skipped": skipped, "fields": {k: [np.dtype(t).name, list(s)] for k, (t, s) in FIELDS.items()},
-            "source": args.hf or str(args.inputlog), "since": args.since, "both_sides": args.both_sides,
+            "source": args.hf or str(args.inputlog), "since": args.since, "ranges": args.ranges, "both_sides": args.both_sides,
             "val_frac": args.val_frac, "built": time.strftime("%Y-%m-%d %H:%M:%S")}
     (out_dir / "meta.json").write_text(json.dumps(meta, indent=1))
     (out_dir / "game_ids.json").write_text(json.dumps(game_ids))

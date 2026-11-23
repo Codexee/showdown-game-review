@@ -200,6 +200,9 @@ def main() -> None:
     ap.add_argument("--layers", type=int, default=6)
     ap.add_argument("--heads", type=int, default=8)
     ap.add_argument("--ff", type=int, default=1024)
+    ap.add_argument("--dropout", type=float, default=0.1)
+    ap.add_argument("--value-weight-floor", type=float, default=1.0,
+                    help="value loss weight 1 for the first epoch, then cosine down to this (1 = off; vault plan-run-v12)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
@@ -217,7 +220,7 @@ def main() -> None:
     steps_per_epoch = len(train_idx) // args.bs
     total_steps = max(1, int(steps_per_epoch * args.epochs))
 
-    cfg = ModelConfig(d=args.d, layers=args.layers, heads=args.heads, ff=args.ff)
+    cfg = ModelConfig(d=args.d, layers=args.layers, heads=args.heads, ff=args.ff, dropout=args.dropout)
     model = EvalNet(cfg).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd, betas=(0.9, 0.98))
     warmup = min(2000, total_steps // 20 + 1)
@@ -227,6 +230,14 @@ def main() -> None:
             return args.lr * (step + 1) / warmup
         frac = min(1.0, (step - warmup) / max(1, total_steps - warmup))
         return args.lr * (0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * frac)))
+
+    def value_weight_at(step: int) -> float:
+        """1 during the first epoch, then cosine to --value-weight-floor by the last step: the value
+        head memorises games after about one pass (vault 2026-11-22-main-run-results)."""
+        if args.value_weight_floor >= 1.0 or step < steps_per_epoch:
+            return 1.0
+        frac = min(1.0, (step - steps_per_epoch) / max(1, total_steps - steps_per_epoch))
+        return args.value_weight_floor + (1 - args.value_weight_floor) * 0.5 * (1 + math.cos(math.pi * frac))
 
     step, best, best_policy, elapsed_before = 0, float("inf"), float("inf"), 0.0
     if args.resume and (out / "last.pt").exists():
@@ -257,7 +268,7 @@ def main() -> None:
     def log_eval():
         nonlocal best, best_policy
         m = summarize(collect(model, data, val_idx, device))
-        m.update(step=step, epoch=round(step / max(1, steps_per_epoch), 3), lr=lr_at(step),
+        m.update(step=step, epoch=round(step / max(1, steps_per_epoch), 3), lr=lr_at(step), value_weight=value_weight_at(step),
                  minutes=round((elapsed_before + time.time() - t0) / 60, 1), train_loss=round(run_loss, 4))
         with open(out / "metrics.jsonl", "a") as f:
             f.write(json.dumps(m) + "\n")
@@ -285,7 +296,7 @@ def main() -> None:
             for g in opt.param_groups:
                 g["lr"] = lr_at(step)
             v, p, aux = model(t["ids"], t["mon"], t["field"], aux=True)
-            loss = F.binary_cross_entropy_with_logits(v, t["value"])
+            loss = value_weight_at(step) * F.binary_cross_entropy_with_logits(v, t["value"])
             for weight, l in ((args.policy_weight, choice_loss(p, t["policy"])),
                               (args.opp_weight, choice_loss(aux["opp_policy"], t["opp_policy"]))):
                 if l is not None:

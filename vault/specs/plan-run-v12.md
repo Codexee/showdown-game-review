@@ -1,14 +1,14 @@
 ---
 title: "Plan: training run v1.2 (value overfitting)"
 type: spec
-status: draft
+status: active
 tags: [area/model]
 updated: 2026-11-22
 ---
 
 # Plan: training run v1.2 (fix value overfitting)
 
-The user asked for this plan on 2026-11-22. Nothing here runs until the user says go.
+The user asked for this plan on 2026-11-22. **Tests started 2026-11-22** after the user's go-ahead ([[2026-11-22-v12-tests-go]]); the overnight run still waits for a go.
 
 ## Problem
 In the `main` run the value loss was lowest at step 9,000 (epoch 1.2, 0.5755) and then rose to 0.6172 by epoch 2.7. Over the same steps the fitted temperature went from 0.97 to 1.65 (the model grew overconfident), while the policy kept improving ([[2026-11-22-main-run-results]]).
@@ -25,10 +25,11 @@ Beat the installed `main@9000` on the pinned bank of future games (log-loss 0.58
 4. **Keep:** `best.pt` chosen by value loss, temperature fit, the paired gate.
 5. **Not now:** TD / bootstrapped value targets (lower-variance labels, but a bigger change); training on the 14-day collected games. Those stay test-only, because the pinned bank comes from them and they are the only "future" games we have.
 
-## Code changes (small)
-- `train.py`: `--dropout`, `--value-weight-after-epoch1` (cosine target).
+## Code changes (built 2026-11-22)
+- `train.py`: `--dropout`, `--value-weight-floor` (weight 1 for epoch 1, then cosine to the floor); `value_weight` logged in `metrics.jsonl`.
 - `build_dataset.py`: `--ranges` (several date ranges in one dataset, for the data-mix test).
-- `overnight.sh`: `SINCE`, dropout, wd and the schedule as variables.
+- `overnight.sh`: `SINCE`, dropout, wd and the schedule as variables (not yet; after the tests).
+- `training/tests_v12.sh`: the four tests and gates, resumable.
 
 ## Small tests first (CLAUDE.md rule; about 4.5 h, background)
 Each test runs 4 epochs on the `medium` dataset (138k games since 2026-08-01, about 12 minutes per epoch), where overfitting shows up sooner. Each is scored on the pinned bank.
