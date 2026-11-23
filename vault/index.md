@@ -90,4 +90,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-search-blend-fresh-check]]
 - [[2026-11-23-adopt-grade-quality-next]]
 - [[2026-11-23-desktop-one-screen-layout]]
+- [[2026-11-23-games-page-one-block]]
 - [[2026-11-22-second-brain-guide]]

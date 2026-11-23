@@ -133,17 +133,17 @@ input[type='file'] { border-style: dashed; max-width: 100%; }
 .app-head h1 { font-size: 2.25rem; color: var(--frame); }
 @media (prefers-color-scheme: dark) { .app-head h1 { color: var(--ink); } }
 
-.trainer-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; }
-.trainer-card .user-form { grid-column: 1; }
-.trainer-card .sync-info { grid-column: 1; color: var(--ink-soft); font-size: 0.875rem; }
-.trainer-card .ratings-box { grid-column: 2; grid-row: 1 / span 2; }
+.home-profile { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; }
+.home-profile .user-form { grid-column: 1; }
+.home-profile .sync-info { grid-column: 1; color: var(--ink-soft); font-size: 0.875rem; }
+.home-profile .ratings-box { grid-column: 2; grid-row: 1 / span 2; }
 .ratings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0; }
 .ratings dt { font-size: 0.875rem; color: var(--ink-soft); overflow-wrap: anywhere; margin-top: 6px; }
 .ratings dd { margin: 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .elo { font-family: var(--pixel); font-size: 1.25rem; font-weight: 700; }
 @media (max-width: 640px) {
-  .trainer-card { grid-template-columns: minmax(0, 1fr); }
-  .trainer-card .ratings-box { grid-column: 1; grid-row: auto; }
+  .home-profile { grid-template-columns: minmax(0, 1fr); }
+  .home-profile .ratings-box { grid-column: 1; grid-row: auto; }
 }
 
 .userscript { margin-top: 12px; border-top: 2px dashed var(--line); padding-top: 10px; }
@@ -421,4 +421,30 @@ img.missing { visibility: hidden; }
   .events-panel { display: flex; flex-direction: column; flex: 1 0 auto; padding: 12px; min-height: 180px; }
   .events-panel .events { flex: 1; max-height: none; }
   .team-details { padding: 10px 12px; }
+}
+
+/* ------------------------------------------------------------------ games page
+   One block: profile, sync and "Add a game" beside the games list. Narrow windows stack
+   them; a desktop window fits the block to the screen and the list scrolls inside it
+   (user request 2026-11-23). */
+.home-side .add, .home-games { border-top: 2px dashed var(--line); margin-top: 14px; padding-top: 12px; }
+.home-side .add h2 { margin-bottom: 6px; }
+
+@media (min-width: 1000px) and (min-height: 600px) {
+  body[data-page='list'] #app { max-width: 1400px; height: 100vh; height: 100dvh; display: flex; flex-direction: column;
+    padding: 10px 20px 14px; }
+  body[data-page='list'] .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  body[data-page='list'] .status { position: fixed; top: 10px; right: 20px; z-index: 5; margin: 0; min-height: 0; }
+  body[data-page='list'] .status:not(:empty) { background: var(--screen); border: 3px solid var(--frame); padding: 4px 10px; }
+  body[data-page='list'] .app-head { padding: 0 0 10px; }
+  body[data-page='list'] .app-head h1 { font-size: 1.75rem; }
+
+  .home { flex: 1; min-height: 0; margin: 0; display: grid; gap: 0 24px;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); }
+  .home-side { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+  .home-profile { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .home-profile .ratings-box { grid-column: 1; grid-row: auto; }
+  .home-games { display: flex; flex-direction: column; min-height: 0; margin-top: 0; padding-top: 0; border-top: 0;
+    border-left: 2px dashed var(--line); padding-left: 24px; }
+  .home-games .games { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 }

@@ -95,22 +95,26 @@ const urlForm = h('form', { class: 'row' },
 
 export async function renderList(root: HTMLElement) {
   wire()
+  // One block: profile, sync and adding games beside the games list. On a desktop it fits
+  // the window and the list scrolls inside it (user request 2026-11-23); phones stack it.
   root.replaceChildren(
     h('header', { class: 'app-head' }, h('h1', {}, 'Showdown Review')),
-    h('section', { class: 'trainer-card frame', 'aria-label': 'Your profile' }, userForm, syncInfo, profileBox),
-    h('section', { class: 'add frame', 'aria-label': 'Add games' },
-      h('h2', {}, 'Add a game'),
-      urlForm,
-      h('div', { class: 'row' }, h('label', { for: 'replay-file' }, 'Or upload a saved log or replay file'), fileInput),
-      scriptBox),
-    h('section', { class: 'game-list frame', 'aria-label': 'Your games' },
-      h('div', { class: 'list-head' },
-        h('h2', {}, 'Your games'),
-        h('div', { class: 'row filters' },
-          h('label', { for: 'f-format', class: 'sr-only' }, 'Format'), formatSel,
-          h('label', { for: 'f-result', class: 'sr-only' }, 'Result'), resultSel,
-          h('label', { for: 'f-opp', class: 'sr-only' }, 'Opponent'), oppInput)),
-      list))
+    h('section', { class: 'home frame', 'aria-label': 'Your profile and games' },
+      h('div', { class: 'home-side' },
+        h('div', { class: 'home-profile', 'aria-label': 'Your profile' }, userForm, syncInfo, profileBox),
+        h('div', { class: 'add', 'aria-label': 'Add games' },
+          h('h2', {}, 'Add a game'),
+          urlForm,
+          h('div', { class: 'row' }, h('label', { for: 'replay-file' }, 'Or upload a saved log or replay file'), fileInput),
+          scriptBox)),
+      h('div', { class: 'home-games game-list', 'aria-label': 'Your games' },
+        h('div', { class: 'list-head' },
+          h('h2', {}, 'Your games'),
+          h('div', { class: 'row filters' },
+            h('label', { for: 'f-format', class: 'sr-only' }, 'Format'), formatSel,
+            h('label', { for: 'f-result', class: 'sr-only' }, 'Result'), resultSel,
+            h('label', { for: 'f-opp', class: 'sr-only' }, 'Opponent'), oppInput)),
+        list)))
   await loadSettings().catch(err => say(errText(err), 'error'))
   await Promise.all([loadProfile(), loadGames()])
 }
