@@ -53,7 +53,7 @@ class ReviewScreen {
   private readonly methodBox = h('details', { class: 'method' })
   // Pokemon details, docked in the review column (no floating tooltip): shows the Pokemon
   // under the pointer or keyboard focus; a click pins it; otherwise the opponent's active one.
-  private readonly inspectPanel = h('section', { class: 'panel inspect-panel frame', 'aria-label': 'Pokémon details', 'aria-live': 'polite' })
+  private readonly inspectPanel = h('section', { class: 'inspect-panel', 'aria-label': 'Pokémon details', 'aria-live': 'polite' })
   private pinned: string | null = null
   private hovered: { key: string; mon: Mon } | null = null
   private revealScores = false   // animate the scorecards once, when a review finishes while open
@@ -115,7 +115,10 @@ class ReviewScreen {
     this.nextBtn.addEventListener('click', () => this.go(this.step + 1))
     const hinge = h('div', { class: 'hinge' }, this.prevBtn, this.turnLabel, this.nextBtn)
 
-    const bottom = h('div', { class: 'screen bottom' }, this.graph, this.methodBox)
+    // Bottom screen: the Pokemon details, right under the battle box (fixed height, so the
+    // battle box never moves). The graph sits in the review column above "What happened".
+    const bottom = h('div', { class: 'screen bottom' }, this.inspectPanel)
+    const graphPanel = h('section', { class: 'panel graph-panel frame', 'aria-label': 'Win chance over the game' }, this.graph, this.methodBox)
 
     const teamArea = h('textarea', { id: 'team-paste', rows: '8', spellcheck: 'false',
       placeholder: 'Paste the team you used (Showdown export format)' })
@@ -145,7 +148,7 @@ class ReviewScreen {
             h('kbd', {}, '←'), h('kbd', {}, '→'))),
         h('div', { class: 'col-review' },
           this.analysisBar,
-          this.inspectPanel,
+          graphPanel,
           h('section', { class: 'panel events-panel frame', 'aria-label': 'What happened' },
             h('h2', {}, 'What happened'), this.eventsBox),
           ownTeam ? h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team'), teamForm) : null)))
@@ -449,14 +452,32 @@ class ReviewScreen {
         spr.dataset.pos = String(pos)
         this.inspectOn(spr, sid, mon)
         sprites.append(spr)
-        boxes.append(this.hpBox(mon, mine, prev))
+        const box = this.hpBox(mon, mine, prev)
+        if (fell && leftNow) {
+          // The fainted one's HP box drains to 0 on top, then gives way to the replacement's.
+          box.classList.add('after-faint-box')
+          boxes.append(h('div', { class: 'hp-slot' }, box, this.faintBox(leftNow, mine, fell[1])))
+        } else {
+          boxes.append(box)
+        }
       } else {
         sprites.append(h('span', { class: 'sprite empty', 'aria-hidden': 'true' }))
+        if (fell && leftNow) boxes.append(this.faintBox(leftNow, mine, fell[1], true))   // last one: stays at 0
       }
     }
     sprites.append(...sideOverlays(side))
     area.append(h('div', { class: 'party-row' }, h('span', { class: 'trainer' }, side.name), this.party(side)), boxes, sprites)
     return area
+  }
+
+  /** The HP box of a Pokemon that fainted this turn, starting from its HP last turn so the
+   *  bar visibly drains to 0. `final`: no replacement (end of game), so it stays. */
+  private faintBox(mon: Mon, mine: boolean, prev: MonSnap, final = false) {
+    const box = this.hpBox(mon, mine, prev)
+    box.classList.add('faint-box')
+    if (final) box.classList.add('final')
+    else { box.setAttribute('aria-hidden', 'true'); box.removeAttribute('tabindex') }
+    return box
   }
 
   private hpBox(mon: Mon, mine: boolean, prev?: MonSnap) {

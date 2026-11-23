@@ -712,7 +712,8 @@ button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-of
 .mstrip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 2.3em; gap: 2px; margin-top: 3px; font-size: 0.62rem; }
 .mchip { line-height: 1.15; padding: 1px 3px; overflow: hidden; overflow-wrap: anywhere; display: flex; align-items: center;
   border-left: 4px solid var(--c, var(--line)); background: color-mix(in srgb, var(--c, var(--line)) 22%, var(--screen)); color: var(--ink); }
-.mchip.unknown { border-left-color: var(--line); color: var(--ink-soft); justify-content: center; background: transparent; outline: 1px dotted var(--line); }
+/* Same box as a revealed move (no outline, which drew it 1 px larger): just a lighter tint. */
+.mchip.unknown { border-left-color: var(--line); color: var(--ink-soft); justify-content: center; background: color-mix(in srgb, var(--line) 12%, var(--screen)); }
 .mcat { display: none; }
 .col-battle .field.doubles .mstrip { display: none; }   /* four boxes: the info card has the moves */
 
@@ -817,3 +818,60 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .elo-d { font-size: 0.85rem; }
 .elo-d.up { color: var(--hp-green); }
 .elo-d.down { color: var(--them); }
+
+/* ------------------------------------------------------------------ layout v3 (2026-11-23)
+   Left: battle box, hinge, then the Pokemon details in the bottom screen. Right: a compact
+   move review, the win-chance graph, then "What happened" taking the rest. */
+.inspect-panel { padding: 0; }
+.screen.bottom .inspect-head h2 { font-size: 1rem; }
+
+/* Move review, compact: per player "name … accuracy" over "verdict chips … luck". */
+.analysis-bar h2 { margin-bottom: 6px; }
+.scorecards { gap: 8px; margin-bottom: 4px; }
+.scorecard { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name acc' 'counts luck';
+  align-items: center; gap: 2px 8px; padding: 5px 8px; }
+.scorecard .sc-name { grid-area: name; }
+.scorecard .sc-acc { grid-area: acc; }
+.scorecard .sc-counts { grid-area: counts; min-height: 0; }
+.scorecard .luck { grid-area: luck; margin: 0; }
+.sc-num { font-size: 1.35rem; }
+.analysis-bar .how { margin-top: 2px; }
+
+/* Graph panel in the review column. */
+.graph-panel { padding: 8px 10px; }
+.graph-panel .graph-svg { height: clamp(60px, 10vh, 110px); }
+.graph-panel .method { margin: 4px 0 0; }
+
+@media (min-width: 1100px) and (min-height: 620px) {
+  /* Fixed-height bottom screen: hovering never moves the battle box. */
+  .col-battle .screen.bottom { height: clamp(180px, 33vh, 300px); overflow-y: auto; padding: 8px 10px; flex: none; }
+  /* Details in two columns: facts on the left, moves on the right. */
+  .col-battle .tip-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); column-gap: 14px; align-content: start; }
+  .col-battle .tip-body > .tip-head { grid-column: 1 / -1; }
+  .col-battle .tip-body > p { grid-column: 1; }
+  .col-battle .tip-body > .tip-moves { grid-column: 2; grid-row: 2 / span 12; margin-top: 0; grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .col-review .graph-panel { flex: none; }
+  .col-review .events-panel { min-height: 160px; }
+}
+
+/* Faint, HP side: the fallen Pokemon's box drains to 0 (the ghost segment, 80-440 ms), fades
+   (480-640 ms), then the replacement's box and sprite come in. */
+.hp-slot { position: relative; width: fit-content; max-width: 100%; }
+.hp-box.faint-box:not(.final) { position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  animation: fade-out 160ms ease-out 480ms both; }
+.hp-box.faint-box .hp-ghost.lost { animation-duration: 360ms; }
+.hp-box.after-faint-box { animation: fade 180ms ease-out 600ms both; }
+.side.theirs .sprite.after-faint { animation-delay: 600ms; }
+.side.mine .sprite.after-faint { animation-delay: 600ms; }
+.side.theirs .sprite.after-faint.hit, .side.mine .sprite.after-faint.hit { animation-delay: 600ms, 860ms; }
+.still .hp-box.faint-box:not(.final) { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .hp-box.faint-box:not(.final) { animation: fade-out 160ms ease-out 300ms both; }
+  .hp-box.after-faint-box { animation: fade 160ms ease-out 320ms both; }
+}
+
+/* Doubles on a short window: four Pokemon need the height, so the details screen is shorter
+   (it scrolls inside itself). */
+@media (min-width: 1100px) and (min-height: 620px) and (max-height: 820px) {
+  .col-battle:has(.field.doubles) .screen.bottom { height: clamp(140px, 24vh, 220px); }
+}
