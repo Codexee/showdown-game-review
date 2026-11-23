@@ -12,6 +12,7 @@ A local, Lichess-style review tool for Pokémon Showdown games. A trained networ
 Rules for this vault: [[CLAUDE]].
 
 ## Start here
+- Code: https://github.com/Codexee/showdown-game-review (public; run locally with `./start.sh`, [[ADR-0020-distribution]])
 - [[project-overview]]: what we are building and why
 - [[open-questions]]: decisions still waiting on the user
 - [[roadmap]]: build order
