@@ -57,7 +57,7 @@ Rules for this vault: [[CLAUDE]].
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
 - [[spec-replay-sync]]: pull user data, list games, auto-save and auto-upload replays (draft)
-- [[plan-grade-quality]]: next stage: verdict bank, worlds fairness fix, depth-2 re-check (draft)
+- [[plan-grade-quality]]: current stage: verdict bank (built), worlds fairness fix, depth-2 re-check
 - [[goals-endgame]]: long-range goals set by the user (deeper search than PS Dashboard at its speed, and more)
 - [[plan-model-gains]]: eval gains beyond more training (ensembles, calibration, search as the eval)
 - [[plan-run-v12]]: training run v1.2 (done: `v12` installed, 68.2% on future games)
@@ -118,6 +118,7 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-publish-model]]
 - [[2026-11-23-v12-results]]
 - [[2026-11-23-publish-v12]]
+- [[2026-11-23-verdict-bank-v1]]
 - [[2026-11-23-bigger-vgc-sprites-and-design-audit]]
 - [[2026-11-23-design-audit-codex-claude]]
 - [[2026-11-23-audit-fixes-go-sprite-project-official]]

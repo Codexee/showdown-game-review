@@ -90,6 +90,7 @@ Fonts come from `@fontsource/dotgothic16` and `@fontsource/atkinson-hyperlegible
 | `train.py` | `python -m training.train --data … --run … --hours …`: MPS training, checkpoints, resume, metrics vs placeholder. |
 | `test_model.py` | Scores a run on another dataset (the pinned bank `test_pinned`) with the validation temperature; writes the report (with a `two_view` section) and per-sample predictions. |
 | `export.py` | Installs a run as `data/models/current.pt` for the app. |
+| `verdict_bank.py` | Verdict bank (grade-quality stage): grade future games, pick ~70 choices by category, high-effort references, independent-seed re-run, report (`data/verdict_bank/`). `analyze()` takes `only_turns` and `seed_offset` for it. |
 | `overnight.sh` | Build or check the dataset → train (9 h ceiling) → test → gate → install only if better, with `caffeinate`. `RUN=<new name>`; variables `SINCE`/`RANGES`, `EPOCHS`, `DROPOUT`, `WD`, `VW_FLOOR`; `RESUME=1`, `DRY_RUN=1`, `INSTALL_IF_TIE=1`. Log: `data/models/<run>.log`. |
 
 `web/src/gallery.ts`: `#/gallery`, every battle-screen element as example turns on the real review screen.

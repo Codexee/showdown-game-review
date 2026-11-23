@@ -1,7 +1,7 @@
 ---
 title: "Plan: grade quality (verdict bank, fairness fix, depth-2 re-check)"
 type: spec
-status: draft
+status: active
 tags: [area/model]
 updated: 2026-11-23
 ---
@@ -32,6 +32,10 @@ Measure whether the move review's verdicts are right, then fix what the measure 
    - full paralysis / sleep: keep "no blame" for the dice, but still grade "attack vs switch" when a switch was legal (Codex finding 7);
    - hidden-item sensitivity: soften a verdict that flips under a plausible hidden item ([[goals-endgame]] goal 6);
    - drop custom-rule games ([[2026-11-23-bug-custom-rules-randbats]]).
+
+## Results so far
+- **Step 1 built (2026-11-23):** `training/verdict_bank.py`, bank of 69 choices ([[2026-11-23-verdict-bank-v1]]). Default vs high-effort reference: 92.8% same flag, mean regret difference 0.61; default vs itself with new seeds: 89.9%, 0.48. Noise is the largest measured error; close calls flip about 1 in 5. References so far are high-effort re-searches only (source c); exact endgames (a) and blind labels (b) not yet.
+- Next: step 2 (fairness fix), which averages several dice per cell and so should also cut this noise; re-score on the same bank.
 
 ## Done when
 - The verdict bank exists and the move review's score on it is recorded.
