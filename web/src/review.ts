@@ -2,7 +2,7 @@
 // Top screen: the battle at the start of the selected turn, with the eval bar beside it.
 // Hinge: turn controls. Bottom screen: eval graph, turn list, and what happened.
 import { api, type Analysis, type Mon, type Review, type SideReview, type SideView, type Step, type TurnReview } from './api'
-import { errText, fmtDate, h, pct, s, say, sprite } from './dom'
+import { errText, fmtDate, h, pct, s, say } from './dom'
 import { formatBadge, icon, shortDate } from './list'
 import { battleSprite, fieldOverlays, infoCard, moveStrip, substituteSprite } from './battlefx'
 
@@ -549,7 +549,7 @@ class ReviewScreen {
       const state = m.fainted ? 'fainted' : m.status ? 'status' : m.active ? 'active' : ''
       const label = `${m.species}${m.fainted ? ', fainted' : m.status ? `, ${STATUS_LABEL[m.status] ?? m.status}` : ''}`
       const b = h('button', { type: 'button', class: `pmini ${state}`, 'aria-label': label },
-        sprite(m.sprite, false, '', 'pmini-img'),
+        h('img', { class: 'pmini-img', alt: '', decoding: 'async', src: `/sprites/gen5mini/${encodeURIComponent(m.sprite)}.png` }),
         m.status && !m.fainted ? h('span', { class: `pmini-status ${m.status}`, 'aria-hidden': 'true' }) : null)
       this.inspectOn(b, side.id, m)
       row.append(b)

@@ -8,6 +8,8 @@ turned into a horizontal strip of frames, with /sprites/gen5ani[-back]/<id>.json
 frame size, count and durations, so the page can step through them at its own pace.
 The substitute doll: /sprites/sub/substitute.png and /sprites/sub-back/substitute.png.
 Item icons: /sprites/item/<id>.png (e.g. poke-ball, for party slots not seen yet).
+Party minis: /sprites/gen5mini/<id>.png is the gen5 sprite cropped to the Pokemon and padded
+to a square, so every mini fills its slot the same way.
 """
 from __future__ import annotations
 
@@ -21,7 +23,7 @@ import httpx
 from .ids import to_id
 
 SPRITE_BASE = "https://play.pokemonshowdown.com/sprites"
-FOLDERS = {"gen5", "gen5-back", "gen5ani", "gen5ani-back", "sub", "sub-back", "item"}
+FOLDERS = {"gen5", "gen5-back", "gen5ani", "gen5ani-back", "sub", "sub-back", "item", "gen5mini"}
 ANIMATED = {"gen5ani", "gen5ani-back"}
 REMOTE = {"sub": "substitutes/gen5", "sub-back": "substitutes/gen5-back", "item": "itemicons"}  # ours -> Showdown's
 # Folders outside /sprites (none now: hazards are tags, as they have no official game sprite).
@@ -65,6 +67,15 @@ class SpriteCache:
             return None
         if folder in ANIMATED:
             return await self._get_animated(http, folder, name, target, missing)
+        if folder == "gen5mini":
+            full = await self.get(http, "gen5", name)
+            if full is None:
+                return None
+            target.parent.mkdir(parents=True, exist_ok=True)
+            tmp = target.with_suffix(".part")
+            crop_square(full.read_bytes()).save(tmp, format="PNG")
+            tmp.replace(target)
+            return target
         base = FULL_REMOTE.get(folder) or f"{SPRITE_BASE}/{REMOTE.get(folder, folder)}"
         resp = await http.get(f"{base}/{name}.png")
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +106,20 @@ class SpriteCache:
         target.with_suffix(".json").write_text(json.dumps(meta))
         tmp.replace(target)
         return target
+
+
+def crop_square(data: bytes):
+    """A sprite cropped to its visible pixels and centred on a transparent square."""
+    from PIL import Image
+
+    im = Image.open(io.BytesIO(data)).convert("RGBA")
+    box = im.getbbox()
+    if box:
+        im = im.crop(box)
+    side = max(im.size)
+    out = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    out.paste(im, ((side - im.width) // 2, side - im.height))   # standing on the bottom edge
+    return out
 
 
 def gif_to_strip(data: bytes):

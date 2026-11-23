@@ -886,3 +886,13 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
 .side-tags .tag { font-size: 0.68rem; padding: 0 5px; background: var(--screen); color: var(--ink); border-width: 2px; }
 .side-tags .tag.mine { border-color: var(--you); }
 .side-tags .tag.theirs { border-color: var(--them); }
+
+/* Party minis: cropped to the Pokemon (server), fitted inside their own slot, never spilling
+   into the next one. */
+.pmini { overflow: hidden; }
+.pmini-img { width: 24px; height: 24px; margin: 0; object-fit: contain; }
+
+/* Tall sprites: the animated frame never grows past the sprite box (keeps its shape), and the
+   opponent's sprite isn't pulled up into the party row above it. */
+.ani-win { aspect-ratio: var(--fw) / var(--fh); width: auto; height: min(calc(var(--fh) * 100% / 96), 91%); }
+.col-battle .side.theirs .sprite { margin-top: 0; }

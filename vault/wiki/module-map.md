@@ -42,7 +42,7 @@ Environment variables (`server/config.py`): `SR_DATA_DIR` (default `./data`), `S
 `archive.py` also validates every game id and format id before using them as file names (an uploaded `.json` could otherwise write outside `data/`).
 
 ### API
-`GET/PUT /api/settings` (incl. `auto_analyze`) · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `GET /api/games/{id}/review?side=p1|p2` · `GET/POST /api/games/{id}/analysis` (body: `seeds`, `top_k`, `mode` worlds|perfect) · `GET /sprites/{gen5|gen5-back|gen5ani|gen5ani-back|sub|sub-back|item}/{id}.png` (+ `.json` frame data for gen5ani) · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
+`GET/PUT /api/settings` (incl. `auto_analyze`) · `GET /api/profile[?refresh=true]` · `POST /api/sync` · `GET /api/sync` · `GET /api/formats` · `GET /api/games?format=&result=&opponent=` · `GET /api/games/{id}` · `GET /api/games/{id}/turns?side=p1|p2|all` · `GET /api/games/{id}/review?side=p1|p2` · `GET/POST /api/games/{id}/analysis` (body: `seeds`, `top_k`, `mode` worlds|perfect) · `GET /sprites/{gen5|gen5-back|gen5ani|gen5ani-back|sub|sub-back|item|gen5mini}/{id}.png` (+ `.json` frame data for gen5ani) · `PUT /api/games/{id}/team` · `POST /api/import/url` · `POST /api/import/file` · `POST /api/ingest` · `POST /api/ingest-private` · `GET /userscript/showdown-review.user.js`
 
 ## Userscript: `userscript/`
 | File | Job |
