@@ -488,15 +488,21 @@ img.missing { visibility: hidden; }
 .when .turns { font-family: var(--pixel); }
 
 .sync-btn { display: inline-flex; align-items: center; gap: 6px; }
-.sync-icon { display: inline-block; line-height: 1; }
-.sync-btn.busy .sync-icon { animation: spin 640ms var(--px-steps) infinite; }
-.file-btn { display: inline-block; cursor: pointer; font-family: var(--pixel); font-weight: 400; border: 3px dashed var(--frame);
-  padding: 4px 12px; background: var(--screen); }
+.sync-btn .pxicon.sync { width: 12px; height: 12px; flex: none; transform-origin: 50% 50%; }
+.sync-btn.busy .pxicon.sync { animation: spin 640ms var(--px-steps) infinite; }
+.add-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; margin-bottom: 6px; }
+.url-form { display: contents; }
+.add-grid #replay-url { width: 100%; }
+.file-drop { grid-column: 1; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+  font-family: var(--pixel); font-weight: 400; border: 3px dashed var(--frame); padding: 8px 12px; background: var(--screen);
+  color: var(--ink-soft); }
+.file-drop .pxicon.drop { width: 14px; height: 14px; flex: none; color: var(--ink); }
+.file-drop.over { background: var(--screen-2); border-style: solid; color: var(--ink); }
 @media (hover: hover) and (pointer: fine) {
-  .file-btn { transition: background-color 120ms ease; }
-  .file-btn:hover { background: var(--screen-2); }
+  .file-drop { transition: background-color 120ms ease, color 120ms ease; }
+  .file-drop:hover { background: var(--screen-2); color: var(--ink); }
 }
-#replay-file:focus-visible + .file-btn { outline: 3px solid var(--focus); outline-offset: 2px; }
+#replay-file:focus-visible + .file-drop { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 /* Motion. Rows rise in on the first load and when a new game arrives (not on every refresh);
    ladder bars fill once, stepped like the HP bars; the sync icon turns while syncing. */
@@ -511,7 +517,7 @@ img.missing { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .games li.enter { animation-name: fade; animation-delay: 0ms; }
   .ladders.enter .wl-w, .ladders.enter .wl-l { animation: none; }
-  .sync-btn.busy .sync-icon { animation: none; }
+  .sync-btn.busy .pxicon.sync { animation: none; }
 }
 
 /* ------------------------------------------------------------------ review screen symbols (2026-11-23) */

@@ -2,6 +2,16 @@
 import { api, type Game, type Profile, type Settings } from './api'
 import { errText, fmtAgo, fmtDate, h, say, sprite } from './dom'
 
+// 8×8 pixel icons ('#' = filled). Each has a title for its meaning.
+const ICONS: Record<string, string[]> = {
+  lock: ['..####..', '.#....#.', '.#....#.', '########', '###..###', '###..###', '########', '########'],
+  disk: ['#######.', '#.###.##', '#.###..#', '#......#', '#.####.#', '#.#..#.#', '#.####.#', '########'],
+  scroll: ['######..', '#....##.', '#.##..#.', '#.....#.', '#.###.#.', '#.....#.', '#.###.#.', '#######.'],
+  dice: ['########', '#......#', '#.#..#.#', '#......#', '#..##..#', '#......#', '#.#..#.#', '########'],
+  drop: ['...##...', '...##...', '.######.', '..####..', '...##...', '#......#', '#......#', '########'],
+  sync: ['..###.#.', '.#...##.', '#...###.', '#.......', '#......#', '.......#', '.#....#.', '..####..'],
+  lens: ['.###....', '#...#...', '#...#...', '#...#...', '.####...', '....##..', '.....##.', '......##'],
+}
 let profileShown = false            // animate the ladder bars once per page load
 const seenGames = new Set<string>()  // rows already shown: only new games animate in
 
@@ -12,7 +22,7 @@ const state = {
 
 const userInput = h('input', { id: 'username', autocomplete: 'off', spellcheck: 'false', maxlength: '18' })
 const syncInfo = h('p', { class: 'sync-info' })
-const syncIcon = h('span', { class: 'sync-icon', 'aria-hidden': 'true' }, '⟳')
+const syncIcon = icon('sync', '')   // square pixel icon: centred, and spins about its middle
 const syncLabel = h('span', {}, 'Sync')
 const syncBtn = h('button', { type: 'button', class: 'sync-btn' }, syncIcon, syncLabel)
 const profileBox = h('div', { class: 'ratings-box' })
@@ -69,8 +79,7 @@ function wire() {
       await loadGames()
     } catch (err) { say(errText(err), 'error') }
   })
-  fileInput.addEventListener('change', async () => {
-    const f = fileInput.files?.[0]
+  const upload = async (f: File | undefined) => {
     if (!f) return
     try {
       const r = await api.importFile(f)
@@ -78,6 +87,15 @@ function wire() {
       await loadGames()
     } catch (err) { say(errText(err), 'error') }
     finally { fileInput.value = '' }
+  }
+  fileInput.addEventListener('change', () => void upload(fileInput.files?.[0]))
+  // The drop zone also takes a file dragged onto it.
+  fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('over') })
+  fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('over'))
+  fileDrop.addEventListener('drop', e => {
+    e.preventDefault()
+    fileDrop.classList.remove('over')
+    void upload(e.dataTransfer?.files?.[0])
   })
   formatSel.addEventListener('change', () => { state.filters.format = formatSel.value; loadGames() })
   resultSel.addEventListener('change', () => { state.filters.result = resultSel.value; loadGames() })
@@ -96,7 +114,9 @@ function wire() {
 const userForm = h('form', { class: 'user-form' },
   h('label', { for: 'username' }, 'Username'),
   h('div', { class: 'row' }, userInput, h('button', { type: 'submit', class: 'quiet' }, 'Save'), syncBtn))
-const urlForm = h('form', { class: 'row' },
+const fileDrop = h('label', { for: 'replay-file', class: 'file-drop', title: 'A saved .log, .html or .json replay' },
+  icon('drop', ''), h('span', {}, 'Drop or choose a file'))
+const urlForm = h('form', { class: 'url-form' },
   h('label', { for: 'replay-url', class: 'sr-only' }, 'Replay URL'), urlInput, h('button', { type: 'submit' }, 'Add'))
 
 export async function renderList(root: HTMLElement) {
@@ -110,9 +130,8 @@ export async function renderList(root: HTMLElement) {
         h('div', { class: 'home-profile', 'aria-label': 'Your profile' }, userForm, syncInfo, profileBox),
         h('div', { class: 'add', 'aria-label': 'Add games' },
           h('h2', {}, 'Add a game'),
-          urlForm,
-          h('div', { class: 'row' }, fileInput,
-            h('label', { for: 'replay-file', class: 'file-btn', title: 'A saved .log, .html or .json replay' }, 'Upload a file')),
+          // One grid, so the drop zone lines up with the link box (the Add button sits beside the link).
+          h('div', { class: 'add-grid' }, urlForm, fileInput, fileDrop),
           scriptBox)),
       h('div', { class: 'home-games game-list', 'aria-label': 'Your games' },
         h('div', { class: 'list-head' },
@@ -255,23 +274,19 @@ export function formatBadge(formatId: string, formatName: string) {
     gen ? h('span', { class: 'fmt-gen' }, gen) : null, h('span', { class: 'fmt-name' }, name))
 }
 
-// 8×8 pixel icons ('#' = filled). Each has a title for its meaning.
-const ICONS: Record<string, string[]> = {
-  lock: ['..####..', '.#....#.', '.#....#.', '########', '###..###', '###..###', '########', '########'],
-  disk: ['#######.', '#.###.##', '#.###..#', '#......#', '#.####.#', '#.#..#.#', '#.####.#', '########'],
-  scroll: ['######..', '#....##.', '#.##..#.', '#.....#.', '#.###.#.', '#.....#.', '#.###.#.', '#######.'],
-  dice: ['########', '#......#', '#.#..#.#', '#......#', '#..##..#', '#......#', '#.#..#.#', '########'],
-  lens: ['.###....', '#...#...', '#...#...', '#...#...', '.####...', '....##..', '.....##.', '......##'],
-}
 export function icon(name: string, label: string): Element {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('viewBox', '0 0 8 8')
   svg.setAttribute('class', `pxicon ${name}`)
-  svg.setAttribute('role', 'img')
-  svg.setAttribute('aria-label', label)
-  const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
-  title.textContent = label
-  svg.append(title)
+  if (label) {
+    svg.setAttribute('role', 'img')
+    svg.setAttribute('aria-label', label)
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title')
+    title.textContent = label
+    svg.append(title)
+  } else {
+    svg.setAttribute('aria-hidden', 'true')   // decorative: the button's text names the action
+  }
   ICONS[name].forEach((row, y) => [...row].forEach((c, x) => {
     if (c !== '#') return
     const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
