@@ -28,7 +28,7 @@ from __future__ import annotations
 import copy
 import math
 import time
-from typing import Callable
+from typing import Callable, Collection
 
 import numpy as np
 
@@ -249,9 +249,13 @@ def side_record(cs: list[str], q: np.ndarray, mix: np.ndarray, played: str | Non
 
 # ---------------------------------------------------------------- main
 def analyze(replay: dict, model_eval, engine, seeds: int = 16, top_k: int = 6, mode: str = "worlds",
-            progress: Callable[[int, int], None] | None = None) -> dict:
+            progress: Callable[[int, int], None] | None = None, only_turns: Collection[int] | None = None,
+            seed_offset: int = 0) -> dict:
     """Full move review of one replay (needs replay['inputlog']). In "worlds" mode `seeds`
-    is the number of sampled worlds per graded side (each with its own dice)."""
+    is the number of sampled worlds per graded side (each with its own dice).
+
+    `only_turns` grades just those turns (the verdict bank's high-effort references);
+    `seed_offset` (worlds mode) draws different worlds and dice, for an independent re-run."""
     if mode not in ("worlds", "perfect"):
         raise ValueError(f"unknown mode {mode}")
     model = Model(model_eval)
@@ -288,6 +292,8 @@ def analyze(replay: dict, model_eval, engine, seeds: int = 16, top_k: int = 6, m
     t0 = time.time()
     for n, tinfo in enumerate(turns):
         turn = tinfo["turn"]
+        if only_turns is not None and turn not in only_turns:
+            continue
         state = real_states[turn]
         base = bases[turn]
         prev = real_events.get(turn - 1) if turn > 1 else None
@@ -302,7 +308,9 @@ def analyze(replay: dict, model_eval, engine, seeds: int = 16, top_k: int = 6, m
         v_after = value_at[nxt[0]] if nxt else end_value
         mine = {"p1": v_before, "p2": 1 - v_before}
         couldnt = {s: cant.get(turn, {}).get(s, ("",))[0] == "none" for s in ("p1", "p2")}
-        entry = {"turn": turn, "value_before": v_before, "value_after": v_after, "sides": {}}
+        entry = {"turn": turn, "value_before": v_before, "value_after": v_after, "sides": {},
+                 # Pokemon left per side (unseen ones count as alive): small endgames for the verdict bank
+                 "alive": {sd: 6 - sum(1 for m in state["sides"][sd]["team"] if m["fainted"]) for sd in ("p1", "p2")}}
 
         if mode == "perfect":
             c1, c2 = cands["p1"], cands["p2"]
@@ -332,14 +340,14 @@ def analyze(replay: dict, model_eval, engine, seeds: int = 16, top_k: int = 6, m
             plan, all_jobs = {}, []
             for side in ("p1", "p2"):
                 opp = other(side)
-                worlds = sample_worlds(state, side, seeds, seed=turn * 2 + (side == "p2"))
+                worlds = sample_worlds(state, side, seeds, seed=turn * 2 + (side == "p2") + 100_003 * seed_offset)
                 wopts = engine.options(turn, worlds)
                 cols = []
                 for k, (w, o) in enumerate(zip(worlds, wopts)):
                     cy = rank_options(pol_of[opp], o["options"][opp], o["info"][opp], own[opp], top_k)
                     cols.append(cy)
                     pairs = [(a, b) if side == "p1" else (b, a) for a in cands[side] for b in cy]
-                    all_jobs.append({"world": w, "seed": k, "pairs": pairs})
+                    all_jobs.append({"world": w, "seed": k + 1000 * seed_offset, "pairs": pairs})
                 plan[side] = (len(all_jobs) - len(worlds), cols)
             luck_job = None
             if played["p1"] in tinfo["options"]["p1"] and played["p2"] in tinfo["options"]["p2"]:
