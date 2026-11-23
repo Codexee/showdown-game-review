@@ -750,7 +750,6 @@ button.pmini:active:not(:disabled) { transform: none; }
 .pmini-status.par { background: #c9a300; } .pmini-status.brn { background: #d8632b; } .pmini-status.slp { background: #7c7f93; }
 .pmini-status.frz { background: #4fa3c7; }
 .pmini.unknown { width: 28px; }
-.pmini.unknown::before { content: ''; width: 12px; height: 12px; border: 2px dotted var(--ink-soft); border-radius: 50%; }
 button.pmini:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
 /* Pokemon details, docked in the review column, laid out like Showdown's tooltip. */
@@ -808,3 +807,13 @@ button.icon-btn:hover:not(:disabled) { background: var(--screen-2); color: var(-
 button.icon-btn[aria-pressed='true'] { color: var(--ink); border-color: var(--you); background: color-mix(in srgb, var(--you) 22%, var(--screen)); }
 button.icon-btn .pxicon { width: 14px; height: 14px; }
 button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Not-yet-seen party slot: a Poke Ball sprite. */
+.pmini-ball { width: 24px; height: 24px; image-rendering: pixelated; opacity: 0.8; }
+
+/* Players' Elo in the review header: rating before the game, then the change. */
+.elo-tag { display: inline-flex; align-items: baseline; gap: 4px; font-size: 0.95rem; }
+.elo-n { color: var(--ink-soft); }
+.elo-d { font-size: 0.85rem; }
+.elo-d.up { color: var(--hp-green); }
+.elo-d.down { color: var(--them); }

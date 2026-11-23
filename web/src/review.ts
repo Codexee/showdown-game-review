@@ -100,7 +100,8 @@ class ReviewScreen {
 
     const header = h('header', { class: 'review-head' },
       h('a', { href: '#/', class: 'back' }, 'Games'),
-      h('h1', {}, h('span', { class: 'me' }, meName), h('span', { class: 'vs' }, 'vs'), h('span', { class: 'them' }, themName)),
+      h('h1', {}, h('span', { class: 'me' }, meName), this.elo(this.me), h('span', { class: 'vs' }, 'vs'),
+        h('span', { class: 'them' }, themName), this.elo(this.them)),
       h('p', { class: 'meta' },
         result ? h('span', { class: `pip ${result}`, role: 'img', 'aria-label': result === 'win' ? 'Win' : result === 'loss' ? 'Loss' : 'Tie' },
           result[0].toUpperCase()) : null,
@@ -183,6 +184,16 @@ class ReviewScreen {
   }
 
   /** Short label for how the win chance is made; the full explanation opens below it. */
+  /** A player's ladder rating for this game: before, and the change (green / red). */
+  private elo(side: 'p1' | 'p2') {
+    const r = this.review.game.summary?.[side]
+    if (!r || r.rating_before == null) return null
+    const d = r.rating_after != null ? r.rating_after - r.rating_before : null
+    return h('span', { class: 'elo-tag', title: `Elo ${r.rating_before}${r.rating_after != null ? ` → ${r.rating_after}` : ''}` },
+      h('span', { class: 'elo-n' }, String(r.rating_before)),
+      d == null ? null : h('span', { class: `elo-d ${d >= 0 ? 'up' : 'down'}` }, `${d >= 0 ? '+' : '−'}${Math.abs(d)}`))
+  }
+
   private renderMethod() {
     const m = this.review.eval_method
     const label = m === 'model+search' ? 'Model + search' : m === 'model' ? 'Model' : 'HP estimate'
@@ -497,7 +508,8 @@ class ReviewScreen {
     for (let i = 0; i < size; i++) {
       const m = seen[i]
       if (!m) {
-        row.append(h('span', { class: 'pmini unknown', title: 'Not seen yet', role: 'img', 'aria-label': 'Not seen yet' }))
+        row.append(h('span', { class: 'pmini unknown', title: 'Not seen yet', role: 'img', 'aria-label': 'Not seen yet' },
+          h('img', { class: 'pmini-ball', src: '/sprites/item/poke-ball.png', alt: '', width: '24', height: '24' })))
         continue
       }
       const state = m.fainted ? 'fainted' : m.status ? 'status' : m.active ? 'active' : ''

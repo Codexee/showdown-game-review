@@ -133,7 +133,8 @@ export interface Step {
 }
 
 export interface Review {
-  game: Game & { team_paste: string | null }
+  game: Game & { team_paste: string | null
+    summary?: { p1?: { rating_before?: number | null; rating_after?: number | null }; p2?: { rating_before?: number | null; rating_after?: number | null } } }
   perspective: 'p1' | 'p2'
   format_id: string
   eval_method: string
