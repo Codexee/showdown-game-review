@@ -2,6 +2,7 @@
 # Download the [Gen 9] RANDOMBATTLE parquet files of HolidayOugi/pokemon-showdown-replays
 # (public Showdown replay logs, no inputlogs, no license stated) into data/hf/. Resumable.
 set -e
+mkdir -p "$(dirname "$0")/../data/hf"
 cd "$(dirname "$0")/../data/hf"
 BASE="https://huggingface.co/datasets/HolidayOugi/pokemon-showdown-replays/resolve/main"
 # smallest first, so a test run can start early

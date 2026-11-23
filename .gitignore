@@ -25,3 +25,6 @@ web/dist/
 # Obsidian, if the project root is opened as a vault (per-user state)
 /.obsidian/
 /Untitled*.base
+
+# third-party Claude skills copied from another project: kept locally, not published
+.claude/skills/
