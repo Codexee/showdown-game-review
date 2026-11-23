@@ -22,6 +22,9 @@ Items wait here until they are answered. When an item is answered, record the an
 
 8. **What "public" means for the encoder** (Codex finding 2, second part): uploaded randbats logs carry exact HP for both sides, and the encoder leaves out the player's own unseen bench. Decide one mask for training, testing and the move review's leaf. Impact unmeasured ([[2026-11-23-codex-review]]).
 
+9. **Overnight run go-ahead** with the recommended settings in [[plan-run-v12]] (2025 + 2026, C's settings, 3 epochs, install only if better)?
+10. **Eval bar from search** after a move review exists ([[plan-model-gains]] next step 1)? A small change to the bar, measured −0.008.
+
 ## Resolved
 - **Hindsight in move review** → it matters: grading with the real sets changes 21% of verdicts and 6% of flags on 12 games, about 3× sampling noise; worlds mode is now the default ([[ADR-0015-move-review-sampled-worlds]], [[2026-11-22-worlds-vs-perfect-results]]), 2026-11-22.
 - **P0 before the overnight run** → yes; built and passed the paired gate vs test2 ([[2026-11-22-p0-ab-results]]), 2026-11-22.

@@ -62,6 +62,19 @@ Source: [[2026-11-23-codex-review]]. Items 1–3 are checked; 4–5 are test-des
 - `main` vs B: B worse by 0.0145, band [+0.0103, +0.0186]. `main` two-view: 0.58285.
 - The overnight script's settings defaults are still the old ones (dropout 0.1, wd 0.05, no schedule, 4 epochs); set them from the test winner when the overnight run is approved.
 
+### Test results (2026-11-23, [[2026-11-23-v12-tests-and-eval-gains-results]])
+- **B (dropout 0.2, wd 0.1) = A** on future games (−0.00002). Regularisation flattens the validation curve but doesn't improve predictions.
+- **C (value-weight schedule) beats B** by 0.0018 [−0.0033, −0.0003].
+- **D (twice the games, half from 2025-07..09) beats B** by 0.0079 [−0.0114, −0.0044] and C by 0.0061. More games is the largest training lever, and older games help. D had twice the updates too, but B did not gain from its extra updates on the same games (A and B plateau or rise after epoch 2–3), so the gain is the data (Codex's caveat noted, not fully separated).
+- All four trail `main` (D by +0.0066), which trained on 672k games.
+
+### Overnight run, recommended (waits for the user's go-ahead)
+`RUN=v12 SINCE=2025-01-01 DROPOUT=0.2 WD=0.1 VW_FLOOR=0.2 EPOCHS=3 HOURS=9 ./training/overnight.sh`
+- Data: 2025 + 2026, about 1.24M games, ≈29M samples (estimated from `full`: 23.5 samples per game), ≈30 GB on disk (448 GB free). Larger than RAM (24 GB); step time is the open risk (0.47–0.65 s measured), so 3 epochs ≈ 5.5–7.7 h, and the 9 h ceiling stops it if slower.
+- Settings: C's (the schedule needs dropout 0.2 / wd 0.1 too; both were in C).
+- Install: only if the two-view gate says better than `main` ([[ADR-0016-two-view-scoring-strict-gate]]).
+- Option not tested: add 2024 (713k more games, about 2.2 epochs in 9 h). D says older games help, but 2024 is further from today's sets.
+
 ## Needs from the user
 - The Mac must stay awake: lid open, or on power with an external display. Clamshell sleep on battery pauses runs ([[environment-quirks]]).
 - A go-ahead for the tests (about 4.5 h), then a separate go-ahead for the overnight run once the tests are read.

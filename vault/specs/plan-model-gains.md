@@ -32,7 +32,19 @@ Still training-side, after these: game-balanced value sampling ([[plan-run-v12]]
 - Move-review fairness (dice averaged inside each cell, one strategy across worlds, unseen bench sampled): probably the largest gain for grade quality ([[2026-11-23-codex-review]] finding 6). It belongs to the move-review stage.
 
 ## Results
-Filled in as each test finishes; raw numbers in `raw/`.
+Raw numbers: [[2026-11-23-v12-tests-and-eval-gains-results]]. Against `main@9000` two-view (0.58285; 0.5851 on the 199 search games):
+1. Ensemble: **worse** (other runs are weaker and too similar).
+2. Calibration by rating / phase: **≈0**.
+3. Bench-order symmetry: **0 by design** (the network is order-blind).
+4. **One-turn search: the largest gain found.** Blend 75% search + 25% network, worlds mode (fair): **−0.0083** [−0.0118, −0.0048], about 3× the two-view gain; perfect mode −0.0098. Search alone: −0.0047, band crosses zero. Cost: the move review already computes it (141 s per game in worlds mode).
+- Also tried: the players' rating gap. **No signal** (ladder gaps are tiny; the higher-rated player wins 50.3%).
+
+## Next steps, ranked (2026-11-23)
+1. **Eval bar from search after "Analyze":** once a game's move review exists, show the 75/25 blend instead of the raw network. No training; −0.008 measured. Blend weight chosen on the test games; confirm on a fresh sample. Small server + UI change.
+2. **Overnight run** on 2025 + 2026 with C's settings ([[plan-run-v12]]): the data lever, −0.008 between B and D at small scale.
+3. **Distil search into the network:** train the value head on search values (or the blend) as soft targets. Each position gets its own target, not one win/loss per game, which also attacks the overfitting cause. Needs search values for many games (≈2 min per game; 5 parallel ≈ 3,000 games per night).
+4. Data hygiene: drop custom-rule games ([[2026-11-23-bug-custom-rules-randbats]]).
+5. Later training-side: history tokens, matchup damage calcs, game-balanced value sampling.
 
 ## Related
 - [[plan-run-v12]] · [[spec-eval-model]] · [[ADR-0016-two-view-scoring-strict-gate]] · [[2026-11-23-codex-review]]

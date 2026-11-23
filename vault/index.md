@@ -58,6 +58,7 @@ Rules for this vault: [[CLAUDE]].
 - [[environment-quirks]]
 - [[2026-11-22-bug-forme-change-team]]
 - [[2026-11-22-bug-sim-snapshot-mutation]]
+- [[2026-11-23-bug-custom-rules-randbats]]
 
 ## Raw inputs
 - [[2026-11-22-interview-round-1]]
@@ -79,4 +80,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-22-direction-codex-review]]
 - [[2026-11-23-codex-review]]
 - [[2026-11-23-codex-fixes-go]]
+- [[2026-11-23-v12-tests-and-eval-gains-results]]
 - [[2026-11-22-second-brain-guide]]

@@ -48,6 +48,13 @@ def search_p1(entry: dict) -> float | None:
 
 
 def one_game(args: tuple[str, str, int, int]) -> dict:
+    try:
+        return _one_game(args)
+    except Exception as e:  # one bad game must not stop the sample; reported, not retried
+        return {"game": Path(args[0]).stem, "mode": args[1], "error": f"{type(e).__name__}: {e}"[:500]}
+
+
+def _one_game(args: tuple[str, str, int, int]) -> dict:
     path, mode, seeds, top_k = args
     from server import model_eval
     from server.review.analyze import analyze
@@ -76,7 +83,7 @@ def run(args) -> None:
         for i, r in enumerate(pool.imap_unordered(one_game, [(f, args.mode, args.seeds, args.top_k) for f in todo])):
             fh.write(json.dumps(r) + "\n")
             fh.flush()
-            print(f"{i + 1}/{len(todo)} {r['game']} {r['seconds']} s", flush=True)
+            print(f"{i + 1}/{len(todo)} {r['game']} " + (f"ERROR {r['error'][:120]}" if "error" in r else f"{r['seconds']} s"), flush=True)
 
 
 def report() -> None:
@@ -84,6 +91,10 @@ def report() -> None:
 
     for f in sorted(OUT.glob("*.jsonl")):
         rows = [json.loads(l) for l in f.read_text().splitlines()]
+        errors = [r for r in rows if "error" in r]
+        rows = [r for r in rows if "error" not in r]
+        if errors:
+            print(f"{f.stem}: {len(errors)} games failed: " + ", ".join(r["game"] for r in errors))
         y, net, srch, g = [], [], [], []
         for gi, r in enumerate(rows):
             if r["label_p1"] is None:
