@@ -48,6 +48,7 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0017-eval-bar-search-blend]]: accepted (eval bar = 75% search + 25% network after a move review)
 - [[ADR-0018-grade-quality-before-ui]]: accepted (close model testing after `v12`; grade quality, then the UI)
 - [[ADR-0019-project-name]]: accepted (one name: `showdown-game-review`)
+- [[ADR-0020-distribution]]: accepted (public GitHub repo; local app with one-command setup)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
@@ -108,4 +109,6 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-sprite-overlaps]]
 - [[2026-11-23-remove-field-layers]]
 - [[2026-11-23-name-showdown-game-review]]
+- [[2026-11-23-publish-answers]]
+- [[2026-11-23-local-app-not-hosted]]
 - [[2026-11-22-second-brain-guide]]
