@@ -52,3 +52,4 @@ Facts that exist only in a chat transcript are easy to lose when a question is s
 - Next: fix value overfitting in the next training run (now with 18,975 inputlog replays); consider sampling unseen opposing species in move review.
 - Then: stage 7, VGC Reg M-C.
 - 23:50 EST: status check. v12a done (best val value 0.5707 at step 3600, epoch 2.3; then up to 0.5818 at epoch 4; pinned bank log-loss 0.6008). v12b at step 5200, best so far 0.5696 at 3600. The Mac is on AC power now. The user's direction (Codex review, VGC picks, usage stats, VGC team import in the UI stage, stay on model testing) is in [[2026-11-22-direction-codex-review]] and [[roadmap]]. Codex review started (read-only).
+- 00:15 EST (2026-11-23): Codex review finished ([[2026-11-23-codex-review]]). Checked: overnight gate bug, two-view gain (−0.00258 on `main`), compare_runs key intersection. Proposed changes in [[plan-run-v12]]; waiting on the user ([[open-questions]] #6).

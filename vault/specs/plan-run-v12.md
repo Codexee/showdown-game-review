@@ -49,6 +49,14 @@ Readout: best value loss and its epoch, pinned-bank log-loss, gate A vs B, B vs 
 - About 14k steps per epoch at 1.24M games, so roughly 4.5 epochs in 9 h; `best.pt` keeps the best value step.
 - Then: test on the pinned bank, paired gate vs `main`, install if not worse. Record results in `raw/` and [[spec-eval-model]].
 
+## Changes from the Codex review (proposed 2026-11-23, waiting on the user)
+Source: [[2026-11-23-codex-review]]. Items 1–3 are checked; 4–5 are test-design advice.
+1. **Fix the install gate in `overnight.sh` before any overnight run.** Fresh run name (not `main`), dataset rebuilt or checked against `SINCE`, B/C settings passed through, and install only on "b is better" or an explicit rule; "no clear difference" or a skipped gate keeps `main`.
+2. **Two-view scoring** for the eval bar, `test_model` and the gate, the same as the move review's leaf: measured −0.0026 log-loss on `main` with no retraining.
+3. **Strict pairing in `compare_runs`:** fail if the two prediction files don't have the same keys.
+4. **A game-balanced value test** (a fifth small run): sample games evenly, a few positions per game for the value loss, dense policy labels. It tests the "one label per game" diagnosis directly.
+5. **Read C and D carefully:** C's schedule depends on the configured epoch count (4 here, 8 in the overnight script). D changes data age, game count and update count together, so a D win doesn't mean all of 2025 helps. The pinned bank has now informed several choices; keep a later window of collected games for one final check against `main`.
+
 ## Needs from the user
 - The Mac must stay awake: lid open, or on power with an external display. Clamshell sleep on battery pauses runs ([[environment-quirks]]).
 - A go-ahead for the tests (about 4.5 h), then a separate go-ahead for the overnight run once the tests are read.

@@ -17,6 +17,9 @@ Items wait here until they are answered. When an item is answered, record the an
 4. **Frontend UI framework** (Preact, Svelte or none). Decide at the UI stage ([[ADR-0007-app-stack]]).
 5. **Install SpriteCook** when the UI stage starts ([[tooling]]).
 
+6. **Codex review, model-testing changes:** adopt items 1–5 in [[plan-run-v12]] (gate fix, two-view scoring, strict pairing, game-balanced value test, careful C/D readout)? Recommendation: 1–3 now (small, checked), 4 as one extra ~50 min test before the overnight run ([[2026-11-23-codex-review]]).
+7. *(research)* **Verify the new references** before relying on them: Nessie, Mew's Truck, Ninjask, Eevenator, Mega Evolution rules for Reg M-C ([[2026-11-23-codex-review]]).
+
 ## Resolved
 - **Hindsight in move review** → it matters: grading with the real sets changes 21% of verdicts and 6% of flags on 12 games, about 3× sampling noise; worlds mode is now the default ([[ADR-0015-move-review-sampled-worlds]], [[2026-11-22-worlds-vs-perfect-results]]), 2026-11-22.
 - **P0 before the overnight run** → yes; built and passed the paired gate vs test2 ([[2026-11-22-p0-ab-results]]), 2026-11-22.

@@ -27,6 +27,10 @@ Why randbats is a good first target:
 - Action space per turn is much larger than singles (two Pokémon, targets, spread moves).
 - Training keeps only species and moves at ≥1.5% usage ([[2026-11-22-interview-round-2]]).
 
+### Format gimmicks and set predictions (user direction, [[2026-11-22-direction-codex-review]])
+- Each format has its own mechanic. Gen 9 Random Battle: Terastallization. Champions Reg M-C: **Mega Evolution**, once per battle, needs the Pokémon's Mega Stone (official rules page cited by Codex: https://news.pokemon-home.com/en/page/816.html; unverified, [[2026-11-23-codex-review]]).
+- VGC: team preview, bring 4 of 6 and choose 2 leads. The pick is a graded choice. Opponent sets come from Smogon usage stats (rating- and month-matched), not random-set data.
+
 ## Earlier target: [Gen 9 Champions] OU (superseded as first target)
 - `mod: 'champions'`, `ruleset: ['Standard']`, banlist: AG, Uber, Moody, Damp Rock, King's Rock, Light Clay, Quick Claw, Baton Pass, Last Respects, Shed Tail ([[2026-11-22-research-findings]]).
 - 6v6 singles with Mega Evolution. 106,694 battles in the 1500 stats file for 2026-10; 66 species at ≥1.5% usage ([[2026-11-22-research-findings]]).

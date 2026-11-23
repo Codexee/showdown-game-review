@@ -17,6 +17,8 @@ Sources: [[2026-11-22-prior-art-research]], [[2026-11-22-prior-art-jaxcalibur-mi
 - **Auxiliary heads** (Jaxcalibur): predict each opposing Pokémon's item, ability, moves and Tera type, and the **opponent's next action**; the latter "made the bot substantially stronger". We have labels for both: the opponent's next action from every log, and hidden sets exactly from the inputlog rebuild (ADR-0009) or partly from what gets revealed later in the same game.
 - **History and matchup tokens** (Jaxcalibur): last 16 events; damage calcs per Pokémon pair, added halfway through.
 - **Search = one ply over sampled worlds, solved as a matrix game** (mikumiku: 16 worlds, top-8 × top-8, several RNG seeds per cell, regret matching; Jaxcalibur: pUCT over 32 worlds). This is exactly our planned move-review method (P1 item 6), with our value net at the leaf and hidden sets sampled from randbats priors / the set-prediction head. Use 64–128 seeds per cell for stable grades (mikumiku: 4 seeds gave nonsense). Search adds ~100–150 Elo; most of the strength is the network.
+  > [!warning] Conflict
+  > "One ply" fits mikumiku only. Jaxcalibur searches depth 4, about two turns, sharing nodes by revealed state ([[2026-11-22-prior-art-jaxcalibur-mikumiku]], [[2026-11-23-codex-review]] finding 6). [[ADR-0014-move-review-method]] Context groups both as "one ply". The ADR body is read-only; the decision itself doesn't depend on this.
 - **Doubles policy:** each slot's action includes its target; slot 2 conditioned on slot 1 (pairwise term) with pair legality masks (mikumiku). For stage 7.
 - **Fair play:** both withheld their bots over ladder and tournament cheating. Our tool must only analyze **finished** games ([[ADR-0013-post-game-analysis-only]]).
 
@@ -59,6 +61,14 @@ Sources: [[2026-11-22-prior-art-research]], [[2026-11-22-prior-art-jaxcalibur-mi
 - A pinned evaluation bank and a paired gate before adopting a model change (P0 item 4).
 - Playwright end-to-end checks of the review screen (we check by hand in the browser today).
 - Keep the parser's simulator-graded test as the guard for every parser change (already in place).
+
+## Second opinion: Codex review (2026-11-23)
+Source: [[2026-11-23-codex-review]] (verbatim, with Claude's checks). Web claims there are unverified until read.
+- **Confirmed:** the overnight script can install a model with no passing gate (`RUN` defaults to the installed run's name, and an unclear gate exports). Must be fixed before the overnight run.
+- **Confirmed, measured:** averaging p1's view and 1 − p2's view (as the move review already does) improves `main` on the pinned bank: log-loss 0.58543 → 0.58285 (band −0.0027 to −0.0025), accuracy 67.4% → 67.6%. The eval bar and the gate use one view today.
+- **Open diagnosis:** the "one label per game" cause of value overfitting is a hypothesis. A game-balanced value-sampling test would check it (no bot writeup confirms this practice; unverified).
+- **Move review, later:** each world is solved separately with one dice seed per cell, so the graded player gets a different best answer in worlds they can't tell apart, and a lucky roll can steer both answers. Fix: average dice inside each cell first, then one strategy for the graded player across worlds. Also sample the unseen bench (Eevenator, Foul Play), audit every Tera and switch choice, and build a small bank of checked verdicts.
+- **New references (unverified):** Nessie (1.5M params, ~375k search-guided games, damage/survival aux heads), Mew's Truck (scores 90 bring-4/lead-2 plans), Ninjask (open Champions VGC simulator), Eevenator, MissingNo.Zero, Numbrion, Metamon TD backups, PokaiTrainer.
 
 ## Decision needed
 Which of P0 to do before the overnight run: [[open-questions]].
