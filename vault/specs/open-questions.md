@@ -3,7 +3,7 @@ title: Open questions
 type: spec
 status: active
 tags: [area/vault]
-updated: 2026-11-22
+updated: 2026-11-23
 ---
 
 # Open questions
@@ -27,6 +27,9 @@ Items wait here until they are answered. When an item is answered, record the an
 
 13. **Verdict bank labels:** how many choices will the user label blind (the bank also works with search-based references alone) ([[plan-grade-quality]])?
 
+
+14. **Sprites for Gen 6+ Pokémon may not be official** (Codex audit #6, [[2026-11-23-design-audit-codex-claude]]). The battle view uses Showdown's `gen5` sprites for every species; for species after Gen 5 (e.g. Gholdengo) these are Black & White-style sprites drawn by the Smogon sprite project, not game assets (https://github.com/smogon/sprites#license, unverified by Claude). This conflicts with the rule "official Pokémon sprites only" ([[visual-style]]). Options: keep gen5-style for all (consistent look), use official Gen 6+ models/home sprites for newer species (mixed look), or ask the user to relax the rule for these.
+15. **Which design-audit fixes to make** ([[2026-11-23-design-audit-codex-claude]]). Recommendation: first the confirmed bugs and accessibility (arrow double-binding, focus ring, light-mode green text, phone doubles layout, selected-turn hover), then layout items.
 
 ## Resolved
 - **Publish the trained model** → yes: release `model-main-9000`, downloaded and checked by `setup.sh` ([[2026-11-23-publish-model]], [[ADR-0021-publish-model]]), 2026-11-23.

@@ -225,8 +225,12 @@ img.mini { width: 40px; height: 40px; image-rendering: pixelated; margin: -4px -
 .platform::after { content: ''; position: absolute; left: 6%; right: 6%; bottom: 0; height: 22px; border-radius: 50%;
   background: var(--platform); box-shadow: inset 0 -4px 0 var(--platform-edge); z-index: 0; }
 .sprite { width: 192px; height: 192px; image-rendering: pixelated; position: relative; z-index: 1; margin: -24px -12px; }
-/* Doubles: two Pokemon per platform at 1.5x (still a whole-pixel scale on 2x screens). */
-.field.doubles .sprite { width: 144px; height: 144px; margin: -18px -22px; }
+/* Doubles: two Pokemon share a platform. Each is as big as a singles sprite when the field is
+   wide enough; otherwise it shrinks to leave about 210px for the HP boxes. The wider negative
+   margins overlap the empty edges of the 96px canvases, so the pair stands close together. */
+.field.doubles { container-type: inline-size; }
+.field.doubles .sprite { --dsprite: min(var(--sprite, 192px), calc((100cqi - 210px) / 1.44));
+  width: var(--dsprite); height: var(--dsprite); margin: calc(var(--dsprite) * -0.12) calc(var(--dsprite) * -0.14); }
 .sprite.empty { display: inline-block; }
 .sprite.fainted { opacity: 0.25; filter: grayscale(1); }
 img.missing { visibility: hidden; }
@@ -409,7 +413,6 @@ img.missing { visibility: hidden; }
   .col-battle .side.theirs { align-self: start; }
   .col-battle .side.mine { align-self: end; }
   .col-battle .sprite { width: var(--sprite); height: var(--sprite); margin: calc(var(--sprite) * -0.12) calc(var(--sprite) * -0.06); }
-  .col-battle .field.doubles .sprite { width: calc(var(--sprite) * 0.75); height: calc(var(--sprite) * 0.75); }
   .col-battle .hinge { padding: 6px 0; }
   .col-battle .screen.bottom { padding: 8px 10px; }
   .col-battle .graph-svg { height: clamp(64px, 11vh, 130px); }
@@ -560,7 +563,6 @@ kbd { font-family: var(--pixel); border: 2px solid var(--line); border-bottom-wi
   .col-battle .field.doubles .hp-foot { min-height: 0; }
   .col-battle .field.doubles .chips { margin-top: 1px; }
   .col-battle .field.doubles .chip { font-size: 0.65rem; padding: 0 3px; }
-  .col-battle .field.doubles .sprite { width: calc(var(--sprite) * 0.62); height: calc(var(--sprite) * 0.62); }
   .col-battle .field.doubles { padding-top: 4px; }
 }
 

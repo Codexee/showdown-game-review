@@ -32,7 +32,7 @@ Pixel frame: a thick border with the four corner pixels cut away (`clip-path`, `
 - **Pixelify Sans was tried first and rejected:** its "5" reads as "S" and its bold "C" as "O" ("Turn 4 of 2S", "Oodexe"). Numbers are the pixel font's main job.
 
 ## Assets
-- Pokémon: Showdown's Gen 5-style sprites (front for the opponent, back for your side), through the local caching proxy `/sprites/gen5[-back]/<id>.png`. 192 px (2×) in singles, 144 px in doubles, 96 px on phones.
+- Pokémon: Showdown's Gen 5-style sprites (front for the opponent, back for your side), through the local caching proxy `/sprites/gen5[-back]/<id>.png`. 192 px (2×) in singles (on desktop `clamp(104px, 20vh, 192px)`). In doubles each sprite is the singles size when the field is wide enough, else it shrinks to leave about 210 px for the HP boxes (`min(var(--sprite), (100cqi − 210px) / 1.44)`, the field is a size container); the pair overlaps its empty canvas edges. Measured 2026-11-23: 1440×900 135→172 px, 1440×790 98→158 px, 900×800 144→192 px ([[2026-11-23-bigger-vgc-sprites-and-design-audit]]). Phones stay at 96 px.
 - UI art is CSS only (frames, HP bars, party balls, field). No Nintendo UI art is copied.
 - **SpriteCook** (plugin, not installed): planned to replace the CSS art with generated sprites/UI kit later ([[tooling]]).
 
@@ -46,6 +46,9 @@ Battle elements get a picture only when the Pokémon games have an official spri
 
 > [!warning] Corrected
 > The first reading of "official sprites" (Showdown's `/fx/` images) was wrong; the user meant official Pokémon sprites ([[2026-11-23-official-means-pokemon-sprites]]).
+
+> [!warning] Conflict
+> The sprite source (Showdown `gen5` for every species) and this rule may disagree for Gen 6+ species, whose Gen 5-style sprites are community art (Codex audit, [[2026-11-23-design-audit-codex-claude]]). Waiting on the user: [[open-questions]] #14.
 
 ## Rule: icons over text labels (user, 2026-11-23)
 Use an icon or symbol instead of a text label wherever the symbol reads clearly; put the words in `aria-label` and `title` ([[2026-11-23-icons-over-text-rule]], [[2026-11-23-less-text-symbols-motion]]). Examples in the app: the pin, ⟳ Sync, the dice for luck, chess marks (?!, ?, ??) for verdicts, pixel icons for game tags (lock, disk, scroll, lens), green/red bars for wins and losses, type-coloured chips. Pixel icons live in `ICONS` (`web/src/list.ts`), drawn 1:1 on an 8×8 or 14×14 grid.
