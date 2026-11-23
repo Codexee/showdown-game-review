@@ -371,3 +371,54 @@ img.missing { visibility: hidden; }
   .hp-fill, .eval-them, .eval-me { transition: none; }
   button:active:not(:disabled) { transform: none; }
 }
+
+/* ------------------------------------------------------------------ review layout
+   Phones and narrow windows: one column (battle, turns, review). Desktop: three columns
+   sized to the window, so the whole review fits one screen; long lists scroll inside
+   their own panel instead of the page (user request 2026-11-23). */
+.review-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.review-layout > .frame, .col-review > .frame { margin: 0; }
+.col-review { display: flex; flex-direction: column; gap: 16px; }
+.panel h2 { margin-bottom: 8px; }
+.col-turns .keys { margin: 8px 0 0; }
+
+@media (min-width: 1100px) and (min-height: 620px) {
+  body[data-page='review'] #app { max-width: 1720px; height: 100vh; height: 100dvh; display: flex; flex-direction: column;
+    padding: 10px 20px 14px; }
+  body[data-page='review'] .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  body[data-page='review'] .status { position: fixed; top: 10px; right: 20px; z-index: 5; margin: 0; min-height: 0; }
+  body[data-page='review'] .status:not(:empty) { background: var(--screen); border: 3px solid var(--frame); padding: 4px 10px; }
+
+  .review-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; margin-bottom: 10px; }
+  .review-head h1 { font-size: 1.6rem; margin: 0; }
+  .review-head .meta { margin: 0; }
+
+  .review-layout { flex: 1; min-height: 0; gap: 14px;
+    grid-template-columns: minmax(0, 1.3fr) minmax(270px, 0.85fr) minmax(320px, 1fr); }
+  .review-layout > * { min-height: 0; }
+
+  /* Battle column: the top screen takes the height that is left. */
+  .col-battle { --sprite: clamp(104px, 20vh, 192px); display: flex; flex-direction: column; }
+  .col-battle .top-row { flex: 1; min-height: 0; }
+  .col-battle .screen.top { display: flex; flex-direction: column; min-height: 0; }
+  .col-battle .field { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+  .col-battle .side.theirs { align-self: start; }
+  .col-battle .side.mine { align-self: end; }
+  .col-battle .sprite { width: var(--sprite); height: var(--sprite); margin: calc(var(--sprite) * -0.12) calc(var(--sprite) * -0.06); }
+  .col-battle .field.doubles .sprite { width: calc(var(--sprite) * 0.75); height: calc(var(--sprite) * 0.75); }
+  .col-battle .hinge { padding: 6px 0; }
+  .col-battle .screen.bottom { padding: 8px 10px; }
+  .col-battle .graph-svg { height: clamp(64px, 11vh, 130px); }
+  .col-battle .method { margin: 6px 0 0; }
+
+  /* Turns column: the list fills the column and scrolls inside it. */
+  .col-turns { display: flex; flex-direction: column; padding: 12px; }
+  .col-turns .turn-list { flex: 1; min-height: 0; max-height: none; }
+
+  /* Review column: scorecards, what happened, team; scrolls inside if it runs long. */
+  .col-review { gap: 14px; overflow-y: auto; overscroll-behavior: contain; }
+  .col-review .analysis-bar { padding: 12px; }
+  .events-panel { display: flex; flex-direction: column; flex: 1 0 auto; padding: 12px; min-height: 180px; }
+  .events-panel .events { flex: 1; max-height: none; }
+  .team-details { padding: 10px 12px; }
+}

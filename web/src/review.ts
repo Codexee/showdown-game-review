@@ -96,12 +96,7 @@ class ReviewScreen {
     this.nextBtn.addEventListener('click', () => this.go(this.step + 1))
     const hinge = h('div', { class: 'hinge' }, this.prevBtn, this.turnLabel, this.nextBtn)
 
-    const bottom = h('div', { class: 'screen bottom' },
-      this.graph,
-      this.methodText,
-      h('div', { class: 'bottom-grid' },
-        h('section', { 'aria-label': 'Turns' }, h('h2', {}, 'Turns'), this.turnList),
-        h('section', { 'aria-label': 'What happened' }, h('h2', {}, 'What happened'), this.eventsBox)))
+    const bottom = h('div', { class: 'screen bottom' }, this.graph, this.methodText)
 
     const teamArea = h('textarea', { id: 'team-paste', rows: '8', spellcheck: 'false',
       placeholder: 'Paste the team you used (Showdown export format)' })
@@ -115,15 +110,22 @@ class ReviewScreen {
       try { await api.saveTeam(g.id, teamArea.value); say('Team saved.') } catch (err) { say(errText(err), 'error') }
     })
 
+    // Desktop: three columns that fit one screen (battle | turns | review); phones stack them.
     this.root.replaceChildren(
       header,
-      this.analysisBar,
-      h('div', { class: 'ds' },
-        h('div', { class: 'top-row' }, this.topScreen, this.evalBar),
-        hinge,
-        bottom),
-      h('p', { class: 'keys' }, 'Use the ← and → keys to step through turns.'),
-      h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team for this game'), teamForm))
+      h('div', { class: 'review-layout' },
+        h('div', { class: 'ds col-battle' },
+          h('div', { class: 'top-row' }, this.topScreen, this.evalBar),
+          hinge,
+          bottom),
+        h('section', { class: 'panel col-turns frame', 'aria-label': 'Turns' },
+          h('h2', {}, 'Turns'), this.turnList,
+          h('p', { class: 'keys' }, 'Use the ← and → keys to step through turns.')),
+        h('div', { class: 'col-review' },
+          this.analysisBar,
+          h('section', { class: 'panel events-panel frame', 'aria-label': 'What happened' },
+            h('h2', {}, 'What happened'), this.eventsBox),
+          h('details', { class: 'team-details frame' }, h('summary', {}, 'Your team for this game'), teamForm))))
 
     this.methodText.textContent = this.review.eval_method_text
     this.buildGraph()

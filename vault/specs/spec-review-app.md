@@ -11,7 +11,7 @@ updated: 2026-11-22
 Lichess-style game review for Showdown games ([[project-overview]]). Runs locally ([[ADR-0001-local-web-app]]) in a Gen 4–5 pixel-art style ([[visual-style]]). Battle view: [[ADR-0011-review-screen-battle-view]].
 
 > [!note] Status 2026-11-22: stage 4 built
-> Games page and review screen work for singles and doubles, light and dark, phone and desktop. The eval is a **placeholder** (remaining HP) until stage 5. Not built: move labels (best / mistake…), best-move suggestions, forced-switch decision points mid-turn.
+> Games page and review screen work for singles and doubles, light and dark, phone and desktop. **Desktop (≥1100 × 620 px): the review screen fits one screen with no page scroll**, in three columns: battle screen + eval bar + hinge + graph | turn list | move review + what happened + team. The turn list and the review column scroll inside their panels. Narrower windows stack the columns (2026-11-23, [[2026-11-23-desktop-one-screen-layout]]). The page `index.html` is served with `Cache-Control: no-cache` so a new build always loads. The eval is a **placeholder** (remaining HP) until stage 5. Not built: move labels (best / mistake…), best-move suggestions, forced-switch decision points mid-turn.
 
 ## Screens
 1. **Games** (`#/`): trainer card (username, sync, top ladder ratings), add a game (URL, file, userscript help), your games with filters. Each row links to its review.

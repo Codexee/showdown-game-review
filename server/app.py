@@ -421,7 +421,9 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             target = (dist / path).resolve()
             if path and target.is_file() and dist.resolve() in target.parents:
                 return FileResponse(target)
-            return FileResponse(dist / "index.html")
+            # Always revalidate the page itself: its asset names change on every build, so a
+            # cached copy would keep loading the old UI (seen 2026-11-23).
+            return FileResponse(dist / "index.html", headers={"Cache-Control": "no-cache"})
 
     return app
 
