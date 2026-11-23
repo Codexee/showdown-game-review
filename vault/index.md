@@ -105,4 +105,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-side-tags-no-turn-repeat]]
 - [[2026-11-23-official-means-pokemon-sprites]]
 - [[2026-11-23-sprite-overlaps]]
+- [[2026-11-23-remove-field-layers]]
 - [[2026-11-22-second-brain-guide]]

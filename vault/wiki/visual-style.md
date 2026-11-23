@@ -42,7 +42,7 @@ Pixel frame: a thick border with the four corner pixels cut away (`clip-path`, `
 - Text left-aligned; line lengths short; visible focus ring (`--focus`, yellow).
 
 ## Rule: official Pokémon sprites only (user, 2026-11-23)
-Battle elements get a picture only when the Pokémon games have an official sprite for it: Pokémon (gen5 still and animated), item icons, the substitute doll. Not Showdown's own effect art (`/fx/` rocks, caltrops, web) and not hand-drawn CSS art; anything else (hazards, screens, Tailwind) is a tag or an icon ([[2026-11-23-official-sprites-and-space]], corrected by [[2026-11-23-official-means-pokemon-sprites]]).
+Battle elements get a picture only when the Pokémon games have an official sprite for it: Pokémon (gen5 still and animated), item icons, the substitute doll. Not Showdown's own effect art (`/fx/` rocks, caltrops, web) and not hand-drawn CSS art; anything else (hazards, screens, Tailwind, weather, terrain, rooms) is a tag or an icon; the drawn field layers were removed on the user's answer ([[2026-11-23-remove-field-layers]]) ([[2026-11-23-official-sprites-and-space]], corrected by [[2026-11-23-official-means-pokemon-sprites]]).
 
 > [!warning] Corrected
 > The first reading of "official sprites" (Showdown's `/fx/` images) was wrong; the user meant official Pokémon sprites ([[2026-11-23-official-means-pokemon-sprites]]).

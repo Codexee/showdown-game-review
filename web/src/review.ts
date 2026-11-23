@@ -4,7 +4,7 @@
 import { api, type Analysis, type Mon, type Review, type SideReview, type SideView, type Step, type TurnReview } from './api'
 import { errText, fmtDate, h, pct, s, say } from './dom'
 import { formatBadge, icon, shortDate } from './list'
-import { battleSprite, fieldOverlays, infoCard, moveStrip, substituteSprite } from './battlefx'
+import { battleSprite, infoCard, moveStrip, substituteSprite } from './battlefx'
 
 const STAT_SHORT: Record<string, string> = { atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe', accuracy: 'Acc', evasion: 'Eva' }
 const STATUS_LABEL: Record<string, string> = { brn: 'BRN', par: 'PAR', slp: 'SLP', frz: 'FRZ', psn: 'PSN', tox: 'TOX' }
@@ -379,7 +379,8 @@ class ReviewScreen {
     field.append(this.sideArea(view.sides[this.them], false, doubles), this.sideArea(view.sides[this.me], true, doubles))
     const tags = this.fieldTags(st)
     this.hovered = null
-    this.topScreen.replaceChildren(...fieldOverlays(view.field), field, tags)
+    // Field effects are tags only (no official Pokemon sprite exists for them; vault visual-style).
+    this.topScreen.replaceChildren(field, tags)
     this.renderInspect()
   }
 

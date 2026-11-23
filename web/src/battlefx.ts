@@ -65,23 +65,6 @@ export function substituteSprite(back: boolean, cls: string): HTMLElement {
     src: `/sprites/${back ? 'sub-back' : 'sub'}/substitute.png` })
 }
 
-// ---------------------------------------------------------------- field effects
-const WEATHER_FX: Record<string, string> = {
-  raindance: 'rain', primordialsea: 'rain', sunnyday: 'sun', desolateland: 'sun', sandstorm: 'sand',
-  snowscape: 'snow', hail: 'snow', deltastream: 'wind',
-}
-/** Quiet overlays for weather, terrain and room effects (labels stay in the tags below). */
-export function fieldOverlays(field: { weather: string; terrain: string; pseudo_weather: string[] }): HTMLElement[] {
-  const out: HTMLElement[] = []
-  const wx = WEATHER_FX[field.weather]
-  if (wx) out.push(h('div', { class: `fx-layer wx ${wx}`, 'aria-hidden': 'true' }))
-  if (field.terrain) out.push(h('div', { class: `fx-layer terrain ${field.terrain.replace('terrain', '')}`, 'aria-hidden': 'true' }))
-  for (const p of field.pseudo_weather) {
-    if (['trickroom', 'gravity', 'magicroom', 'wonderroom'].includes(p)) out.push(h('div', { class: `fx-layer room ${p}`, 'aria-hidden': 'true' }))
-  }
-  return out
-}
-
 // ---------------------------------------------------------------- moves and info cards
 /** Role weights given what has been revealed: roles that can't have a revealed move drop out. */
 function rolesFor(roles: DexRole[], mon: Mon): DexRole[] {
