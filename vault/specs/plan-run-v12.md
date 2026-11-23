@@ -1,7 +1,7 @@
 ---
 title: "Plan: training run v1.2 (value overfitting)"
 type: spec
-status: active
+status: done
 tags: [area/model]
 updated: 2026-11-22
 ---
@@ -74,6 +74,9 @@ Source: [[2026-11-23-codex-review]]. Items 1–3 are checked; 4–5 are test-des
 - Settings: C's (the schedule needs dropout 0.2 / wd 0.1 too; both were in C).
 - Install: only if the two-view gate says better than `main` ([[ADR-0016-two-view-scoring-strict-gate]]).
 - Option not tested: add 2024 (713k more games, about 2.2 epochs in 9 h). D says older games help, but 2024 is further from today's sets.
+
+### Result (2026-11-23, [[2026-11-23-v12-results]])
+v12 beat `main` on the pinned bank: log-loss 0.57381 vs 0.58285 (−0.0090, band [−0.0120, −0.0062]), accuracy 68.2% vs 67.6%, better in every phase; the value loss no longer turned up (best at epoch 2.6, flat after). Installed as `current.pt`. Model testing is closed ([[ADR-0018-grade-quality-before-ui]]).
 
 ## Needs from the user
 - The Mac must stay awake: lid open, or on power with an external display. Clamshell sleep on battery pauses runs ([[environment-quirks]]).

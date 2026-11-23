@@ -60,7 +60,7 @@ Rules for this vault: [[CLAUDE]].
 - [[plan-grade-quality]]: next stage: verdict bank, worlds fairness fix, depth-2 re-check (draft)
 - [[goals-endgame]]: long-range goals set by the user (deeper search than PS Dashboard at its speed, and more)
 - [[plan-model-gains]]: eval gains beyond more training (ensembles, calibration, search as the eval)
-- [[plan-run-v12]]: next training run, fixing value overfitting (tests running; overnight run waits on the user)
+- [[plan-run-v12]]: training run v1.2 (done: `v12` installed, 68.2% on future games)
 - [[spec-eval-model]]: the network and training pipeline (v1 built; overnight run pending)
 
 ## Logs
@@ -116,6 +116,7 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-publish-answers]]
 - [[2026-11-23-local-app-not-hosted]]
 - [[2026-11-23-publish-model]]
+- [[2026-11-23-v12-results]]
 - [[2026-11-23-bigger-vgc-sprites-and-design-audit]]
 - [[2026-11-23-design-audit-codex-claude]]
 - [[2026-11-23-audit-fixes-go-sprite-project-official]]
