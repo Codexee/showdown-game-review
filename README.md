@@ -23,7 +23,7 @@ The first run of `start.sh` runs `setup.sh`, which installs the Python packages 
 
 ## Win-chance model
 
-The eval bar and move review use a small network trained on Random Battle replays. Without one installed, the eval bar shows a remaining-HP estimate and move review is off.
+The eval bar and move review use a small network trained on Random Battle replays. `setup.sh` downloads the published one from the [latest release](https://github.com/Codexee/showdown-game-review/releases/latest) (28 MB, checked against its SHA-256; skip with `NO_MODEL=1`). It calls the winner from each turn 67% of the time on games it never saw, against 63% for a remaining-HP estimate. Without a model, the eval bar falls back to that estimate and move review is off.
 
 Training your own takes some disk space (tens of GB) and hours on a laptop GPU:
 

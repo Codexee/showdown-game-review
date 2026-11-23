@@ -20,7 +20,8 @@ class ModelEval:
         import torch
         from training.model import EvalNet, ModelConfig
 
-        ck = torch.load(path, map_location="cpu", weights_only=False)
+        # Safe loading (tensors and plain values only): the model may be downloaded from a release.
+        ck = torch.load(path, map_location="cpu", weights_only=True)
         self.model = EvalNet(ModelConfig(**ck["config"]))
         self.model.load_state_dict(ck["model"])
         self.model.eval()
