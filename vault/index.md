@@ -93,4 +93,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-games-page-one-block]]
 - [[2026-11-23-less-text-symbols-motion]]
 - [[2026-11-23-turn-motion-and-team-paste]]
+- [[2026-11-23-theme-motion-switches]]
 - [[2026-11-22-second-brain-guide]]

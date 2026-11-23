@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Showdown Review</title>
+    <script>
+      // Theme and motion before first paint: the saved choice, else the system setting.
+      (function () {
+        var d = document.documentElement, mq = function (q) { return window.matchMedia(q).matches }
+        var t = null, m = null
+        try { t = localStorage.getItem('sr-theme'); m = localStorage.getItem('sr-motion') } catch (e) {}
+        d.dataset.theme = t || (mq('(prefers-color-scheme: dark)') ? 'dark' : 'light')
+        d.dataset.motion = m || (mq('(prefers-reduced-motion: reduce)') ? 'off' : 'on')
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

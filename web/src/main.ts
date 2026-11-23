@@ -7,11 +7,12 @@ import '@fontsource/atkinson-hyperlegible/700.css'
 import './style.css'
 import { h, statusLine } from './dom'
 import { renderList } from './list'
+import { prefsBar } from './prefs'
 import { renderReview, reviewKeyHandler, setCurrent } from './review'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 const view = h('div', { class: 'view' })
-app.append(statusLine, view)
+app.append(prefsBar(), statusLine, view)
 
 function route() {
   const m = location.hash.match(/^#\/game\/([^/]+)(?:\/(\d+))?$/)

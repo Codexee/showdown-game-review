@@ -39,30 +39,29 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #0e1828;
-    --frame: #0a1222;
-    --frame-hi: #2a3f63;
-    --hinge: #050a14;
-    --screen: #1b2740;
-    --screen-2: #233251;
-    --ink: #e6eef8;
-    --ink-soft: #a6b6cf;
-    --line: #34476b;
-    --sky-1: #142236;
-    --sky-2: #1c3048;
-    --grass-1: #2c5566;
-    --grass-2: #1e3a4a;
-    --platform: #2f6070;
-    --platform-edge: #1b4150;
-    --hp-track: #0d1626;
-    --you: #6aa2f0;
-    --them: #f0708a;
-    --btn: #3d6098;
-    --btn-hover: #4c73b0;
-    color-scheme: dark;
-  }
+/* Theme: set on <html> by index.html / main.ts (saved choice, else the system setting). */
+:root[data-theme='dark'] {
+  --page: #0e1828;
+  --frame: #0a1222;
+  --frame-hi: #2a3f63;
+  --hinge: #050a14;
+  --screen: #1b2740;
+  --screen-2: #233251;
+  --ink: #e6eef8;
+  --ink-soft: #a6b6cf;
+  --line: #34476b;
+  --sky-1: #142236;
+  --sky-2: #1c3048;
+  --grass-1: #2c5566;
+  --grass-2: #1e3a4a;
+  --platform: #2f6070;
+  --platform-edge: #1b4150;
+  --hp-track: #0d1626;
+  --you: #6aa2f0;
+  --them: #f0708a;
+  --btn: #3d6098;
+  --btn-hover: #4c73b0;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -133,7 +132,7 @@ input[type='file'] { border-style: dashed; max-width: 100%; }
 /* ───────────── Games page ───────────── */
 .app-head { padding: 8px 0 16px; }
 .app-head h1 { font-size: 2.25rem; color: var(--frame); }
-@media (prefers-color-scheme: dark) { .app-head h1 { color: var(--ink); } }
+:root[data-theme='dark'] .app-head h1 { color: var(--ink); }
 
 .home-profile { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; }
 .home-profile .user-form { grid-column: 1; }
@@ -477,10 +476,8 @@ img.missing { visibility: hidden; }
 .wl-nums { grid-area: nums; font-family: var(--pixel); display: flex; gap: 3px; }
 .wl-nums .w { color: color-mix(in srgb, var(--hp-green) 55%, var(--ink)); }
 .wl-nums .l { color: color-mix(in srgb, var(--them) 80%, var(--ink)); }
-@media (prefers-color-scheme: dark) {
-  .wl-nums .w { color: var(--hp-green); }
-  .wl-nums .l { color: color-mix(in srgb, var(--them) 70%, #fff); }
-}
+:root[data-theme='dark'] .wl-nums .w { color: var(--hp-green); }
+:root[data-theme='dark'] .wl-nums .l { color: color-mix(in srgb, var(--them) 70%, #fff); }
 
 .marks { grid-area: marks; display: flex; gap: 8px; color: var(--ink-soft); }
 .pxicon { width: 14px; height: 14px; fill: currentColor; shape-rendering: crispEdges; display: block; }
@@ -603,4 +600,34 @@ kbd { font-family: var(--pixel); border: 2px solid var(--line); border-bottom-wi
   .review-layout > .enter, .turn-list li.enter, .events ul.play .ev { animation-name: fade; animation-delay: 0ms; }
   .sprite.hit, .sprite.switch-in, .sprite.faint-now, .status-tag.pop, .chip.pop { animation: none; }
   .hp-ghost.lost { animation: flash 360ms ease-out both; transform: none; }
+}
+
+/* Motion off (the switch in the top right; default follows the system's reduced-motion
+   setting): no animations or transitions anywhere. */
+:root[data-motion='off'] *, :root[data-motion='off'] *::before, :root[data-motion='off'] *::after {
+  animation: none !important; transition: none !important;
+}
+
+/* ------------------------------------------------------------------ display switches (top right) */
+#app { position: relative; }
+.prefs { position: absolute; top: 10px; right: 16px; z-index: 6; display: flex; gap: 10px; }
+.app-head, .review-head { padding-right: 190px; }
+button.toggle-switch { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; background: var(--screen);
+  color: var(--ink); border: 2px solid var(--frame); font: inherit; }
+button.toggle-switch:hover:not(:disabled) { background: var(--screen-2); }
+button.toggle-switch:active:not(:disabled) { transform: none; }
+button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.toggle-switch .pxicon { width: 12px; height: 12px; }
+.switch-track { position: relative; width: 30px; height: 16px; background: var(--hp-track); border: 2px solid var(--frame); flex: none; }
+.switch-knob { position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; background: #fff; }
+.toggle-switch[aria-checked='true'] .switch-track { background: var(--you); }
+.toggle-switch[aria-checked='true'] .switch-knob { transform: translateX(14px); }
+.switch-knob { transition: transform 160ms var(--ease-out); }   /* feedback for the press */
+.switch-track { transition: background-color 160ms ease; }
+/* The status message sits below the switches. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  body[data-page='list'] .status, body[data-page='review'] .status { top: 48px; }
+}
+@media (max-width: 560px) {
+  .app-head, .review-head { padding-right: 0; padding-top: 34px; }
 }
