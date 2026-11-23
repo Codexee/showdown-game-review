@@ -126,4 +126,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-spritecook-new-sprites-auth]]
 - [[2026-11-23-auto-upload-replays]]
 - [[2026-11-23-auto-upload-private]]
+- [[2026-11-23-first-real-browser-auto-upload]]
 - [[2026-11-22-second-brain-guide]]
