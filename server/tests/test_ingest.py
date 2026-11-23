@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from server.app import create_app
 from server.config import Config
-from server.ingest import clean_log, game_id_from_room
+from server.ingest import clean_log, game_id_from_room, replay_ref_from_room
 
 from .conftest import RANDBATS_ID, VGC_ID, load_replay
 
@@ -32,6 +32,8 @@ def battle_body(replay_id: str, **extra) -> dict:
 def test_room_ids():
     assert game_id_from_room("battle-gen9randombattle-123") == "gen9randombattle-123"
     assert game_id_from_room("battle-gen9ou-123-abc123pw") == "gen9ou-123"
+    assert replay_ref_from_room("battle-gen9ou-123-abc123pw") == ("gen9ou-123", "abc123")
+    assert replay_ref_from_room("battle-gen9ou-123") == ("gen9ou-123", None)
     for bad in ("lobby", "battle-../../x-1", "battle-gen9ou"):
         with pytest.raises(ValueError):
             game_id_from_room(bad)
@@ -126,3 +128,43 @@ def test_bad_ids_cannot_escape_data_dir(client, tmp_path):
 def test_userscript_served(client):
     r = client.get("/userscript/showdown-game-review.user.js")
     assert r.status_code == 200 and "==UserScript==" in r.text
+
+
+# ---- auto-upload (2026-11-23): the userscript ran /savereplay; fetch the replay now
+def test_ingest_uploaded_upgrades_and_auto_analyzes(client, fake, monkeypatch):
+    from server.review.jobs import Jobs
+    queued: list[str] = []
+    real_start = Jobs.start
+    monkeypatch.setattr(Jobs, "start", lambda self, gid, **kw: (queued.append(gid), real_start(self, gid, **kw))[1])
+    client.post("/api/sync")  # sets the start time
+    client.post("/api/ingest", json=battle_body(RANDBATS_ID))         # the browser's copy, no inputlog
+    body = {"roomid": f"battle-{RANDBATS_ID}"}
+    r = client.post("/api/ingest-uploaded", json=body).json()
+    assert r == {"id": RANDBATS_ID, "found": False, "added": False}    # not uploaded yet
+    fake.add(load_replay(RANDBATS_ID), uploadtime=int(time.time()) + 5)
+    r = client.post("/api/ingest-uploaded", json=body).json()
+    assert r == {"id": RANDBATS_ID, "found": True, "added": False}     # upgraded, not new
+    game = client.get(f"/api/games/{RANDBATS_ID}").json()
+    assert game["has_inputlog"] and game["uploadtime"] is not None
+    assert queued.count(RANDBATS_ID) == 2   # on the browser copy (unsupported: no inputlog) and on the upgrade
+    n = len(fake.requests)
+    assert client.post("/api/ingest-uploaded", json=body).json()["found"] is True
+    assert len(fake.requests) == n          # already has the server copy: no request
+
+
+def test_ingest_uploaded_private_room_uses_its_password(client, fake):
+    client.post("/api/sync")
+    fake.add(load_replay(VGC_ID), uploadtime=int(time.time()) + 5, password="abc123")
+    r = client.post("/api/ingest-uploaded", json={"roomid": f"battle-{VGC_ID}-abc123pw"}).json()
+    assert r == {"id": VGC_ID, "found": True, "added": True}
+    game = client.get(f"/api/games/{VGC_ID}").json()
+    assert game["private"] is True and not game["has_inputlog"]   # VGC: no inputlog, so no move review
+    assert fake.requests[-1].url.path == f"/{VGC_ID}-abc123pw.json"
+
+
+def test_ingest_uploaded_rejects_bad_rooms_and_other_sites(client):
+    assert client.post("/api/ingest-uploaded", json={"roomid": "lobby"}).status_code == 400
+    evil = {"Origin": "https://evil.example"}
+    assert client.post("/api/ingest-uploaded", json={"roomid": f"battle-{RANDBATS_ID}"}, headers=evil).status_code == 403
+    pre = client.options("/api/ingest-uploaded", headers={"Origin": PLAY, "Access-Control-Request-Method": "POST"})
+    assert pre.status_code == 204

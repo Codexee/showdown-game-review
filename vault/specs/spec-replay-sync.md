@@ -3,7 +3,7 @@ title: Spec: replay sync and game list
 type: spec
 status: draft
 tags: [area/data, area/ui]
-updated: 2026-11-22
+updated: 2026-11-23
 ---
 
 # Spec: replay sync and game list (draft)
@@ -12,6 +12,7 @@ updated: 2026-11-22
 > **Built (stage 2a):** profile, poller (public and password-suffixed private replays it can see), archive, game list with filters, URL import, file import (.log/.json/.html), team paste, settings. Code map: [[module-map]]. Checked live: first sync set the start time; two of Codexe's older replays were added by URL.
 > **Built (stage 2b), same day:** userscript (`userscript/showdown-game-review.user.js`, installable from the app), `/api/ingest`, `/api/ingest-private`, origin guard ([[ADR-0010-local-api-origin-guard]]). Tested with Node (fake client) and end to end against a throwaway server. **Not yet tried on the real play.pokemonshowdown.com in a real browser**: see [[open-questions]] #1.
 > Team icons are text names for now; sprites come in stage 4.
+> **Built (auto-upload), 2026-11-23:** the userscript uploads each finished game you played with `/savereplay silent`, and `/api/ingest-uploaded` fetches the replay at once, so move review starts with no input ([[ADR-0022-auto-upload-replays]], [[2026-11-23-auto-upload-replays]]). Tested with Node and pytest only; real browser: [[open-questions]] #1.
 
 Source requests: [[2026-11-22-interview-round-1]] and [[2026-11-22-interview-round-2]]. Storage and capture decisions: [[ADR-0006-replay-archive]].
 
@@ -37,6 +38,15 @@ The app knows my Showdown username (`Codexe`). It shows my ratings and a list of
    - **Transport:** `GM_xmlhttpRequest` with `// @grant GM_xmlhttpRequest` and `// @connect localhost`, so the page's CORS rules and Chrome's Local Network Access prompt for page `fetch()` calls don't apply. (unverified that LNA skips extension requests; test once.) Fallback: plain `fetch()` after a one-time LNA prompt, with FastAPI allowing the `https://play.pokemonshowdown.com` origin on the ingest routes only.
    - **Dedup:** the room id `battle-<format>-<n>` matches the replay id `<format>-<n>`. (unverified; check with one game.) A later upload of the same game upgrades the stored copy with the inputlog.
    - **Retry:** if the local server is down, keep unsent logs in the script's storage (`GM_setValue`) and resend on the next page load.
+   - **Auto-upload** ([[ADR-0022-auto-upload-replays]]): after a game **you played** ends, the script waits 4 s and sends `/savereplay silent` to the room. That is the client's "Upload and share replay" command without the popup (Showdown `core.ts`; [[2026-11-23-auto-upload-replays]]). The uploaded replay carries the inputlog, which move review needs and the browser never sees.
+     - Privacy is the room's. A hidden or invite-only battle, or one after `/hidereplay`, uploads as a private replay. A hidden battle is renamed to `…-<pw>pw` at the end. The script follows `|noinit|rename|`, so it knows the password.
+     - Pickup: `POST /api/ingest-uploaded {roomid}` at 8 s, 30 s and 120 s after the upload. Each call makes at most one replay-server request and the script stops at the first `found`. Then it lists private replays once; the poller covers the rest.
+     - Switch: Tampermonkey menu → "Auto-upload replays" (default on). App down: Showdown still uploads; both local sends are queued.
+     - Spectated and unfinished games are never uploaded.
+     - **VGC:** uploaded and saved like any format, but there is no inputlog and no doubles model, so there is no move review. Auto-analysis skips it.
+     - **Unknown:** does Showdown accept `/savereplay` from a user who has already left the room? This happens if you close the tab within 4 s of the end. The source doesn't settle it ([[open-questions]] #17).
+     - **Unknown:** does a chat throttle on the main server ever drop the command right after a game? ([[open-questions]] #17)
+     - **Unknown:** the value of `Config.autosavereplays` on the main server ([[open-questions]] #17).
 4. **Archive.** Raw files under `data/replays/<format>/<id>.{json,log}` plus one SQLite row each. Every format. Never delete. Re-running sync or re-sending a game must not create duplicates.
 5. **Game list (UI)** shows per game: date, format, opponent, result, rating before/after if the log has it, turn count, both teams as sprite icons, public/private/not-uploaded, and an "analyzed" badge once a model has scored it. Filter by format, result and opponent. Eval bars only for formats that have a model.
 6. **Manual input** (all chosen in round 2):
@@ -52,7 +62,8 @@ The app knows my Showdown username (`Codexe`). It shows my ratings and a list of
 ## Done when
 - Starting sync stores each new game once; a second sync adds nothing.
 - A game finished in the browser with the userscript installed appears in the list within a minute, even if it was not uploaded.
+- With auto-upload on, a finished Gen 9 Random Battle has its inputlog and its move review queued within about 10 s, with no clicks.
 - A pasted URL and an uploaded log both open in the review screen.
 
 ## Related
-- [[data-sources]] · [[spec-review-app]] · [[architecture]] · [[ADR-0007-app-stack]]
+- [[data-sources]] · [[spec-review-app]] · [[architecture]] · [[ADR-0007-app-stack]] · [[ADR-0022-auto-upload-replays]]

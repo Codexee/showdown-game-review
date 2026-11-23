@@ -31,7 +31,7 @@ from .review.analyze import SEARCH_BLEND, search_value_p1
 from .review.jobs import Jobs
 from .ids import parse_replay_ref, to_id
 from .imports import record_from_file
-from .ingest import BattleIn, PrivateListIn, ingest_battle, ingest_private
+from .ingest import BattleIn, PrivateListIn, UploadedIn, ingest_battle, ingest_private, ingest_uploaded
 from .showdown import ShowdownClient, ShowdownError, make_http
 from .sprites import SpriteCache, sprite_id
 from .sync import refresh_profile, sync_user
@@ -40,6 +40,7 @@ from .sync import refresh_profile, sync_user
 # path when GM_xmlhttpRequest isn't available). Everything else under /api only
 # accepts requests from this app's own pages on localhost.
 SHOWDOWN_ORIGINS = {"https://play.pokemonshowdown.com", "https://replay.pokemonshowdown.com"}
+INGEST_PATHS = ("/api/ingest", "/api/ingest-private", "/api/ingest-uploaded")
 USERSCRIPT_FILE = ROOT / "userscript" / "showdown-game-review.user.js"
 
 
@@ -162,7 +163,7 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
         origin = request.headers.get("origin")
         if not path.startswith("/api/") or not origin:
             return await call_next(request)
-        ingest = path in ("/api/ingest", "/api/ingest-private")
+        ingest = path in INGEST_PATHS
         if _is_local_origin(origin):
             return await call_next(request)
         if ingest and origin in SHOWDOWN_ORIGINS:
@@ -451,6 +452,16 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
             raise HTTPException(409, f"Private list is for {body.username}, but the app is set to {username()}")
         result = await ingest_private(state["client"], archive, body, sync_start())
         archive.set_setting("last_ingest_private", str(int(time.time())))
+        return result
+
+    @app.post("/api/ingest-uploaded")
+    async def post_ingest_uploaded(body: UploadedIn, request: Request):
+        require_json(request)
+        try:
+            result = await ingest_uploaded(state["client"], archive, body, sync_start())
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        archive.set_setting("last_ingest_uploaded", str(int(time.time())))
         return result
 
     @app.get("/userscript/showdown-game-review.user.js", include_in_schema=False)

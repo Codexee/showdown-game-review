@@ -112,15 +112,17 @@ class Archive:
 
     def needs(self, game_id: str) -> bool:
         """True if the replay server's copy would add something: the game is missing,
-        or it was captured by the userscript (no upload time, no inputlog), or it is a
-        random format stored without its inputlog."""
+        or it is a userscript copy not yet upgraded by the replay server (no upload time),
+        or it is a random format stored without its inputlog."""
         with self._db() as db:
             row = db.execute(
-                "SELECT source, has_inputlog, format_id FROM games WHERE id=?", (game_id,)
+                "SELECT source, has_inputlog, format_id, uploadtime FROM games WHERE id=?", (game_id,)
             ).fetchone()
         if row is None:
             return True
-        if row["source"] == "userscript":
+        # An upgraded copy keeps source=userscript but gains an upload time (2026-11-23:
+        # before this, an upgraded game was fetched again on every check).
+        if row["source"] == "userscript" and row["uploadtime"] is None:
             return True
         return not row["has_inputlog"] and is_random_format(row["format_id"])
 

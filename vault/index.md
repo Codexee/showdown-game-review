@@ -2,7 +2,7 @@
 title: Index (map of content)
 type: moc
 tags: [area/vault]
-updated: 2026-11-22
+updated: 2026-11-23
 ---
 
 # Showdown Game Review (`showdown-game-review`): index
@@ -51,10 +51,11 @@ Rules for this vault: [[CLAUDE]].
 - [[ADR-0019-project-name]]: accepted (one name: `showdown-game-review`)
 - [[ADR-0020-distribution]]: accepted (public GitHub repo; local app with one-command setup)
 - [[ADR-0021-publish-model]]: accepted (model `main@9000` as a release; setup downloads and verifies it)
+- [[ADR-0022-auto-upload-replays]]: accepted (userscript uploads each game you play with `/savereplay silent`; app fetches it at once)
 
 ## Specs
 - [[spec-review-app]]: review screen and games page (built; eval from the trained model; move review for randbats)
-- [[spec-replay-sync]]: pull user data, list games, auto-save replays (draft)
+- [[spec-replay-sync]]: pull user data, list games, auto-save and auto-upload replays (draft)
 - [[plan-grade-quality]]: next stage: verdict bank, worlds fairness fix, depth-2 re-check (draft)
 - [[goals-endgame]]: long-range goals set by the user (deeper search than PS Dashboard at its speed, and more)
 - [[plan-model-gains]]: eval gains beyond more training (ensembles, calibration, search as the eval)
@@ -121,4 +122,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-spritecook-redo-sprites]]
 - [[2026-11-23-drop-spritecook]]
 - [[2026-11-23-spritecook-new-sprites-auth]]
+- [[2026-11-23-auto-upload-replays]]
 - [[2026-11-22-second-brain-guide]]

@@ -49,7 +49,7 @@ const scriptBox = h('details', { class: 'userscript' },
     h('li', {}, 'Install ', h('a', { href: 'https://www.tampermonkey.net/', target: '_blank', rel: 'noopener' }, 'Tampermonkey'), '.'),
     h('li', {}, h('a', { href: '/userscript/showdown-game-review.user.js' }, 'Install the userscript'), '.'),
     h('li', {}, 'Play with this app running.')),
-  h('p', { class: 'small muted' }, 'Sends only battle logs to this app. Your login stays in your browser.'),
+  h('p', { class: 'small muted' }, 'Uploads each game you play as a Showdown replay, so move review starts on its own (turn off in the Tampermonkey menu). Your login stays in your browser.'),
   scriptStatus)
 
 let wired = false
@@ -254,7 +254,7 @@ function gameRow(g: Game) {
   const when = g.played_at ?? g.uploadtime
   const marks = [
     g.private ? icon('lock', 'Private replay') : null,
-    g.source === 'userscript' ? icon('disk', 'Saved by the userscript, not uploaded') : null,
+    g.source === 'userscript' && g.uploadtime == null ? icon('disk', 'Saved by the userscript, not uploaded') : null,
     g.has_inputlog ? icon('scroll', 'Full battle data: move review available') : null,
     g.analyzed ? icon('lens', 'Reviewed') : null,
   ].filter(Boolean) as Element[]

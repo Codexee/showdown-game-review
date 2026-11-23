@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Showdown Game Review: save every battle
 // @namespace    showdown-game-review.local
-// @version      0.1.0
-// @description  Sends each finished battle, and your private replay list, to the local Showdown Game Review app.
+// @version      0.2.0
+// @description  Uploads each battle you finish to Showdown's replay site (as the client's own button does) and sends it, and your private replay list, to the local Showdown Game Review app.
 // @match        https://play.pokemonshowdown.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @grant        unsafeWindow
 // @connect      127.0.0.1
 // @connect      localhost
@@ -24,6 +25,13 @@
  *   few seconds for the rating lines, then POSTs the log to the local server.
  *   A room that closes before the end is sent with incomplete=true.
  * - Your own |request| messages hold your full team; the last one is sent too.
+ * - Auto-upload (on by default; toggle it in the Tampermonkey menu): after a battle you
+ *   played ends, it sends `/savereplay silent` to the room, the same command as the
+ *   client's "Upload and share replay" button, minus the popup. The server keeps the
+ *   room's own privacy: a hidden battle (or one after /hidereplay) uploads as a private
+ *   replay. Then it tells the local server, which downloads the replay (with the
+ *   inputlog that move review needs) at once instead of waiting for the poller.
+ *   Spectated battles are never uploaded.
  * - Every 15 minutes (and on load) it asks replay.pokemonshowdown.com for your private
  *   replays, using your browser's login, and sends only ids + passwords to the local
  *   server, which downloads them itself. Your password and cookies never leave the browser.
@@ -35,6 +43,9 @@
   const SERVER = GM_getValue('serverUrl', 'http://127.0.0.1:8765');
   const SEND_DELAY_MS = 4000; // rating |raw| lines arrive just after |win|
   const PRIVATE_EVERY_MS = 15 * 60 * 1000;
+  // After /savereplay: ask the local server to fetch the replay at these delays (from the
+  // upload). One replay-server request each; stops at the first hit.
+  const UPLOAD_CHECKS_MS = [8000, 30000, 120000];
   const MAX_QUEUE = 200;
   const W = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
   const log = (...a) => console.debug('[showdown-game-review]', ...a);
@@ -96,8 +107,21 @@
     for (const item of q) await send(item.path, item.body);
   }
 
+  // ---------------------------------------------------------------- settings
+  const autoUploadOn = () => GM_getValue('autoUpload', true) !== false;
+  function registerMenu() {
+    if (typeof GM_registerMenuCommand !== 'function') return;
+    const label = () => (autoUploadOn() ? '✓ ' : '✗ ') + 'Auto-upload replays (click to turn ' + (autoUploadOn() ? 'off' : 'on') + ')';
+    GM_registerMenuCommand(label(), () => {
+      GM_setValue('autoUpload', !autoUploadOn());
+      log('auto-upload', autoUploadOn() ? 'on' : 'off');
+      // Tampermonkey shows the new label after the next page load.
+    });
+  }
+
   // ---------------------------------------------------------------- battle capture
-  const rooms = new Map(); // roomid -> { lines: [], request: obj|null, ended: bool, sent: bool, timer }
+  // roomid -> { id, lines: [], request: obj|null, ended: bool, sent: bool, timer }
+  const rooms = new Map();
 
   function currentUser() {
     try {
@@ -105,6 +129,15 @@
       if (W.PS && W.PS.user) return W.PS.user.name || W.PS.user.userid || '';
     } catch { /* client not ready */ }
     return '';
+  }
+
+  const toID = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  /** True if the logged-in user is p1..p4 in this log (not a spectator). */
+  function playedIn(lines) {
+    const me = toID(currentUser());
+    if (!me) return false;
+    return lines.some(l => l.startsWith('|player|') && toID(l.split('|')[3]) === me);
   }
 
   function flushRoom(roomid, incomplete) {
@@ -122,6 +155,49 @@
       username: currentUser(),
       incomplete,
     });
+    if (!incomplete && autoUploadOn() && playedIn(room.lines)) uploadReplay(roomid);
+  }
+
+  // ---------------------------------------------------------------- auto-upload
+  /** Send a command to a room the way the client's own buttons do. */
+  function sendToRoom(roomid, text) {
+    const client = W.app || W.PS;
+    const room = client && client.rooms && client.rooms[roomid];
+    if (room && typeof room.send === 'function') { room.send(text); return true; }
+    if (client && typeof client.send === 'function') { client.send(text, roomid); return true; } // both clients: send(msg, roomid)
+    return false;
+  }
+
+  /** POST and return the parsed JSON body, or null if the local server is down. */
+  async function postJSON(path, body) {
+    try {
+      const r = await post(path, body);
+      try { return JSON.parse(r.responseText || '{}'); } catch { return {}; }
+    } catch (e) {
+      if (/^HTTP 4\d\d/.test(e.message)) { log('rejected', path, e.message); return {}; }
+      return null;
+    }
+  }
+
+  function uploadReplay(roomid) {
+    if (!sendToRoom(roomid, '/savereplay silent')) { log('could not send /savereplay to', roomid); return; }
+    log('uploading replay', roomid);
+    let i = 0;
+    const check = async () => {
+      const res = await postJSON('/api/ingest-uploaded', { roomid });
+      if (res === null) { // app not running: keep it for the next page load
+        const q = loadQueue();
+        q.push({ path: '/api/ingest-uploaded', body: { roomid } });
+        saveQueue(q);
+        return;
+      }
+      if (res.found) { log('replay saved by the app', roomid); return; }
+      if (++i < UPLOAD_CHECKS_MS.length) { setTimeout(check, UPLOAD_CHECKS_MS[i] - UPLOAD_CHECKS_MS[i - 1]); return; }
+      // Not public under this id: likely a private replay whose password the room id
+      // didn't carry. Listing private replays finds it; the poller covers the rest.
+      void syncPrivate();
+    };
+    setTimeout(check, UPLOAD_CHECKS_MS[0]);
   }
 
   function onMessage(data) {
@@ -134,7 +210,7 @@
       if (line.startsWith('|init|battle')) {
         // A fresh full log (joining or reconnecting). Start over.
         if (room) clearTimeout(room.timer);
-        room = { lines: [], request: null, ended: false, sent: false, timer: 0 };
+        room = { id: roomid, lines: [], request: null, ended: false, sent: false, timer: 0 };
         rooms.set(roomid, room);
         continue;
       }
@@ -144,11 +220,23 @@
         if (json) { try { room.request = JSON.parse(json); } catch { /* ignore */ } }
         continue;
       }
-      if (line.startsWith('|deinit')) { flushRoom(roomid, !room.ended); return; }
+      if (line.startsWith('|deinit')) { flushRoom(room.id, !room.ended); return; }
+      if (line.startsWith('|noinit|rename|')) {
+        // A hidden battle is renamed at the end to battle-<format>-<n>-<password>pw
+        // (Showdown rooms.ts setPrivate); later messages use the new id.
+        const newid = line.split('|')[3];
+        if (newid && newid.startsWith('battle-') && newid !== room.id) {
+          rooms.delete(room.id);
+          room.id = newid;
+          rooms.set(newid, room);
+        }
+        continue;
+      }
       room.lines.push(line);
       if (!room.ended && (line.startsWith('|win|') || line === '|tie' || line.startsWith('|tie|'))) {
         room.ended = true;
-        room.timer = setTimeout(() => flushRoom(roomid, false), SEND_DELAY_MS);
+        const r = room;
+        r.timer = setTimeout(() => flushRoom(r.id, false), SEND_DELAY_MS);
       }
     }
   }
@@ -157,7 +245,7 @@
   async function syncPrivate() {
     const user = currentUser();
     if (!user) return;
-    const uid = user.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const uid = toID(user);
     let text;
     try {
       text = await getText(`https://replay.pokemonshowdown.com/api/replays/searchprivate?username=${encodeURIComponent(uid)}`);
@@ -188,7 +276,9 @@
   }
 
   // Exposed for tests (server/tests run this file in Node with stubs).
-  W.__showdownGameReview = { onMessage, flushRoom, rooms, syncPrivate, flushQueue, hook };
+  W.__showdownGameReview = { onMessage, flushRoom, rooms, syncPrivate, flushQueue, hook, uploadReplay };
+
+  registerMenu();
 
   if (!hook()) {
     let tries = 0;

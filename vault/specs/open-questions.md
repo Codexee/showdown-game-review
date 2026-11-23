@@ -11,7 +11,7 @@ updated: 2026-11-23
 Items wait here until they are answered. When an item is answered, record the answer in a `raw/` note, update the affected notes, and move the item to **Resolved**. Items marked *(research)* are for Claude to look up, not for the user.
 
 ## Open
-1. *(test, needs the user)* **First real-browser run of the userscript:** play one game with Tampermonkey on, then check (a) the game appears, (b) whether Chrome showed a Local Network Access prompt, (c) whether the private check works (Tampermonkey log shows `private search:` errors if the login cookie isn't sent to replay.pokemonshowdown.com), (d) after uploading, the poller upgrades the same id, which confirms room ids match replay ids. The `searchprivate` URL is settled: the replay site itself calls `/api/replays/searchprivate?username=` and gets `]` + JSON ([[spec-replay-sync]]).
+1. *(test, needs the user)* **First real-browser run of the userscript:** play one game with Tampermonkey on, then check (a) the game appears, (b) whether Chrome showed a Local Network Access prompt, (c) whether the private check works (Tampermonkey log shows `private search:` errors if the login cookie isn't sent to replay.pokemonshowdown.com), (d) after uploading, the poller upgrades the same id, which confirms room ids match replay ids. (e) **Auto-upload** ([[ADR-0022-auto-upload-replays]]): after the game, the Tampermonkey menu shows "Auto-upload replays". The console shows `[showdown-game-review] uploading replay` and then `replay saved by the app`. The game's row gains the full-data icon and its move review starts on its own. No popup appears. The `searchprivate` URL is settled: the replay site itself calls `/api/replays/searchprivate?username=` and gets `]` + JSON ([[spec-replay-sync]]).
 
 6. **Codex review, model-testing changes:** items 1–3 done 2026-11-23 ([[ADR-0016-two-view-scoring-strict-gate]]). Still open: adopt items 4–5 in [[plan-run-v12]] (gate fix, two-view scoring, strict pairing, game-balanced value test, careful C/D readout)? Recommendation: 1–3 now (small, checked), 4 as one extra ~50 min test before the overnight run ([[2026-11-23-codex-review]]).
 7. *(research)* **Verify the new references** before relying on them: Nessie, Mew's Truck, Ninjask, Eevenator, Mega Evolution rules for Reg M-C ([[2026-11-23-codex-review]]).
@@ -20,6 +20,9 @@ Items wait here until they are answered. When an item is answered, record the an
 
 
 12. *(research)* **Profile the move review** (simulator vs network vs Python) before choosing how to speed up depth 2 ([[goals-endgame]]).
+
+16. **Auto-uploads public or private?** With auto-upload on (the default), every game in a public room becomes a public replay under your name. Before, only games you chose to upload were public. Keep that? Or have the script send `/hidereplay` before `/savereplay`, so auto-uploads are private but the app can still fetch them? ([[ADR-0022-auto-upload-replays]])
+17. *(test, needs a real browser)* **Auto-upload unknowns:** (a) does Showdown accept `/savereplay` after you have left the room (tab closed within 4 s of the end)? (b) does a chat throttle ever drop it? (c) is `Config.autosavereplays` on for the main server? ([[spec-replay-sync]], [[2026-11-23-auto-upload-replays]])
 
 13. **Verdict bank labels:** how many choices will the user label blind (the bank also works with search-based references alone) ([[plan-grade-quality]])?
 
