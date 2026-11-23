@@ -685,27 +685,14 @@ button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-of
 .room.gravity { background: repeating-linear-gradient(180deg, rgba(115, 87, 151, 0.12) 0 2px, transparent 2px 14px); }
 .room.magicroom, .room.wonderroom { box-shadow: inset 0 0 0 3px rgba(114, 160, 255, 0.35); }
 
-/* Side conditions on the platform: screens stand in front, hazards lie on it. */
-.platform .cond { position: absolute; pointer-events: none; z-index: 2; }
-.cond.reflect, .cond.lightscreen, .cond.auroraveil, .cond.safeguard, .cond.mist { left: 12%; right: 12%; bottom: 8px; height: 70%;
-  border: 2px solid; opacity: 0.5; }
-.cond.reflect { border-color: #6390f0; background: rgba(99, 144, 240, 0.14); }
-.cond.lightscreen { border-color: #f95587; background: rgba(249, 85, 135, 0.12); left: 16%; right: 16%; }
-.cond.auroraveil { border-color: #96d9d6; background: linear-gradient(rgba(150, 217, 214, 0.18), rgba(214, 133, 173, 0.14)); }
-.cond.safeguard { border-color: #a98ff3; border-style: dashed; background: transparent; }
-.cond.mist { border-color: #e6eef8; border-style: dotted; background: rgba(230, 238, 248, 0.1); }
-.cond.stealthrock { left: 14%; bottom: 0; width: 46%; height: 16px;
-  background: radial-gradient(circle at 12% 62%, #d8c487 0 4px, #6e5e36 4px 5.5px, transparent 6px),
-    radial-gradient(circle at 46% 45%, #e6d394 0 5px, #6e5e36 5px 6.5px, transparent 7px),
-    radial-gradient(circle at 84% 66%, #cdb97c 0 4px, #6e5e36 4px 5.5px, transparent 6px); }
-.cond.spikes, .cond.toxicspikes { right: 14%; bottom: 2px; height: 8px; width: calc(var(--layers, 1) * 14px);
-  background: linear-gradient(135deg, transparent 50%, var(--spike) 50%) 0 0 / 7px 8px repeat-x,
-    linear-gradient(225deg, transparent 50%, var(--spike) 50%) 0 0 / 7px 8px repeat-x; --spike: #c8ccd8; }
-.cond.toxicspikes { right: auto; left: 60%; --spike: #a33ea1; }
-.cond.stickyweb { left: 30%; width: 40%; bottom: 0; height: 18px; opacity: 0.5;
-  background: repeating-radial-gradient(circle at 50% 100%, transparent 0 5px, #e6eef8 5px 6px); }
-.cond.tailwind { left: 0; right: 0; bottom: 30%; height: 40%;
-  background: repeating-linear-gradient(0deg, transparent 0 9px, rgba(255, 255, 255, 0.28) 9px 10px); animation: drift 600ms linear infinite; }
+/* Entry hazards: Showdown's effect sprites lying on the platform, scaled with the sprites. */
+.platform .hazard { position: absolute; z-index: 2; pointer-events: none; image-rendering: pixelated; --u: calc(var(--sprite, 192px) / 96); }
+.hazard.rock { height: calc(var(--u) * 13px); bottom: calc(var(--u) * 2px); }
+.hazard.r1 { left: 18%; } .hazard.r2 { left: 30%; bottom: calc(var(--u) * 5px); }
+.hazard.spike, .hazard.tspike { height: calc(var(--u) * 12px); bottom: calc(var(--u) * 1px); }
+.hazard.s0 { right: 16%; } .hazard.s1 { right: 26%; } .hazard.s2 { right: 36%; }
+.hazard.t0 { left: 54%; } .hazard.t1 { left: 64%; }
+.hazard.web { width: 58%; left: 21%; bottom: 0; opacity: 0.85; }
 
 /* Move strip under each HP box: 2 × 2, full names (up to two lines, so even "Soul-Stealing
    7-Star Strike" fits) at a fixed height; revealed moves in their type colour, "?" otherwise. */
@@ -719,7 +706,9 @@ button.toggle-switch:focus-visible { outline: 3px solid var(--focus); outline-of
 
 
 /* Stat-change chips: their row is always there, so a boost never makes the box taller. */
-.hp-box .chips { min-height: 1.3em; margin-top: 3px; }
+.hp-foot { flex-wrap: nowrap; min-height: 1.5em; }
+.hp-box .chips { display: flex; flex-wrap: nowrap; gap: 3px; min-width: 0; overflow: hidden; margin: 0; flex: 1; }
+.hp-box .chips .chip { white-space: nowrap; }
 
 /* The substitute doll sits in the middle of its 96 px image; lower it onto the disk. */
 .sprite.sub { transform: translateY(24%); }
@@ -856,7 +845,8 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
 
 /* Faint, HP side: the fallen Pokemon's box drains to 0 (the ghost segment, 80-440 ms), fades
    (480-640 ms), then the replacement's box and sprite come in. */
-.hp-slot { position: relative; width: fit-content; max-width: 100%; }
+.hp-slot { position: relative; width: min(260px, 100%); }   /* the box's own width: no shrink during a faint */
+.hp-slot > .hp-box { width: 100%; }
 .hp-box.faint-box:not(.final) { position: absolute; inset: 0; z-index: 3; pointer-events: none;
   animation: fade-out 160ms ease-out 480ms both; }
 .hp-box.faint-box .hp-ghost.lost { animation-duration: 360ms; }
@@ -874,4 +864,22 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
    (it scrolls inside itself). */
 @media (min-width: 1100px) and (min-height: 620px) and (max-height: 820px) {
   .col-battle:has(.field.doubles) .screen.bottom { height: clamp(140px, 24vh, 220px); }
+}
+
+@media (min-width: 1100px) and (min-height: 620px) and (max-height: 820px) {
+  .col-battle .field.doubles .hp-slot { width: min(200px, 100%); }
+}
+
+/* Turn controls in the Turns panel header (desktop); the hinge between the screens is a thin strip. */
+.turn-nav { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.turns-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.turns-head h2 { margin: 0; }
+.turns-head .turn-nav { gap: 6px; }
+.turns-head .hinge-btn { min-width: 32px; min-height: 30px; padding: 2px 8px; background: var(--btn); }
+.turns-head .turn-label { color: var(--ink); font-size: 0.95rem; min-width: 9ch; }
+.hinge.thin { padding: 0; height: 10px; }
+
+/* Short desktop windows: a shorter details screen (it scrolls) so the battle box has room. */
+@media (min-width: 1100px) and (min-height: 620px) and (max-height: 820px) {
+  .col-battle .screen.bottom { height: clamp(140px, 24vh, 220px); }
 }

@@ -113,7 +113,18 @@ class ReviewScreen {
 
     this.prevBtn.addEventListener('click', () => this.go(this.step - 1))
     this.nextBtn.addEventListener('click', () => this.go(this.step + 1))
-    const hinge = h('div', { class: 'hinge' }, this.prevBtn, this.turnLabel, this.nextBtn)
+    // Turn controls: between the two screens on phones; on a desktop they sit in the Turns
+    // panel header, leaving a thin hinge, so the battle box has more height.
+    const nav = h('div', { class: 'turn-nav' }, this.prevBtn, this.turnLabel, this.nextBtn)
+    const hinge = h('div', { class: 'hinge' })
+    const turnsHead = h('div', { class: 'turns-head' }, h('h2', {}, 'Turns'))
+    const wide = window.matchMedia('(min-width: 1100px) and (min-height: 620px)')
+    const placeNav = () => {
+      ;(wide.matches ? turnsHead : hinge).append(nav)
+      hinge.classList.toggle('thin', wide.matches)
+    }
+    placeNav()
+    wide.addEventListener('change', () => { if (nav.isConnected || !this.root.isConnected) placeNav() })
 
     // Bottom screen: the Pokemon details, right under the battle box (fixed height, so the
     // battle box never moves). The graph sits in the review column above "What happened".
@@ -143,7 +154,7 @@ class ReviewScreen {
           hinge,
           bottom),
         h('section', { class: 'panel col-turns frame', 'aria-label': 'Turns' },
-          h('h2', {}, 'Turns'), this.turnList,
+          turnsHead, this.turnList,
           h('p', { class: 'keys', 'aria-label': 'Use the left and right arrow keys to step through turns' },
             h('kbd', {}, '←'), h('kbd', {}, '→'))),
         h('div', { class: 'col-review' },
@@ -511,10 +522,12 @@ class ReviewScreen {
         h('div', { class: 'hp-track', role: 'meter', 'aria-label': `${mon.species} HP`, 'aria-valuemin': '0',
           'aria-valuemax': '100', 'aria-valuenow': String(Math.round(frac * 100)) },
           h('div', { class: `hp-fill ${tone}`, style: `width:${(frac * 100).toFixed(1)}%` }), ghost)),
+      // One row for status, stat changes and the HP number: always there, so a boost never
+      // makes the box taller.
       h('div', { class: 'hp-foot' },
         mon.status ? h('span', { class: `status-tag ${mon.status}${newStatus ? ' pop' : ''}` }, STATUS_LABEL[mon.status] ?? mon.status) : null,
+        h('span', { class: 'chips' }, ...boosts, ...extra),
         h('span', { class: 'hp-num' }, hpText)),
-      h('div', { class: 'chips' }, ...boosts, ...extra),   // always there, so stat changes never resize the box
       moveStrip(mon, this.review.dex))
     this.inspectOn(box, mine ? this.me : this.them, mon)
     return box

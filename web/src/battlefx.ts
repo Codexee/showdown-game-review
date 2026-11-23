@@ -82,14 +82,17 @@ export function fieldOverlays(field: { weather: string; terrain: string; pseudo_
   return out
 }
 
-/** Side conditions drawn on that side's platform: screens, hazards, Tailwind. */
+/** Entry hazards on that side's platform, drawn with Showdown's own effect sprites (the
+ *  images its client uses). Conditions without an official sprite (screens, Tailwind) are
+ *  only listed in the tags below the field. */
 export function sideOverlays(side: SideView): HTMLElement[] {
+  const fx = (name: string, cls: string) => h('img', { class: `hazard ${cls}`, src: `/sprites/fx/${name}.png`, alt: '', 'aria-hidden': 'true' })
   const out: HTMLElement[] = []
-  for (const [c, layers] of Object.entries(side.conditions)) {
-    if (['reflect', 'lightscreen', 'auroraveil', 'stealthrock', 'spikes', 'toxicspikes', 'stickyweb', 'tailwind', 'safeguard', 'mist'].includes(c)) {
-      out.push(h('span', { class: `cond ${c}`, style: `--layers:${layers}`, 'aria-hidden': 'true' }))
-    }
-  }
+  const c = side.conditions
+  if (c.stealthrock) out.push(fx('rock1', 'rock r1'), fx('rock2', 'rock r2'))
+  for (let i = 0; i < Math.min(c.spikes ?? 0, 3); i++) out.push(fx('caltrop', `spike s${i}`))
+  for (let i = 0; i < Math.min(c.toxicspikes ?? 0, 2); i++) out.push(fx('poisoncaltrop', `tspike t${i}`))
+  if (c.stickyweb) out.push(fx('web', 'web'))
   return out
 }
 
