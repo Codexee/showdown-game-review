@@ -29,7 +29,7 @@ class Config:
 def load_config() -> Config:
     return Config(
         data_dir=Path(os.environ.get("SGR_DATA_DIR", ROOT / "data")),
-        default_username=os.environ.get("SGR_USERNAME", "Codexe"),
+        default_username=os.environ.get("SGR_USERNAME", ""),   # each user sets theirs in the app
         poll_minutes=float(os.environ.get("SGR_POLL_MINUTES", "15")),
         request_delay=float(os.environ.get("SGR_REQUEST_DELAY", "1.0")),
         poller_enabled=os.environ.get("SGR_POLLER", "1") != "0",

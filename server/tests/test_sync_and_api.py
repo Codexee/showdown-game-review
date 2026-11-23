@@ -123,3 +123,13 @@ def test_team_paste_and_settings(client, fake):
     assert s["username"] == "charizardslayer1" and s["poll_minutes"] == 30
     assert client.get(f"/api/games/{RANDBATS_ID}").json()["result"] == "win"
     assert client.put("/api/settings", json={"username": "!!!"}).status_code == 400
+
+
+def test_no_username_yet(tmp_path, transport):
+    # A fresh install has no username: sync asks for one, the profile is empty, nothing breaks.
+    cfg = Config(data_dir=tmp_path, default_username="", poll_minutes=15, request_delay=0, poller_enabled=False)
+    with TestClient(create_app(cfg, transport)) as c:
+        r = c.post("/api/sync")
+        assert r.status_code == 400 and "username" in r.json()["detail"]
+        assert c.get("/api/profile").json() == {"username": "", "ratings": {}}
+        assert c.get("/api/settings").json()["username"] == ""

@@ -119,6 +119,8 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
         return float(archive.get_setting("poll_minutes") or config.poll_minutes)
 
     async def run_sync() -> dict:
+        if not to_id(username()):
+            raise HTTPException(400, "Set your Showdown username first")
         async with state["sync_lock"]:
             result = await sync_user(state["client"], archive, username())
             state["last_result"] = result.to_dict()
@@ -127,8 +129,9 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
     async def poller() -> None:
         while True:
             try:
-                r = await run_sync()
-                log.info("sync: %d new, %d errors", len(r["added"]), len(r["errors"]))
+                if to_id(username()):   # nothing to sync until a username is set
+                    r = await run_sync()
+                    log.info("sync: %d new, %d errors", len(r["added"]), len(r["errors"]))
             except Exception:  # keep polling after an unexpected error
                 log.exception("sync failed")
             await asyncio.sleep(poll_minutes() * 60)
@@ -222,6 +225,8 @@ def create_app(config: Config | None = None, transport: httpx.AsyncBaseTransport
     @app.get("/api/profile")
     async def get_profile(refresh: bool = False):
         uid = to_id(username())
+        if not uid:
+            return {"username": "", "ratings": {}}
         cached = archive.get_setting(f"profile:{uid}")
         if refresh or not cached:
             try:
