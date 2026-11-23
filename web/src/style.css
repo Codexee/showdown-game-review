@@ -883,3 +883,6 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
 @media (min-width: 1100px) and (min-height: 620px) and (max-height: 820px) {
   .col-battle .screen.bottom { height: clamp(140px, 24vh, 220px); }
 }
+
+/* Party row without the trainer name: their team at the right, yours at the left. */
+.party-row { justify-content: flex-end; }

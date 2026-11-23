@@ -477,7 +477,8 @@ class ReviewScreen {
       }
     }
     sprites.append(...sideOverlays(side))
-    area.append(h('div', { class: 'party-row' }, h('span', { class: 'trainer' }, side.name), this.party(side)), boxes, sprites)
+    // No trainer name here (it's in the page header): more room for the Pokemon.
+    area.append(h('div', { class: 'party-row' }, this.party(side)), boxes, sprites)
     return area
   }
 
