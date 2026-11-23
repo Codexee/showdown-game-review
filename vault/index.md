@@ -119,5 +119,6 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-audit-fixes-go-sprite-project-official]]
 - [[2026-11-23-open-questions-2-to-5]]
 - [[2026-11-23-spritecook-redo-sprites]]
+- [[2026-11-23-drop-spritecook]]
 - [[2026-11-23-spritecook-new-sprites-auth]]
 - [[2026-11-22-second-brain-guide]]

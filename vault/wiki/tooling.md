@@ -22,7 +22,11 @@ updated: 2026-11-22
 - The **claude-obsidian** plugin is installed (`/claude-obsidian:wiki`, `wiki-ingest`, `wiki-lint`, `wiki-query`, `save`, `canvas`). Its `wiki-lint` agent can check this vault for broken links. Not used yet.
 
 ## Pixel art
-- **SpriteCook** plugin (Anthropic plugin directory, community publisher): sprites, UI kits, tilesets, short animations, with an MCP server. **Installed 2026-11-23; its MCP server needs sign-in before its tools work** ([[2026-11-23-spritecook-new-sprites-auth]]). The user chose to build the stage 4 UI with CSS pixel art first and add SpriteCook later ([[2026-11-22-stage4-answers]], [[visual-style]]). Found by plugin search on 2026-11-22 ([[2026-11-22-research-findings]]).
+- **SpriteCook** plugin (Anthropic plugin directory, community publisher): sprites, UI kits, tilesets, short animations, with an MCP server. **Installed 2026-11-23; its MCP server needs sign-in before its tools work** ([[2026-11-23-spritecook-new-sprites-auth]]). **Dropped by the user 2026-11-23 11:24** ([[2026-11-23-drop-spritecook]]); sign-in was never done.
+
+> [!warning] Corrected
+> [[2026-11-23-drop-spritecook]] says SpriteCook never loaded in Claude Code. That was true at Claude's 10:33 check, but another session had it loaded by 10:43; its MCP server only needed the user's sign-in ([[2026-11-23-spritecook-new-sprites-auth]]). The user dropped it at 11:24 either way.
+ The user chose to build the stage 4 UI with CSS pixel art first and add SpriteCook later ([[2026-11-22-stage4-answers]], [[visual-style]]). Found by plugin search on 2026-11-22 ([[2026-11-22-research-findings]]).
 - No standalone pixel-art skill turned up in the skill search.
 
 ## Related
