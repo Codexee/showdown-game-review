@@ -38,7 +38,7 @@ Pixel frame: a thick border with the four corner pixels cut away (`clip-path`, `
 ## Assets
 - Pokémon: Showdown's Gen 5-style sprites (front for the opponent, back for your side), through the local caching proxy `/sprites/gen5[-back]/<id>.png`. 192 px (2×) in singles (on desktop `clamp(104px, 20vh, 192px)`). In doubles each sprite is the singles size when the field is wide enough, else it shrinks to leave about 210 px for the HP boxes (`min(var(--sprite), (100cqi − 210px) / 1.44)`, the field is a size container); the pair overlaps its empty canvas edges. Measured 2026-11-23: 1440×900 135→172 px, 1440×790 98→158 px, 900×800 144→192 px ([[2026-11-23-bigger-vgc-sprites-and-design-audit]]). On phones (≤640 px) each doubles side has a sprite row (sprites up to 112 px) and a full-width row of two HP boxes (122 px each at 375 px wide, was 87 px) ([[2026-11-23-audit-fixes-go-sprite-project-official]]).
 - UI art is CSS only (frames, HP bars, party balls, field). No Nintendo UI art is copied.
-- **SpriteCook** (plugin, not installed): planned to replace the CSS art with generated sprites/UI kit later ([[tooling]]).
+- **SpriteCook** (plugin, installed 2026-11-23, MCP sign-in pending, [[2026-11-23-spritecook-new-sprites-auth]]): planned to replace the CSS art with generated sprites/UI kit later ([[tooling]]).
 
 ## Rules kept
 - Status abbreviations (BRN, PAR…) stay in capitals: game vernacular, not decoration.
