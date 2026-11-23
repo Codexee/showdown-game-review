@@ -478,7 +478,7 @@ class ReviewScreen {
     }
     sprites.append(...sideOverlays(side))
     // No trainer name here (it's in the page header): more room for the Pokemon.
-    area.append(h('div', { class: 'party-row' }, this.party(side)), boxes, sprites)
+    area.append(h('div', { class: 'party-row' }, this.sideTags(side, mine), this.party(side)), boxes, sprites)
     return area
   }
 
@@ -563,15 +563,19 @@ class ReviewScreen {
     const tags: HTMLElement[] = []
     if (view.field.weather) tags.push(h('span', { class: 'tag weather' }, WEATHER_NAMES[view.field.weather] ?? titleCase(view.field.weather)))
     if (view.field.terrain) tags.push(h('span', { class: 'tag terrain' }, titleCase(view.field.terrain.replace('terrain', ' Terrain'))))
-    for (const p of view.field.pseudo_weather) tags.push(h('span', { class: 'tag' }, titleCase(p)))
-    for (const sid of [this.them, this.me] as const) {
-      for (const [c, layers] of Object.entries(view.sides[sid].conditions)) {
-        const name = CONDITION_NAMES[c] ?? titleCase(c)
-        tags.push(h('span', { class: `tag ${sid === this.me ? 'mine' : 'theirs'}` },
-          `${name}${layers > 1 ? ` ×${layers}` : ''} (${sid === this.me ? 'your side' : 'their side'})`))
-      }
-    }
+    const ROOMS: Record<string, string> = { trickroom: 'Trick Room', magicroom: 'Magic Room', wonderroom: 'Wonder Room',
+      gravity: 'Gravity', mudsport: 'Mud Sport', watersport: 'Water Sport', fairylock: 'Fairy Lock', iondeluge: 'Ion Deluge' }
+    for (const p of view.field.pseudo_weather) tags.push(h('span', { class: 'tag' }, ROOMS[p] ?? titleCase(p)))
+    // Whole-field effects only; each side's conditions sit in that side's own row.
     return h('div', { class: 'field-tags' }, ...tags)
+  }
+
+  /** A side's conditions (hazards, screens, Tailwind) as tags in its own colour, placed in
+   *  its row by its party icons: where they sit says whose side, no "(your side)" text. */
+  private sideTags(side: SideView, mine: boolean) {
+    return h('span', { class: 'side-tags' }, ...Object.entries(side.conditions).map(([c, layers]) =>
+      h('span', { class: `tag ${mine ? 'mine' : 'theirs'}`, title: `${CONDITION_NAMES[c] ?? titleCase(c)} on ${mine ? 'your' : 'their'} side` },
+        `${CONDITION_NAMES[c] ?? titleCase(c)}${layers > 1 ? ` ×${layers}` : ''}`)))
   }
 
   // ---------------------------------------------------------------- eval
@@ -673,10 +677,9 @@ class ReviewScreen {
   }
 
   private renderEvents(st: Step) {
-    const heading = this.step === 0 ? 'Leads' : st.ended ? `Turn ${st.turn}, the last` : `Turn ${st.turn - 1}`
+    // No "Turn N" heading here: the turn list and the Turns header already say which turn.
     const tr = this.reviewFor(this.eventTurn(this.step))
     this.eventsBox.replaceChildren(
-      h('p', { class: 'events-when' }, heading),
       ...(tr ? [this.reviewBox(tr)] : []),
       st.events.length
         ? h('ul', { class: this.prevMons ? 'play' : '' }, ...st.events.map((e, i) =>

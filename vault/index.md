@@ -102,4 +102,5 @@ Rules for this vault: [[CLAUDE]].
 - [[2026-11-23-layout-v3-faint-hp]]
 - [[2026-11-23-official-sprites-and-space]]
 - [[2026-11-23-no-names-in-battle-box]]
+- [[2026-11-23-side-tags-no-turn-repeat]]
 - [[2026-11-22-second-brain-guide]]

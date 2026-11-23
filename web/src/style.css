@@ -886,3 +886,12 @@ button.icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset:
 
 /* Party row without the trainer name: their team at the right, yours at the left. */
 .party-row { justify-content: flex-end; }
+
+/* Side conditions in the side's own row, by its party icons (their row: tags left of the
+   party; your row: right of it). */
+.party-row { justify-content: space-between; align-items: center; }
+.side-tags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.side-tags:empty { display: block; }
+.side-tags .tag { font-size: 0.68rem; padding: 0 5px; background: var(--screen); color: var(--ink); border-width: 2px; }
+.side-tags .tag.mine { border-color: var(--you); }
+.side-tags .tag.theirs { border-color: var(--them); }
