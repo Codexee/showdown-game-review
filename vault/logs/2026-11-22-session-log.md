@@ -42,6 +42,8 @@ tags: [area/vault]
 - **Sampled worlds** ([[ADR-0015-move-review-sampled-worlds]], [[2026-11-22-worlds-vs-perfect-results]]): move review now grades each player over 16 sampled versions of the opponent's hidden set parts (randbats role data), with a matrix per world; luck stays in the real game. On 12 games, 79% of verdicts match the real-set grading and 6% of flags change, about 3× the sampling noise. 95 tests.
 - **Collector finished:** 14-day crawl done, 18,975 replays with inputlogs in `data/train/inputlog`.
 
+- **Next training run planned** ([[plan-run-v12]]): the user asked for a plan. Levers: add 2025 games (563k), dropout/wd, value-loss schedule; four 4-epoch tests on `medium` first, then a 9 h run. Waiting for the go-ahead.
+
 ## Lesson
 Facts that exist only in a chat transcript are easy to lose when a question is skipped or work moves to a new session. Write answers to `raw/` as soon as they arrive ([[ADR-0003-vault-as-memory]]).
 
