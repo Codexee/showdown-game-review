@@ -1,13 +1,16 @@
 # showdown-game-review
 
-A Lichess-style review tool for your [Pokémon Showdown](https://pokemonshowdown.com) games, running on your own computer.
+chess.com game review for [Pokémon Showdown](https://pokemonshowdown.com). Runs locally
 
-- Saves your games automatically: syncs your uploaded replays by username, and an optional userscript saves every battle you play, even ones you never upload.
-- Replays each game turn by turn in a Gen 4–5 style battle screen, with an eval bar and a win-chance graph.
-- **Move review** (Gen 9 Random Battle): grades every choice by the win chance it gave up (?! inaccuracy, ? mistake, ?? blunder), separates decisions from luck, and gives each player an accuracy score. It grades each player only on what they could see.
-- Shows everything Showdown's tooltips show: types, revealed moves, items, abilities, Tera types, possible sets with odds, and stats.
+# Features
+- Auto-saves uploaded replays by username with an optional browser script that saves all games
+- Replays games in a custom UI with eval bar and win graph
+- Grades choices by change in win chance, accounting for luck, and gives each player an accuracy score (currently limited to gen9randombattle)
 
-![Battle-screen examples](docs/battle-examples.png)
+# Planned Features
+- Move analysis for every gamemode
+- Evaluation for every game mode
+- Guessing sets from turn order and damage rolls
 
 ## Quick start
 
